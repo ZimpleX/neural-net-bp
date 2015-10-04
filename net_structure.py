@@ -6,8 +6,9 @@ define the general structure of the whole network, including:
 """
 
 import numpy as np
+import node_activity as act
 
-class net_structure:
+class Net_structure:
     def __init__(self, layer_size_list, activ_list):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
@@ -15,18 +16,19 @@ class net_structure:
         activ_list          list of node activation object, defining the 
                             activation function as well as derivatives
         """
-        num_layer = len(layer_size_list) - 1
+        # num_layer is excluding the input layer
+        self.num_layer = len(layer_size_list) - 1
         self.w_list = [np.zeros((layer_size_list[i], layer_size_list[i+1]))
-                        for i in xrange(num_layer)]
-        self.b_list = [np.zeros(layer_size_list[i+1]) for i in xrange(num_layer)]
+                        for i in xrange(self.num_layer)]
+        self.b_list = [np.zeros(layer_size_list[i+1]) for i in xrange(self.num_layer)]
         self.activ_list = activ_list
+
     def __str__(self):
         """
         print the value of weight and bias array, for each layer
         """
-        num_layer = len(self.w_list)
         net_stat = ''
-        for i in xrange(num_layer-1, -1, -1):
+        for i in xrange(self.num_layer-1, -1, -1):
             net_stat += '--------------------------\n'
             net_stat += 'layer {}: {} nodes\n'.format(i+1, self.w_list[i].shape[1])
             net_stat += '--------------------------\n'
@@ -36,7 +38,26 @@ class net_structure:
         net_stat += '--------------------------\n'
         return net_stat
 
+    def act_forward(self, data):
+        """
+        action: 
+            data = activity((data dot weight) + bias)
+        argument:
+            data    matrix of input data
+                    columns = num of input nodes
+                    rows = num of data pieces
+        return:
+            layer_out   the output from the output layer
+        """
+        layer_out = data
+        for i in xrange(self.num_layer):
+            layer_out = self.activ_list[i] \
+                .act_forward(layer_out, w_list[i], b_list[i])
+        return layer_out
+
 
 if __name__ == "__main__":
-    ns = net_structure([2,3,4], 'hhh')
+    ns = Net_structure([2,3,4], [act.Node_linear] * 3)
     print(ns)
+    print act.Node_sigmoid.act_forward(np.array(range(4)).reshape(2,2), np.array(range(6)).reshape(2,3), np.array([3,4,5]))
+
