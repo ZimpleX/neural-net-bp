@@ -6,7 +6,7 @@ define the general structure of the whole network, including:
 """
 
 import numpy as np
-import node_activity as act
+from node_activity import *
 
 class Net_structure:
     """
@@ -64,7 +64,7 @@ class Net_structure:
         net_stat += '--------------------------\n'
         return net_stat
 
-    def act_forward(self, data):
+    def net_act_forward(self, data):
         """
         action: 
             data = activity((data dot weight) + bias)
@@ -83,9 +83,9 @@ class Net_structure:
 
 
 if __name__ == "__main__":
-    ns = Net_structure([2,3,4], [act.Node_sigmoid, act.Node_linear])
+    ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear])
     print(ns)
-    print(ns.act_forward(np.array(range(4)).reshape(2,2)))
+    print(ns.net_act_forward(np.array(range(4)).reshape(2,2)))
 
     #print act.Node_sigmoid.act_forward(np.array(range(4)).reshape(2,2), np.array(range(6)).reshape(2,3), np.array([3,4,5]))
 
