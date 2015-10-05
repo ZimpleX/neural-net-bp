@@ -1,3 +1,15 @@
+"""
+this module is defining all computation function needed for 
+feed forward / back-propagation, for various types of neurons in the whole network
+
+the functions in class definition are almost all classmethod, 
+so the class can simply be treated as providing a namespace for the specific neuron type
+
+theoritically, network of arbitrary layers can be constucted by the info in this file,
+and be trained recursively using chain rule
+"""
+
+
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from math import exp
@@ -49,7 +61,12 @@ class Node_activity:
     @classmethod
     @abstractmethod
     def y_d_w_mat(cls, y_n, y_n_1):
-        # TODO: change this to get deriv w.r.t. every w in weight matrix directly
+        """
+        difference from y_d_w_single version: return derivative w.r.t. the 
+        whole weight matrix, instead of just one weight element
+        --> return matrix shape is .. x .. x (nodes in n-1 layer) x (nodes in n layer)
+            e.g.: return[..., i, j] = d(y_nj) / d(w_(n-1)ij)
+        """
         dim = len(y_n.shape)    # num of dimension of output matrix
         n_node = y_n.shape[-1]
         n_1_node = y_n_1.shape[-1]
@@ -65,7 +82,7 @@ class Node_activity:
         """
         NOTE: overwrite with classmethod
 
-        derivative w.r.t. bias
+        derivative w.r.t. bias, derivative w.r.t. single bias
 
         argument:
         y_n     y list for nth layer
@@ -78,7 +95,29 @@ class Node_activity:
     @classmethod
     @abstractmethod
     def y_d_b_mat(cls, y_n):
-        pass
+        """
+        difference from y_d_b_single version: get derivative w.r.t. the whole
+        bias vector, rather than a single bias. 
+        --> return matrix shape: .. x .. x (nodes in n layer)
+        """
+        return np.ones(y_n.shape)
+
+    @classmethod
+    @abstractmethod
+    def yn_d_yn1_mat(cls, y_n, w):
+        """
+        w is the weight array, which should be strictly 2D
+        return the derivative of y_n w.r.t y_(n-1)
+        return[...,i,j] = d(y_nj) / d(y_n1i)
+        """
+        assert len(w.shape) == 2
+        # shape w/o the last dimension
+        hi_dim_shp = [y_n.shape[i] for i in range(len(y_n.shape)-1)]
+        exp_coef = reduce(lambda x,y: x*y, hi_dim_shp)
+        w2 = np.expand_dims(w, axis=0)
+        w2 = repeat(w2, exp_coef, axis=0)
+        shape = hi_dim_shp + list(w.shape)
+        return w2.reshape(shape)
 
 
 class Node_linear(Node_activity):
@@ -95,7 +134,7 @@ class Node_linear(Node_activity):
     @classmethod
     def y_d_w_single(cls, y_n, y_n_1, w_idx):
         """
-        probably obsolete: use mat version
+        probably obsolete: use y_d_w_mat version
         """
         return super(Node_linear, cls).y_d_w_single(y_n, y_n_1, w_idx)
 
@@ -106,9 +145,17 @@ class Node_linear(Node_activity):
     @classmethod
     def y_d_b_single(cls, y_n, b_idx):
         """
-        probably obsolete: use mat version
+        probably obsolete: use y_d_b_mat version
         """
         return super(Node_linear, cls).y_d_b_single(y_n, b_idx)
+
+    @classmethod
+    def y_d_b_mat(cls, y_n):
+        return super(Node_linear, cls).y_d_b_mat(y_n)
+
+    @classmethod
+    def yn_d_yn1_mat(cls, y_n, w):
+        return super(Node_linear, cls).yn_d_yn1_mat(y_n, w)
 
 
 class Node_sigmoid(Node_activity):
@@ -133,12 +180,13 @@ class Node_sigmoid(Node_activity):
     @classmethod
     def y_d_w_single(cls, y_n, y_n_1, w_idx):
         """
-        probably obsolete: use mat version
+        probably obsolete: use y_d_w_mat version
         """
         y_n_sub = y_n[..., w_idx[1]]
         d_sigmo = y_n_sub * (1 - y_n_sub)
         d_chain = super(Node_sigmoid, cls).y_d_w_single(y_n, y_n_1, w_idx)[..., w_idx[1]]
         deriv = np.zeros(y_n.shape)
+        # apply chain rule
         deriv[..., w_idx[1]] = d_sigmo * d_chain
         return deriv
 
@@ -152,17 +200,38 @@ class Node_sigmoid(Node_activity):
         shape = list(y_n.shape)
         shape.insert(len(shape)-1, n_1_node)
         d_sigmo = np.repeat(d_sigmo, n_1_node, axis=dim-2).reshape(shape)
+        # apply chain rule
         return d_chain * d_sigmo
 
     @classmethod
     def y_d_b_single(cls, y_n, b_idx):
         """
-        probably obsolete: use mat version
+        probably obsolete: use y_d_b_mat version
         """
         y_n_sub = y_n[..., b_idx]
         d_sigmo = y_n_sub * (1 - y_n_sub)
         d_chain = super(Node_sigmoid, cls).y_d_b_single(y_n, b_idx)[..., b_idx]
         deriv = np.zeros(y_n.shape)
+        # apply chain rule
         deriv[..., b_idx] = d_sigmo * d_chain
         return deriv
 
+    @classmethod
+    def y_d_b_mat(cls, y_n):
+        d_sigmo = y_n * (1 - y_n)
+        d_chain = super(Node_sigmoid, cls).y_d_b_mat(y_n)
+        # apply chain rule
+        return d_sigmo * d_chain
+
+    @classmethod
+    def yn_d_yn1_mat(cls, y_n, w):
+        dim = len(y_n.shape)
+        n_1_node = w.shape[0]
+        d_chain = super(Node_sigmoid, cls).yn_d_yn1_mat(y_n, w)
+        d_sigmo = y_n * (1 - y_n)
+        # expand d_sigmo
+        shape = list(y_n.shape)
+        shape.insert(len(shape)-1, n_1_node)
+        d_sigmo = np.repeat(d_sigmo, n_1_node, axis=dim-2).reshape(shape)
+        # apply chain rule
+        return d_chain * d_sigmo
