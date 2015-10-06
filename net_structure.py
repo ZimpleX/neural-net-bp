@@ -69,9 +69,10 @@ class Net_structure:
         action: 
             data = activity((data dot weight) + bias)
         argument:
-            data    matrix of input data
-                    columns = num of input nodes
-                    rows = num of data pieces
+            data    matrix of input data, could be high dimension,
+                    but the last 2 dimensions should be like this:
+                    n-1 = columns: num of input nodes
+                    n = rows: num of data pieces
         return:
             layer_out   the output from the output layer
         """
@@ -81,11 +82,26 @@ class Net_structure:
                 .act_forward(layer_out, self.w_list[i], self.b_list[i])
         return layer_out
 
+    def net_c_d_yi_mat(self, c_d_yi1, y_i1, i):
+        """
+        get the derivative matrix of cost w.r.t. output y of layer i
+        this function is recursive by its nature
+
+        argument:
+        y_i1        the output in the i+1 layer
+        c_d_yi1     the derivative of cost w.r.t. output y of layer i+1
+        """
+        d_chain = self.activ_list[i].yn_d_yn1_mat(y_i1, self.w_list[i])
+        d_prev = c_d_yi1
+        # expand d_prev
+        dim = len(d_prev.shape)
+        np.repeat(d_prev, , axis=dim-2)
+
 
 if __name__ == "__main__":
     ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear])
     print(ns)
-    print(ns.net_act_forward(np.array(range(4)).reshape(2,2)))
+    print(ns.net_act_forward(np.array(range(12)).reshape(2,3,2)))
 
     #print act.Node_sigmoid.act_forward(np.array(range(4)).reshape(2,2), np.array(range(6)).reshape(2,3), np.array([3,4,5]))
 

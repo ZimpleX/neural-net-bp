@@ -13,6 +13,7 @@ and be trained recursively using chain rule
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from math import exp
+import util.array_proc as arr_util
 
 class Node_activity:
     """
@@ -67,14 +68,8 @@ class Node_activity:
         --> return matrix shape is .. x .. x (nodes in n-1 layer) x (nodes in n layer)
             e.g.: return[..., i, j] = d(y_nj) / d(w_(n-1)ij)
         """
-        dim = len(y_n.shape)    # num of dimension of output matrix
-        n_node = y_n.shape[-1]
-        n_1_node = y_n_1.shape[-1]
-        shape = list(y_n_1.shape)
-        shape.insert(len(shape)-1, n_node)
-        exp_y_n_1 = np.repeat(y_n_1, n_node, axis=dim-2) \
-                    .reshape(shape).swapaxes(dim-1, dim-2)
-        return exp_y_n_1
+        # expansion on y_n_1
+        return arr_util.expand_col_swap(y_n_1, y_n.shape[-1])
 
     @classmethod
     @abstractmethod
@@ -120,6 +115,7 @@ class Node_activity:
         return w2.reshape(shape)
 
 
+
 class Node_linear(Node_activity):
     """
     linear neuron
@@ -158,6 +154,7 @@ class Node_linear(Node_activity):
         return super(Node_linear, cls).yn_d_yn1_mat(y_n, w)
 
 
+
 class Node_sigmoid(Node_activity):
     """
     sigmoid (logistic) neuron
@@ -192,14 +189,9 @@ class Node_sigmoid(Node_activity):
 
     @classmethod
     def y_d_w_mat(cls, y_n, y_n_1, w_idx):
-        dim = len(y_n.shape)
-        n_node = y_n.shape[-1]
-        n_1_node = y_n_1.shape[-1]
         d_chain = super(Node_sigmoid, cls).y_d_w_mat(y_n, y_n_1)
         d_sigmo = y_n * (1 - y_n)
-        shape = list(y_n.shape)
-        shape.insert(len(shape)-1, n_1_node)
-        d_sigmo = np.repeat(d_sigmo, n_1_node, axis=dim-2).reshape(shape)
+        arr_util.expand_col(d_sigmo, y_n_1.shape[-1])
         # apply chain rule
         return d_chain * d_sigmo
 
@@ -225,13 +217,8 @@ class Node_sigmoid(Node_activity):
 
     @classmethod
     def yn_d_yn1_mat(cls, y_n, w):
-        dim = len(y_n.shape)
-        n_1_node = w.shape[0]
         d_chain = super(Node_sigmoid, cls).yn_d_yn1_mat(y_n, w)
         d_sigmo = y_n * (1 - y_n)
-        # expand d_sigmo
-        shape = list(y_n.shape)
-        shape.insert(len(shape)-1, n_1_node)
-        d_sigmo = np.repeat(d_sigmo, n_1_node, axis=dim-2).reshape(shape)
+        arr_util.expand_col(d_sigmo, w.shape[0])
         # apply chain rule
         return d_chain * d_sigmo
