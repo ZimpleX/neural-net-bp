@@ -7,12 +7,17 @@ class Cost:
     @classmethod
     @abstractmethod
     def act_forward(cls):
+        """
+        NOTE: overwrite this with classmethod
+        """
         pass
 
     @classmethod
     @abstractmethod
-    def c_d_y_mat(cls):
+    def c_d_y(cls):
         """
+        NOTE: overwrite this with classmethod
+
         derivative of cost w.r.t. output layer
         """
         pass
@@ -26,7 +31,8 @@ class Cost_sqr(Cost):
     def act_forward(cls, y_out, t):
         return 0.5 * sum((y_out-t)*(y_out-t), axis=-1)
 
-    def c_d_y_mat(cls, y_out, t):
+    @classmethod
+    def c_d_y(cls, y_out, t):
         """
         return a derivative matrix
         """

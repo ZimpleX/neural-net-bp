@@ -7,7 +7,12 @@ define the general structure of the whole network, including:
 
 import numpy as np
 from node_activity import *
+from cost import *
+import util.array_proc as arr_util
 
+
+# TODO: make a data class, store raw data (current mini batch)
+# and output of each layer
 class Net_structure:
     """
     glossary:
@@ -32,13 +37,14 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, layer_size_list, activ_list):
+    def __init__(self, layer_size_list, activ_list, cost_type):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
         activ_list          list of node activation object, defining the 
                             activation function as well as derivatives
                             length of list = num of layers excluding input layer
+        cost_type           the class representing the chosen cost function
         """
         # -1 to exclude the input layer
         self.num_layer = len(layer_size_list) - 1
@@ -48,6 +54,9 @@ class Net_structure:
                         for i in range(self.num_layer)]
         self.b_list = [np.zeros(layer_size_list[i+1]) for i in range(self.num_layer)]
         self.activ_list = activ_list
+        self.cost = cost_type
+        # store the output of each layer
+        self.y_list = [None] * (self.num_layer + 1)
 
     def __str__(self):
         """
@@ -76,10 +85,12 @@ class Net_structure:
         return:
             layer_out   the output from the output layer
         """
+        self.y_list[0] = data
         layer_out = data
         for i in range(self.num_layer):
             layer_out = self.activ_list[i] \
                 .act_forward(layer_out, self.w_list[i], self.b_list[i])
+            self.y_list[i+1] = layer_out
         return layer_out
 
     def net_c_d_yi(self, c_d_yi1, y_i1, i):
@@ -94,12 +105,33 @@ class Net_structure:
         d_chain = self.activ_list[i].yn_d_yn1(y_i1, self.w_list[i])
         d_prev = c_d_yi1
         # expand d_prev
+        d_prev = arr_util.expand_col(d_prev, self.w_list[i].shape[0])
         dim = len(d_prev.shape)
-        np.repeat(d_prev, , axis=dim-2)
+        return np.sum(d_prev * d_chain, axis=dim-2)
+
+    def back_prop(self, data, target, conf):
+        """
+        do the actual back-propagation
+        """
+        b_rate = conf.b_rate
+        w_rate = conf.w_rate
+        cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
+        #cur_c_d_y = arr_util.expand_col(cur_c_d_y, self.w_list[-1].shape[0])
+        for n in range(self.num_layer-1, -1, -1):
+            cur_f = self.activ_list[n]
+            cur_y = self.y_list[n+1]
+            prev_y = self.y_list[n]
+            temp_b = cur_c_d_y * cur_f.y_d_b(cur_y)
+            # TODO: flatten temp_b
+            self.b_list[n] -= b_rate * temp_b
+            cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
+            temp_w = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
+            # TODO: flatten temp_w
+            self.w_list[n] -= w_rate * temp_w
 
 
 if __name__ == "__main__":
-    ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear])
+    ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear], Cost_sqr)
     print(ns)
     print(ns.net_act_forward(np.array(range(12)).reshape(2,3,2)))
 

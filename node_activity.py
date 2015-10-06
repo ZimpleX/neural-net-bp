@@ -134,10 +134,10 @@ class Node_sigmoid(Node_activity):
         return 1. / (1 + expz)
 
     @classmethod
-    def y_d_w(cls, y_n, y_n_1, w_idx):
+    def y_d_w(cls, y_n, y_n_1):
         d_chain = super(Node_sigmoid, cls).y_d_w(y_n, y_n_1)
         d_sigmo = y_n * (1 - y_n)
-        arr_util.expand_col(d_sigmo, y_n_1.shape[-1])
+        d_sigmo = arr_util.expand_col(d_sigmo, y_n_1.shape[-1])
         # apply chain rule
         return d_chain * d_sigmo
 
@@ -152,6 +152,6 @@ class Node_sigmoid(Node_activity):
     def yn_d_yn1(cls, y_n, w):
         d_chain = super(Node_sigmoid, cls).yn_d_yn1(y_n, w)
         d_sigmo = y_n * (1 - y_n)
-        arr_util.expand_col(d_sigmo, w.shape[0])
+        d_sigmo = arr_util.expand_col(d_sigmo, w.shape[0])
         # apply chain rule
         return d_chain * d_sigmo
