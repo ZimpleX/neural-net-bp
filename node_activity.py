@@ -37,34 +37,19 @@ class Node_activity:
         """
         return np.dot(prev_layer_out, w) + b
 
+
     @classmethod
     @abstractmethod
-    def y_d_w_single(cls, y_n, y_n_1, w_idx):
+    def y_d_w(cls, y_n, y_n_1):
         """
         NOTE: overwrite with classmethod
 
-        derivative of y w.r.t. w, where y is the output of 
-        the neuron, and w is the weight connecting y and y 
-        from previous layer.
-        do the pre-calc for the part that is common for all sub-class
+        get derivative w.r.t. the whole weight matrix in one layer
 
         argument:
-        y_n     y list for nth layer
-        y_n_1   y list for (n-1) layer (prev layer)
-        w_idx   index tuple of weight (i.e. w is connecting 
-                which 2 neurons)
-        """
-        # the last dimension of y_n should be num of nodes in nth layer
-        deriv = np.zeros(y_n.shape)
-        deriv[..., w_idx[1]] = y_n_1[..., w_idx[0]]
-        return deriv
+        y_n     y list of layer n
+        y_n_1   y list of layer n-1 (prev layer)
 
-    @classmethod
-    @abstractmethod
-    def y_d_w_mat(cls, y_n, y_n_1):
-        """
-        difference from y_d_w_single version: return derivative w.r.t. the 
-        whole weight matrix, instead of just one weight element
         --> return matrix shape is .. x .. x (nodes in n-1 layer) x (nodes in n layer)
             e.g.: return[..., i, j] = d(y_nj) / d(w_(n-1)ij)
         """
@@ -73,33 +58,21 @@ class Node_activity:
 
     @classmethod
     @abstractmethod
-    def y_d_b_single(cls, y_n, b_idx):
+    def y_d_b(cls, y_n):
         """
         NOTE: overwrite with classmethod
-
-        derivative w.r.t. bias, derivative w.r.t. single bias
+        get derivative w.r.t. the whole bias vector in one layer
 
         argument:
-        y_n     y list for nth layer
-        b_idx   bias index, suggesting which node's bias is under concern
-        """
-        deriv = np.zeros(y_n.shape)
-        deriv[..., b_idx] = 1
-        return deriv
+        y_n     y list for layer n
 
-    @classmethod
-    @abstractmethod
-    def y_d_b_mat(cls, y_n):
-        """
-        difference from y_d_b_single version: get derivative w.r.t. the whole
-        bias vector, rather than a single bias. 
-        --> return matrix shape: .. x .. x (nodes in n layer)
+        return matrix shape: .. x .. x (nodes in n layer)
         """
         return np.ones(y_n.shape)
 
     @classmethod
     @abstractmethod
-    def yn_d_yn1_mat(cls, y_n, w):
+    def yn_d_yn1(cls, y_n, w):
         """
         w is the weight array, which should be strictly 2D
         return the derivative of y_n w.r.t y_(n-1)
@@ -128,30 +101,16 @@ class Node_linear(Node_activity):
         return super(Node_linear, cls).act_forward(prev_layer_out, w, b)
 
     @classmethod
-    def y_d_w_single(cls, y_n, y_n_1, w_idx):
-        """
-        probably obsolete: use y_d_w_mat version
-        """
-        return super(Node_linear, cls).y_d_w_single(y_n, y_n_1, w_idx)
-
-    @classmethod
-    def y_d_w_mat(cls, y_n, y_n_1):
-        return super(Node_linear, cls).y_d_w_mat(y_n, y_n_1)
+    def y_d_w(cls, y_n, y_n_1):
+        return super(Node_linear, cls).y_d_w(y_n, y_n_1)
     
     @classmethod
-    def y_d_b_single(cls, y_n, b_idx):
-        """
-        probably obsolete: use y_d_b_mat version
-        """
-        return super(Node_linear, cls).y_d_b_single(y_n, b_idx)
+    def y_d_b(cls, y_n):
+        return super(Node_linear, cls).y_d_b(y_n)
 
     @classmethod
-    def y_d_b_mat(cls, y_n):
-        return super(Node_linear, cls).y_d_b_mat(y_n)
-
-    @classmethod
-    def yn_d_yn1_mat(cls, y_n, w):
-        return super(Node_linear, cls).yn_d_yn1_mat(y_n, w)
+    def yn_d_yn1(cls, y_n, w):
+        return super(Node_linear, cls).yn_d_yn1(y_n, w)
 
 
 
@@ -175,49 +134,23 @@ class Node_sigmoid(Node_activity):
         return 1. / (1 + expz)
 
     @classmethod
-    def y_d_w_single(cls, y_n, y_n_1, w_idx):
-        """
-        probably obsolete: use y_d_w_mat version
-        """
-        y_n_sub = y_n[..., w_idx[1]]
-        d_sigmo = y_n_sub * (1 - y_n_sub)
-        d_chain = super(Node_sigmoid, cls).y_d_w_single(y_n, y_n_1, w_idx)[..., w_idx[1]]
-        deriv = np.zeros(y_n.shape)
-        # apply chain rule
-        deriv[..., w_idx[1]] = d_sigmo * d_chain
-        return deriv
-
-    @classmethod
-    def y_d_w_mat(cls, y_n, y_n_1, w_idx):
-        d_chain = super(Node_sigmoid, cls).y_d_w_mat(y_n, y_n_1)
+    def y_d_w(cls, y_n, y_n_1, w_idx):
+        d_chain = super(Node_sigmoid, cls).y_d_w(y_n, y_n_1)
         d_sigmo = y_n * (1 - y_n)
         arr_util.expand_col(d_sigmo, y_n_1.shape[-1])
         # apply chain rule
         return d_chain * d_sigmo
 
     @classmethod
-    def y_d_b_single(cls, y_n, b_idx):
-        """
-        probably obsolete: use y_d_b_mat version
-        """
-        y_n_sub = y_n[..., b_idx]
-        d_sigmo = y_n_sub * (1 - y_n_sub)
-        d_chain = super(Node_sigmoid, cls).y_d_b_single(y_n, b_idx)[..., b_idx]
-        deriv = np.zeros(y_n.shape)
-        # apply chain rule
-        deriv[..., b_idx] = d_sigmo * d_chain
-        return deriv
-
-    @classmethod
-    def y_d_b_mat(cls, y_n):
+    def y_d_b(cls, y_n):
         d_sigmo = y_n * (1 - y_n)
-        d_chain = super(Node_sigmoid, cls).y_d_b_mat(y_n)
+        d_chain = super(Node_sigmoid, cls).y_d_b(y_n)
         # apply chain rule
         return d_sigmo * d_chain
 
     @classmethod
-    def yn_d_yn1_mat(cls, y_n, w):
-        d_chain = super(Node_sigmoid, cls).yn_d_yn1_mat(y_n, w)
+    def yn_d_yn1(cls, y_n, w):
+        d_chain = super(Node_sigmoid, cls).yn_d_yn1(y_n, w)
         d_sigmo = y_n * (1 - y_n)
         arr_util.expand_col(d_sigmo, w.shape[0])
         # apply chain rule

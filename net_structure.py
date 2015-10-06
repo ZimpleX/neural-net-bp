@@ -82,7 +82,7 @@ class Net_structure:
                 .act_forward(layer_out, self.w_list[i], self.b_list[i])
         return layer_out
 
-    def net_c_d_yi_mat(self, c_d_yi1, y_i1, i):
+    def net_c_d_yi(self, c_d_yi1, y_i1, i):
         """
         get the derivative matrix of cost w.r.t. output y of layer i
         this function is recursive by its nature
@@ -91,7 +91,7 @@ class Net_structure:
         y_i1        the output in the i+1 layer
         c_d_yi1     the derivative of cost w.r.t. output y of layer i+1
         """
-        d_chain = self.activ_list[i].yn_d_yn1_mat(y_i1, self.w_list[i])
+        d_chain = self.activ_list[i].yn_d_yn1(y_i1, self.w_list[i])
         d_prev = c_d_yi1
         # expand d_prev
         dim = len(d_prev.shape)
