@@ -1,0 +1,2 @@
+TARGET=0
+INPUT=1

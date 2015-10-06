@@ -8,6 +8,8 @@ define the general structure of the whole network, including:
 import numpy as np
 from node_activity import *
 from cost import *
+from data_setup import *
+from conf import *
 import util.array_proc as arr_util
 
 
@@ -93,7 +95,7 @@ class Net_structure:
             self.y_list[i+1] = layer_out
         return layer_out
 
-    def back_prop(self, data, target, conf):
+    def back_prop(self, target, conf):
         """
         do the actual back-propagation
         """
@@ -130,6 +132,8 @@ if __name__ == "__main__":
     ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear], Cost_sqr)
     print(ns)
     print(ns.net_act_forward(np.array(range(12)).reshape(2,3,2)))
-
+    fpath = 'train.ignore.dir/3_03'
+    data_set = Data(fpath, [TARGET, INPUT, INPUT, INPUT])
+    print(data_set)
     #print act.Node_sigmoid.act_forward(np.array(range(4)).reshape(2,2), np.array(range(6)).reshape(2,3), np.array([3,4,5]))
 
