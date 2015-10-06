@@ -93,22 +93,6 @@ class Net_structure:
             self.y_list[i+1] = layer_out
         return layer_out
 
-    def net_c_d_yi(self, c_d_yi1, y_i1, i):
-        """
-        get the derivative matrix of cost w.r.t. output y of layer i
-        this function is recursive by its nature
-
-        argument:
-        y_i1        the output in the i+1 layer
-        c_d_yi1     the derivative of cost w.r.t. output y of layer i+1
-        """
-        d_chain = self.activ_list[i].yn_d_yn1(y_i1, self.w_list[i])
-        d_prev = c_d_yi1
-        # expand d_prev
-        d_prev = arr_util.expand_col(d_prev, self.w_list[i].shape[0])
-        dim = len(d_prev.shape)
-        return np.sum(d_prev * d_chain, axis=dim-2)
-
     def back_prop(self, data, target, conf):
         """
         do the actual back-propagation
@@ -116,7 +100,6 @@ class Net_structure:
         b_rate = conf.b_rate
         w_rate = conf.w_rate
         cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
-        #cur_c_d_y = arr_util.expand_col(cur_c_d_y, self.w_list[-1].shape[0])
         for n in range(self.num_layer-1, -1, -1):
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
@@ -138,7 +121,10 @@ class Net_structure:
             if n > 0:
                 # don't update if prev layer is input layer
                 d_chain = cur_f.yn_d_yn1(cur_y, self.w_list[n])
-                cur_c_d_y = np.sum(chain * cur_c_d_y_exp, axis=-1)
+                cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
+
+
+
 
 if __name__ == "__main__":
     ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear], Cost_sqr)
