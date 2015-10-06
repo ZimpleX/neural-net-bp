@@ -121,14 +121,24 @@ class Net_structure:
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
-            temp_b = cur_c_d_y * cur_f.y_d_b(cur_y)
-            # TODO: flatten temp_b
-            self.b_list[n] -= b_rate * temp_b
+            # size of higher dimension (e.g.: num of training tuples)
+            hi_sz = cur_y.size / cur_y.shape[-1]
+            # update bias
+            temp = cur_c_d_y * cur_f.y_d_b(cur_y)
+            temp = temp.reshape(hi_sz, cur_y.shape[-1])
+            temp = np.sum(temp, axis=0)
+            self.b_list[n] -= b_rate * temp
+            # update weight
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
-            temp_w = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
-            # TODO: flatten temp_w
-            self.w_list[n] -= w_rate * temp_w
-
+            temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
+            temp = temp.reshape([hi_sz] + self.w_list[n].shape)
+            temp = np.sum(temp, axis=0)
+            self.w_list[n] -= w_rate * temp
+            # update derivative of cost w.r.t prev layer output
+            if n > 0:
+                # don't update if prev layer is input layer
+                d_chain = cur_f.yn_d_yn1(cur_y, self.w_list[n])
+                cur_c_d_y = np.sum(chain * cur_c_d_y_exp, axis=-1)
 
 if __name__ == "__main__":
     ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear], Cost_sqr)
