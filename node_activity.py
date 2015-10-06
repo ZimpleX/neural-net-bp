@@ -14,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from math import exp
 import util.array_proc as arr_util
+from functools import reduce
 
 class Node_activity:
     """
@@ -81,9 +82,9 @@ class Node_activity:
         assert len(w.shape) == 2
         # shape w/o the last dimension
         hi_dim_shp = [y_n.shape[i] for i in range(len(y_n.shape)-1)]
-        exp_coef = reduce(lambda x,y: x*y, hi_dim_shp)
+        exp_coef = reduce(lambda x, y: x*y, hi_dim_shp)
         w2 = np.expand_dims(w, axis=0)
-        w2 = repeat(w2, exp_coef, axis=0)
+        w2 = np.repeat(w2, exp_coef, axis=0)
         shape = hi_dim_shp + list(w.shape)
         return w2.reshape(shape)
 
@@ -128,7 +129,7 @@ class Node_sigmoid(Node_activity):
         sz = z.size
         # flatten z and compute exp, then restore original shape
         # python3.x: have to convert to list first
-        expz = list(map(lambda x: exp(x), z.reshape(sz)))
+        expz = list(map(lambda x: exp(-x), z.reshape(sz)))
         expz = np.array(expz)
         expz = expz.reshape(shape)
         return 1. / (1 + expz)

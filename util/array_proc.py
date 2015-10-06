@@ -22,4 +22,5 @@ def expand_col_swap(arr, repeat_num):
     make it a new dimension and swap the last 2 axes
     """
     dim = len(arr.shape)
-    return expand_col(arr, repeat_num).swapaxes(dim-1, dim-2)
+    # NOTE: this dim is the dim before expansion
+    return expand_col(arr, repeat_num).swapaxes(dim, dim-1)

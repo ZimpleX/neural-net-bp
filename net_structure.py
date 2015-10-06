@@ -66,13 +66,13 @@ class Net_structure:
         """
         net_stat = ''
         for i in range(self.num_layer-1, -1, -1):
-            net_stat += '--------------------------\n'
+            net_stat += line_dash
             net_stat += 'layer {}: {} nodes\n'.format(i+1, self.w_list[i].shape[1])
-            net_stat += '--------------------------\n'
+            net_stat += line_dash
             net_stat += 'weight\n{}\nbias\n{}\n'.format(self.w_list[i], self.b_list[i])
-        net_stat += '--------------------------\n'
+        net_stat += line_dash
         net_stat += 'layer {}: {} nodes\n'.format(0, self.w_list[0].shape[0])
-        net_stat += '--------------------------\n'
+        net_stat += line_dash
         return net_stat
 
     def net_act_forward(self, data):
@@ -116,7 +116,8 @@ class Net_structure:
             # update weight
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
             temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
-            temp = temp.reshape([hi_sz] + self.w_list[n].shape)
+
+            temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
             temp = np.sum(temp, axis=0)
             self.w_list[n] -= w_rate * temp
             # update derivative of cost w.r.t prev layer output
@@ -129,11 +130,21 @@ class Net_structure:
 
 
 if __name__ == "__main__":
-    ns = Net_structure([2,3,4], [Node_sigmoid, Node_linear], Cost_sqr)
-    print(ns)
-    print(ns.net_act_forward(np.array(range(12)).reshape(2,3,2)))
-    fpath = 'train.ignore.dir/3_03'
-    data_set = Data(fpath, [TARGET, INPUT, INPUT, INPUT])
+    fpath_train = 'train.ignore.dir/AttenSin/3_04'
+    fpath_test = 'train.ignore.dir/AttenSin/3_03'
+    net = Net_structure([3,4,1], [Node_sigmoid, Node_linear], Cost_sqr)
+    #net = Net_structure([3,1], [Node_sigmoid], Cost_sqr)
+    print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
+    data_set = Data(fpath_train, fpath_test, [TARGET, INPUT, INPUT, INPUT])
+    conf = Conf(300, 0.0001, 0.001, 0.001)
     print(data_set)
-    #print act.Node_sigmoid.act_forward(np.array(range(4)).reshape(2,2), np.array(range(6)).reshape(2,3), np.array([3,4,5]))
+    for itr in range(conf.num_itr):
+        cur_net_out = net.net_act_forward(data_set.data)
+        if itr % 1 == 0:
+            print('itr {}\ncost {}\n'.format(itr, Cost_sqr.act_forward(cur_net_out, data_set.target)))
+        net.back_prop(data_set.target, conf)
+        print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
+    print('{}final net\n{}{}\n'.format(line_star, line_star, net))
 
+    print(line_star*3)
+    print(net.net_act_forward(data_set.test_d))

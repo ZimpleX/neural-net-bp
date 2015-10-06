@@ -29,7 +29,7 @@ class Cost_sqr(Cost):
     """
     @classmethod
     def act_forward(cls, y_out, t):
-        return 0.5 * sum((y_out-t)*(y_out-t), axis=-1)
+        return 0.5 * np.sum((y_out-t)*(y_out-t), axis=-1)
 
     @classmethod
     def c_d_y(cls, y_out, t):
