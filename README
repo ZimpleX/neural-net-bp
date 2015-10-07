@@ -1,5 +1,5 @@
-aim to build a general neural net whose num of layers, num of nodes in each layer & neuron activity in each layer can be arbitrarily specified. 
+--  aim to build a general neural net whose num of layers, num of nodes in each layer & neuron activity in each layer can be arbitrarily specified. 
+--  training is using back-propagation
+--  supporting python3, no guarantee about python2
 
-training is using back-propagation
-
-supporting python3, no guarantee about python2
+--  To run the test: start from this dir, then `python -m test.test`
