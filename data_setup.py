@@ -40,10 +40,3 @@ class Data:
         return '{}data\n{}input is\n{}\ntarget is\n{}\n'.format(line_ddash, line_ddash, self.data, self.target)
 
 
-class Conf:
-    def __init__(self, num_itr, b_rate, w_rate, t_cost):
-        self.num_itr = num_itr
-        self.b_rate = b_rate
-        self.w_rate = w_rate
-        # threshold of cost for stop training
-        self.t_cost = t_cost

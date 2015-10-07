@@ -12,6 +12,8 @@ from data_setup import *
 from conf import *
 import util.array_proc as arr_util
 
+import pdb
+
 
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
@@ -60,6 +62,13 @@ class Net_structure:
         # store the output of each layer
         self.y_list = [None] * (self.num_layer + 1)
 
+    def set_w_b(self, w_list, b_list):
+        """
+        setter for weight and bias matrix
+        """
+        self.w_list = w_list
+        self.b_list = b_list
+
     def __str__(self):
         """
         print the value of weight and bias array, for each layer
@@ -87,6 +96,7 @@ class Net_structure:
         return:
             layer_out   the output from the output layer
         """
+        # pdb.set_trace()
         self.y_list[0] = data
         layer_out = data
         for i in range(self.num_layer):
@@ -103,6 +113,7 @@ class Net_structure:
         w_rate = conf.w_rate
         cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
         for n in range(self.num_layer-1, -1, -1):
+            # print('layer {} c d y\n{}\n'.format(n, cur_c_d_y))
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
@@ -112,6 +123,7 @@ class Net_structure:
             temp = cur_c_d_y * cur_f.y_d_b(cur_y)
             temp = temp.reshape(hi_sz, cur_y.shape[-1])
             temp = np.sum(temp, axis=0)
+            # print('bias update\n{}\n'.format(temp))
             self.b_list[n] -= b_rate * temp
             # update weight
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
@@ -119,31 +131,36 @@ class Net_structure:
 
             temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
             temp = np.sum(temp, axis=0)
+            # print('weight update\n{}\n'.format(temp))
+            w_n = np.copy(self.w_list[n])
             self.w_list[n] -= w_rate * temp
             # update derivative of cost w.r.t prev layer output
             if n > 0:
                 # don't update if prev layer is input layer
-                d_chain = cur_f.yn_d_yn1(cur_y, self.w_list[n])
+                d_chain = cur_f.yn_d_yn1(cur_y, w_n)
+                print('layer {} d yn d yn-1 \n{}\n'.format(n, d_chain))
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
 
 
 
 
 if __name__ == "__main__":
+    # fpath_train = 'test/test.ignore.dir/1o3i'
     fpath_train = 'train.ignore.dir/AttenSin/3_04'
     fpath_test = 'train.ignore.dir/AttenSin/3_03'
-    net = Net_structure([3,4,1], [Node_sigmoid, Node_linear], Cost_sqr)
+    net = Net_structure([3,2,1], [Node_sigmoid, Node_linear], Cost_sqr)
     #net = Net_structure([3,1], [Node_sigmoid], Cost_sqr)
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
     data_set = Data(fpath_train, fpath_test, [TARGET, INPUT, INPUT, INPUT])
-    conf = Conf(300, 0.0001, 0.001, 0.001)
+    conf = Conf(200, 0.0001, 0.001, 0.001)
     print(data_set)
     for itr in range(conf.num_itr):
         cur_net_out = net.net_act_forward(data_set.data)
-        if itr % 1 == 0:
-            print('itr {}\ncost {}\n'.format(itr, Cost_sqr.act_forward(cur_net_out, data_set.target)))
+        if itr % 10 == 0:
+            print('\t{}\titr {}\n\tcost {}\n\t{}\n'.format(line_star, itr, Cost_sqr.act_forward(cur_net_out, data_set.target), line_star))
+            # print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
         net.back_prop(data_set.target, conf)
-        print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
+        # print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
     print('{}final net\n{}{}\n'.format(line_star, line_star, net))
 
     print(line_star*3)
