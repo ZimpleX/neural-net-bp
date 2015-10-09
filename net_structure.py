@@ -113,7 +113,6 @@ class Net_structure:
         w_rate = conf.w_rate
         cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
         for n in range(self.num_layer-1, -1, -1):
-            # print('layer {} c d y\n{}\n'.format(n, cur_c_d_y))
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
