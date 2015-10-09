@@ -1,3 +1,8 @@
+"""
+NOTE:
+    invoke this script from parent dir
+"""
+
 from cost import *
 from net_structure import *
 from node_activity import *
@@ -6,6 +11,8 @@ from data_setup import *
 import unittest as ut
 from numpy import *
 from numpy.testing import *
+from util.data_proc import *
+import os
 
 ACT_FORWARD_FAIL='net act forward failed'
 
@@ -28,8 +35,13 @@ class Test_deriv(ut.TestCase):
         #if verbose:
         #    print('{}net after ff\n{}{}\n'.format(line_star, line_star, net))
 
+class Test_util(ut.TestCase):
+    def test_populate_db(self):
+        populate_db(['a', 'b', 'c'], ['TEXT', 'INTEGER', 'REAL'], ['yo'], array(range(6)).reshape(3,2), db_path='data/', db_name='unittest.db')
+        os.remove('data/unittest.db')
 
 if __name__ == "__main__":
     # ut.main()
-    suite = ut.TestLoader().loadTestsFromTestCase(Test_deriv)
+    #suite = ut.TestLoader().loadTestsFromTestCase(Test_deriv)
+    suite = ut.TestLoader().loadTestsFromTestCase(Test_util)
     ut.TextTestRunner(verbosity=2).run(suite)
