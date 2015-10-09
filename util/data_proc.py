@@ -10,7 +10,7 @@ from functools import reduce
 import pdb
 
 
-def populate_db(attr_name, attr_type, *d_tuple, db_path='../data/', db_name='unnamed.db', 
+def populate_db(attr_name, attr_type, *d_tuple, db_path='data/', db_name='unnamed.db', 
         table_name='null|null', overwrite=False, append_time=True):
     """
     populate data into database

@@ -11,6 +11,7 @@ from cost import *
 from data_setup import *
 from conf import *
 import util.array_proc as arr_util
+import argparse
 
 import pdb
 
@@ -54,9 +55,9 @@ class Net_structure:
         self.num_layer = len(layer_size_list) - 1
         assert len(activ_list) == self.num_layer
 
-        self.w_list = [np.zeros((layer_size_list[i], layer_size_list[i+1]))
+        self.w_list = [np.random.rand(layer_size_list[i], layer_size_list[i+1]) - 0.5
                         for i in range(self.num_layer)]
-        self.b_list = [np.zeros(layer_size_list[i+1]) for i in range(self.num_layer)]
+        self.b_list = [np.random.rand(layer_size_list[i+1]) - 0.5 for i in range(self.num_layer)]
         self.activ_list = activ_list
         self.cost = cost_type
         # store the output of each layer
@@ -96,7 +97,6 @@ class Net_structure:
         return:
             layer_out   the output from the output layer
         """
-        # pdb.set_trace()
         self.y_list[0] = data
         layer_out = data
         for i in range(self.num_layer):
@@ -123,45 +123,75 @@ class Net_structure:
             temp = cur_c_d_y * cur_f.y_d_b(cur_y)
             temp = temp.reshape(hi_sz, cur_y.shape[-1])
             temp = np.sum(temp, axis=0)
-            # print('bias update\n{}\n'.format(temp))
+            if __debug__:
+                print('bias update\n{}\n'.format(temp))
             self.b_list[n] -= b_rate * temp
             # update weight
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
             temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
+            #pdb.set_trace()
 
             temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
             temp = np.sum(temp, axis=0)
-            # print('weight update\n{}\n'.format(temp))
+            if __debug__:
+                print('weight update\n{}\n'.format(temp))
             w_n = np.copy(self.w_list[n])
             self.w_list[n] -= w_rate * temp
             # update derivative of cost w.r.t prev layer output
             if n > 0:
                 # don't update if prev layer is input layer
                 d_chain = cur_f.yn_d_yn1(cur_y, w_n)
-                print('layer {} d yn d yn-1 \n{}\n'.format(n, d_chain))
+                if __debug__:
+                    print('layer {} d yn d yn-1 \n{}\n'.format(n, d_chain))
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
 
+
+def parse_args():
+    itr_default = None
+    wr_default = 0.001
+    br_default = 0.001
+    if __debug__:
+        itr_default = 3
+    else:
+        itr_default = 100
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--itr', type=int, metavar='ITR',
+            default=itr_default, help='max num of iterations for trainging')
+    parser.add_argument('-w', '--wrate', type=float, metavar='W_RATE',
+            default=wr_default, help='weight update rate')
+    parser.add_argument('-b', '--brate', type=float, metavar='B_RATE',
+            default=br_default, help='bias update rate')
+    return parser.parse_args()
 
 
 
 if __name__ == "__main__":
-    # fpath_train = 'test/test.ignore.dir/1o3i'
-    fpath_train = 'train.ignore.dir/AttenSin/3_04'
-    fpath_test = 'train.ignore.dir/AttenSin/3_03'
+    args = parse_args()
+    if __debug__:
+        print('{}{}debug on{}{}'.format(line_ddash, line_ddash, line_ddash, line_ddash))
+    #fpath_train = 'test/test.ignore.dir/1o3i'
+    fpath_train = 'train.ignore.dir/AttenSin2/3_03'
+    fpath_test = 'train.ignore.dir/AttenSin2/3_03'
     net = Net_structure([3,2,1], [Node_sigmoid, Node_linear], Cost_sqr)
     #net = Net_structure([3,1], [Node_sigmoid], Cost_sqr)
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
     data_set = Data(fpath_train, fpath_test, [TARGET, INPUT, INPUT, INPUT])
-    conf = Conf(200, 0.0001, 0.001, 0.001)
+    conf = Conf(args.itr, args.wrate, args.brate, 0.001)
     print(data_set)
     for itr in range(conf.num_itr):
         cur_net_out = net.net_act_forward(data_set.data)
-        if itr % 10 == 0:
-            print('\t{}\titr {}\n\tcost {}\n\t{}\n'.format(line_star, itr, Cost_sqr.act_forward(cur_net_out, data_set.target), line_star))
-            # print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
+        stride = None
+        if __debug__:
+            stride = 1
+        else:
+            stride = 10
+        if itr % stride == 0:
+            if __debug__:
+                print('\t{}\titr {}\n\tcost {}\n\t{}\n'.format(line_star, itr, Cost_sqr.act_forward(cur_net_out, data_set.target), line_star))
+                print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
         net.back_prop(data_set.target, conf)
-        # print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
+        print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
     print('{}final net\n{}{}\n'.format(line_star, line_star, net))
-
+    print('final output {}\n'.format(net.y_list[2]))
     print(line_star*3)
     print(net.net_act_forward(data_set.test_d))
