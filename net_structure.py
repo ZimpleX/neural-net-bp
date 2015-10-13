@@ -3,6 +3,13 @@ define the general structure of the whole network, including:
     num of nodes in each layer;
     activate function of each layer;
     deritive of the active function (w.r.t weight / output of prev layer / bias)
+
+
+TODO:
+    convert to mini-batch or online training
+    sum Cost function w.r.t all examples in one mini-batch
+    when obtaining delta, divide by size of mini-batch
+    add momentum / adapt learning rate
 """
 
 import numpy as np
@@ -169,9 +176,9 @@ if __name__ == "__main__":
     if __debug__:
         print('{}{}debug on{}{}'.format(line_ddash, line_ddash, line_ddash, line_ddash))
     #fpath_train = 'test/test.ignore.dir/1o3i'
-    fpath_train = 'train.ignore.dir/AttenSin2/3_03'
-    fpath_test = 'train.ignore.dir/AttenSin2/3_03'
-    net = Net_structure([3,2,1], [Node_sigmoid, Node_linear], Cost_sqr)
+    fpath_train = 'train.ignore.dir/Asst1/train'
+    fpath_test = 'train.ignore.dir/Asst1/test'
+    net = Net_structure([8,10,5], [Node_sigmoid, Node_linear], Cost_sqr)
     #net = Net_structure([3,1], [Node_sigmoid], Cost_sqr)
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
     data_set = Data(fpath_train, fpath_test, [TARGET, INPUT, INPUT, INPUT])
@@ -179,6 +186,7 @@ if __name__ == "__main__":
     print(data_set)
     for itr in range(conf.num_itr):
         cur_net_out = net.net_act_forward(data_set.data)
+        Cost_sqr.act_forward(cur_net_out, data_set.target)
         stride = None
         if __debug__:
             stride = 1
