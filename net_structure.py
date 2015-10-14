@@ -6,10 +6,11 @@ define the general structure of the whole network, including:
 
 
 TODO:
-    convert to mini-batch or online training
+    <del>convert to mini-batch or online training</del>
     sum Cost function w.r.t all examples in one mini-batch
     when obtaining delta, divide by size of mini-batch
     add momentum / adapt learning rate
+    add gradient checking using finite difference
 """
 
 import numpy as np
@@ -153,20 +154,29 @@ class Net_structure:
 
 
 def parse_args():
-    itr_default = None
+    epc_default = None
     wr_default = 0.001
     br_default = 0.001
+    batch_def = 1
+    ptrain_def = 'train_data/AttenSin2/3_04'
+    ptest_def = 'train_data/AttenSin2/3_03'
     if __debug__:
-        itr_default = 3
+        epc_default = 3
     else:
-        itr_default = 100
+        epc_default = 100
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--itr', type=int, metavar='ITR',
-            default=itr_default, help='max num of iterations for trainging')
-    parser.add_argument('-w', '--wrate', type=float, metavar='W_RATE',
+    parser.add_argument('-e', '--epoch', type=int, metavar='EPOCH',
+            default=epc_default, help='max num of iterations for trainging')
+    parser.add_argument('-wr', '--w_rate', type=float, metavar='W_RATE',
             default=wr_default, help='weight update rate')
-    parser.add_argument('-b', '--brate', type=float, metavar='B_RATE',
+    parser.add_argument('-br', '--b_rate', type=float, metavar='B_RATE',
             default=br_default, help='bias update rate')
+    parser.add_argument('-bt', '--batch', type=int, metavar='BATCH',
+            default=batch_def, help='size of mini-batch')
+    parser.add_argument('-ptn', '--path_train', type=str, metavar='PATH_TRAIN',
+            default=ptrain_def, help='path to the training data set')
+    parser.add_argument('-pts', '--path_test', type=str, metavar='PATH_TEST',
+            default=ptest_def, help='path to the testing data set')
     return parser.parse_args()
 
 
@@ -175,30 +185,36 @@ if __name__ == "__main__":
     args = parse_args()
     if __debug__:
         print('{}{}debug on{}{}'.format(line_ddash, line_ddash, line_ddash, line_ddash))
-    #fpath_train = 'test/test.ignore.dir/1o3i'
-    fpath_train = 'train.ignore.dir/Asst1/train'
-    fpath_test = 'train.ignore.dir/Asst1/test'
-    net = Net_structure([8,10,5], [Node_sigmoid, Node_linear], Cost_sqr)
+    net = Net_structure([3,10,1], [Node_sigmoid, Node_linear], Cost_sqr)
     #net = Net_structure([3,1], [Node_sigmoid], Cost_sqr)
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
-    data_set = Data(fpath_train, fpath_test, [TARGET, INPUT, INPUT, INPUT])
-    conf = Conf(args.itr, args.wrate, args.brate, 0.001)
+    data_set = Data(args.path_train, args.path_test, [TARGET, INPUT, INPUT, INPUT])
+    conf = Conf(args.epoch, args.w_rate, args.b_rate, 0.001)
     print(data_set)
-    for itr in range(conf.num_itr):
-        cur_net_out = net.net_act_forward(data_set.data)
-        Cost_sqr.act_forward(cur_net_out, data_set.target)
-        stride = None
-        if __debug__:
-            stride = 1
-        else:
-            stride = 10
-        if itr % stride == 0:
+    for epoch in range(conf.num_epoch):
+        cost_bat = 0.
+        for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
+            cur_net_out = net.net_act_forward(bat_ipt)
+            cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
+            stride = None
             if __debug__:
-                print('\t{}\titr {}\n\tcost {}\n\t{}\n'.format(line_star, itr, Cost_sqr.act_forward(cur_net_out, data_set.target), line_star))
-                print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
-        net.back_prop(data_set.target, conf)
-        print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
+                stride = 1
+            else:
+                stride = 10
+            if b % stride == 0:
+                if __debug__:
+                    print('\t{}\tepoch {} batch {}\n\tcost {}\n\t{}\n' \
+                            .format(line_star, epoch, b, Cost_sqr.act_forward(cur_net_out, bat_tgt), line_star))
+                    print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
+            net.back_prop(bat_tgt, conf)
+            print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
+        print('{}end of epoch {}, sum of cost over all batches: {}\n{}' \
+                .format(line_ddash, epoch, cost_bat, line_ddash))
+
     print('{}final net\n{}{}\n'.format(line_star, line_star, net))
     print('final output {}\n'.format(net.y_list[2]))
     print(line_star*3)
     print(net.net_act_forward(data_set.test_d))
+    if __debug__:
+        print('debug {}'.format(__debug__))
+        print('num epoches {}\n'.format(conf.num_epoch))

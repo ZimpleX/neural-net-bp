@@ -39,4 +39,16 @@ class Data:
     def __str__(self):
         return '{}data\n{}input is\n{}\ntarget is\n{}\n'.format(line_ddash, line_ddash, self.data, self.target)
 
+    def get_batches(self, batch_size):
+        """
+        continuously yield mini-batches of data, 
+        by segmenting the whole data set
+        """
+        if self.data.shape[0] % batch_size != 0:
+            raise RuntimeError('num of data tuples is not a multiple of batch size')
+        num_batch = self.data.shape[0] // batch_size
+        for b in range(num_batch):
+            yield self.data[b*batch_size:(b+1)*batch_size, :], \
+                    self.target[b*batch_size:(b+1)*batch_size, :]
+
 

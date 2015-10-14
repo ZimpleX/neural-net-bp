@@ -7,8 +7,8 @@ line_ddash=('=' * 20) + '\n'
 line_star=('*' * 20) + '\n'
 
 class Conf:
-    def __init__(self, num_itr, b_rate, w_rate, t_cost):
-        self.num_itr = num_itr
+    def __init__(self, num_epoch, b_rate, w_rate, t_cost):
+        self.num_epoch = num_epoch
         self.b_rate = b_rate
         self.w_rate = w_rate
         # threshold of cost for stop training
