@@ -37,3 +37,8 @@ class Cost_sqr(Cost):
         return a derivative matrix
         """
         return y_out - t
+
+
+#####################################
+#####################################
+cost_dict = {'sqr': Cost_sqr}

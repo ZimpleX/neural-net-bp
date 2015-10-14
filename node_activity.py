@@ -16,6 +16,7 @@ from math import exp
 import util.array_proc as arr_util
 from functools import reduce
 
+
 class Node_activity:
     """
     super class for all other node activity classes
@@ -156,3 +157,10 @@ class Node_sigmoid(Node_activity):
         d_sigmo = arr_util.expand_col(d_sigmo, w.shape[0])
         # apply chain rule
         return d_chain * d_sigmo
+
+
+
+#########################################
+#########################################
+activation_dict = {'sig': Node_sigmoid, 
+                   'lin': Node_linear}

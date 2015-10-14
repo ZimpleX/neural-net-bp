@@ -10,8 +10,8 @@ from functools import reduce
 import pdb
 
 
-def populate_db(attr_name, attr_type, *d_tuple, db_path='data/', db_name='unnamed.db', 
-        table_name='null|null', overwrite=False, append_time=True):
+def populate_db(attr_name, attr_type, *d_tuple, db_path='profile_data/', db_name='ann.db', 
+        table_name='null|null', overwrite=False, append_time=True, usr_time=None):
     """
     populate data into database
     optionally append the time to each data tuple
@@ -19,13 +19,13 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path='data/', db_name='unname
     arguments:
     attr_name       list of attribute name in database
     attr_type       type of attr: e.g.: INTEGER, TEXT, REAL...
+    d_tuple         arbitrary num of arguments that consist of the tuple
+                    can be 1D or 2D: if 1D, expand it to 2D
     db_path         path of database
     db_name         name of database
     table_name      table name
     overwrite       erase data in existing db if set true
     append_time     append timestamp to each data tuple if set true
-    d_tuple         arbitrary num of arguments that consist of the tuple
-                    can be 1D or 2D: if 1D, expand it to 2D
     """
     if not os.path.isdir(db_path):
         os.makedirs(db_path)
@@ -57,7 +57,8 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path='data/', db_name='unname
     if append_time:
         attr_name = ['populate_time'] + list(attr_name)
         attr_type = ['TEXT'] + list(attr_type)
-        time_col = array([strftime('[%D-%H:%M:%S]')] * num_tuples) \
+        time_str = usr_time and usr_time or strftime('[%D-%H:%M:%S]')
+        time_col = array([time_str] * num_tuples) \
                 .reshape(num_tuples, 1)
         d_fulltuple = concatenate((time_col, d_fulltuple), axis=1)
     # sqlite3

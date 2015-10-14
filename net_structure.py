@@ -19,7 +19,9 @@ from cost import *
 from data_setup import *
 from conf import *
 import util.array_proc as arr_util
+import util.data_proc as data_util
 import argparse
+from time import strftime
 
 import pdb
 
@@ -152,11 +154,17 @@ class Net_structure:
                     print('layer {} d yn d yn-1 \n{}\n'.format(n, d_chain))
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
 
-
+#############################################
+#############################################
 def parse_args():
+    """
+    accept cmd line options for specifying the ANN coefficient
+    """
     epc_default = None
-    wr_default = 0.001
-    br_default = 0.001
+    rate_default = 0.001
+    inc_rate_def = 1.
+    dec_rate_def = 1.
+    momentum_def = 0.
     batch_def = 1
     ptrain_def = 'train_data/AttenSin2/3_04'
     ptest_def = 'train_data/AttenSin2/3_03'
@@ -165,35 +173,68 @@ def parse_args():
     else:
         epc_default = 100
     parser = argparse.ArgumentParser()
+    parser.add_argument('--struct', type=int, metavar='NET_STRUCT',
+            nargs='+', help='specify the structure of the ANN (num of nodes in each layer)')
+    parser.add_argument('--activation', type=str, metavar='NET_ACTIVATION',
+            nargs='+', help='specify the activation of each layer',
+            choices=activation_dict.keys())
+    parser.add_argument('--cost', type=str, metavar='COST', 
+            help='specify the cost function',
+            choices=cost_dict.keys())
     parser.add_argument('-e', '--epoch', type=int, metavar='EPOCH',
-            default=epc_default, help='max num of iterations for trainging')
-    parser.add_argument('-wr', '--w_rate', type=float, metavar='W_RATE',
-            default=wr_default, help='weight update rate')
-    parser.add_argument('-br', '--b_rate', type=float, metavar='B_RATE',
-            default=br_default, help='bias update rate')
-    parser.add_argument('-bt', '--batch', type=int, metavar='BATCH',
+            default=epc_default, help='max num of iterations for training')
+    parser.add_argument('-r', '--rate', type=float, metavar='RATE',
+            default=rate_default, help='weight & bias update rate')
+    parser.add_argument('--inc_rate', type=float, metavar='INC_RATE',
+            default=inc_rate_def, help='learning rate increment rate')
+    parser.add_argument('--dec_rate', type=float, metavar='DEC_RATE',
+            default=dec_rate_def, help='learning rate decrement rate')
+    parser.add_argument('-m', '--momentum', type=float, metavar='MOMENTUM',
+            default=momentum_def, help='momentum coefficient')
+    parser.add_argument('-b', '--batch', type=int, metavar='BATCH',
             default=batch_def, help='size of mini-batch')
     parser.add_argument('-ptn', '--path_train', type=str, metavar='PATH_TRAIN',
             default=ptrain_def, help='path to the training data set')
     parser.add_argument('-pts', '--path_test', type=str, metavar='PATH_TEST',
             default=ptest_def, help='path to the testing data set')
+    parser.add_argument('--profile', action='store_true',
+            help='do you want to store the profiling data into db')
     return parser.parse_args()
 
 
-
+#############################################
+#############################################
 if __name__ == "__main__":
+
     args = parse_args()
+    timestamp = strftime('[%D-%H:%M:%S]')
+
+    assert len(args.struct) == len(args.activation) + 1
     if __debug__:
         print('{}{}debug on{}{}'.format(line_ddash, line_ddash, line_ddash, line_ddash))
-    net = Net_structure([3,10,1], [Node_sigmoid, Node_linear], Cost_sqr)
-    #net = Net_structure([3,1], [Node_sigmoid], Cost_sqr)
+    net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost])
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
     data_set = Data(args.path_train, args.path_test, [TARGET, INPUT, INPUT, INPUT])
-    conf = Conf(args.epoch, args.w_rate, args.b_rate, 0.001)
+    conf = Conf(args.epoch, args.rate, 0.001)
     print(data_set)
+
+    if (args.profile):    # store the conf of the ANN for this run
+                        # could be identified by parse time
+        struct_info = [str(args.struct[i+1])+args.activation[i] for i in range(len(args.activation))]
+        net_struct = '{}lin'.format(args.struct[0])
+        net_struct += reduce(lambda a,b:a+b, struct_info)
+
+        net_attr = ['struct', 'cost_type', 'train_data_name', 'test_data_name', 'batch_size', 'learn_rate', 'inc_rate', 'dec_rate', 'momentum']
+        net_val = np.array([net_struct, args.cost, args.path_train, args.path_test, 
+                args.batch, args.rate, args.inc_rate, args.dec_rate, args.momentum])
+        net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
+        data_util.populate_db(net_attr, net_attr_type, net_val, table_name='ann|meta', usr_time=timestamp)
+
     for epoch in range(conf.num_epoch):
         cost_bat = 0.
+        batch = 0
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
+            batch = b + 1
             cur_net_out = net.net_act_forward(bat_ipt)
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             stride = None
@@ -208,6 +249,12 @@ if __name__ == "__main__":
                     print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
             net.back_prop(bat_tgt, conf)
             print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
+        if args.profile:
+            # populate actual profiling data
+            prof_attr = ['epoch_num', 'batch_num', 'cost_sum']
+            prof_val = [epoch, batch, cost_bat]
+            prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
+            data_util.populate_db(prof_attr, prof_attr_type, prof_val, table_name='ann|profile', usr_time=timestamp)
         print('{}end of epoch {}, sum of cost over all batches: {}\n{}' \
                 .format(line_ddash, epoch, cost_bat, line_ddash))
 
@@ -215,6 +262,3 @@ if __name__ == "__main__":
     print('final output {}\n'.format(net.y_list[2]))
     print(line_star*3)
     print(net.net_act_forward(data_set.test_d))
-    if __debug__:
-        print('debug {}'.format(__debug__))
-        print('num epoches {}\n'.format(conf.num_epoch))

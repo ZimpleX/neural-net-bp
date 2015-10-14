@@ -1,5 +1,16 @@
 --  aim to build a general neural net whose num of layers, num of nodes in each layer & neuron activity in each layer can be arbitrarily specified. 
 --  training is using back-propagation
---  supporting python3, no guarantee about python2
+    supporting python3, no warrant for python2
 
---  To run the test: start from this dir, then `python -m test.test`
+--  To run the test: start from this dir, then `python -m test.test` (run as a module)
+
+--  you can choose to profile the net performance
+    metrics such as cost is populated into database
+    --  you can inspect it using sqlite3
+        common problem about sqlite3:
+        direction key may not work as expected in the sqlite3 shell, due to problem of readline lib
+        easiest work around for this:
+        `rlwrap sqlite3 <db_name>`
+        (could then alias sqlite to 'rlwrap sqlite3')
+    --  you can visualize db data using other tools, such as *benchtracker*
+        [https://github.com/LemonPi/benchtracker]
