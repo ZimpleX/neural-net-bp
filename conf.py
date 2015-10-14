@@ -8,15 +8,10 @@ INC_RATE = 1.
 DEC_RATE = 1.
 MOMENTUM = 0.
 BATCH_SIZE = 1
-TRAIN_DATA = 'train_data/AttenSin2/3_04'
-TEST_DATA = 'train_data/AttenSin2/3_03'
+TRAIN_DATA = 'train_data/AttenSin3/3_04'
+TEST_DATA = 'train_data/AttenSin3/3_03'
 
-EPOCH = None
-if __debug__:
-    EPOCH = 3
-else:
-    EPOCH = 100
-
+EPOCH = 100
 
 # specify which column in the data set file stands for target / input
 TARGET=0

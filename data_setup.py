@@ -51,4 +51,3 @@ class Data:
             yield self.data[b*batch_size:(b+1)*batch_size, :], \
                     self.target[b*batch_size:(b+1)*batch_size, :]
 
-

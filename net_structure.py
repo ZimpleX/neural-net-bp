@@ -132,8 +132,6 @@ class Net_structure:
             temp = cur_c_d_y * cur_f.y_d_b(cur_y)
             temp = temp.reshape(hi_sz, cur_y.shape[-1])
             temp = np.sum(temp, axis=0)
-            if __debug__:
-                print('bias update\n{}\n'.format(temp))
             self.b_list[n] -= b_rate * temp
             # update weight
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
@@ -142,16 +140,12 @@ class Net_structure:
 
             temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
             temp = np.sum(temp, axis=0)
-            if __debug__:
-                print('weight update\n{}\n'.format(temp))
             w_n = np.copy(self.w_list[n])
             self.w_list[n] -= w_rate * temp
             # update derivative of cost w.r.t prev layer output
             if n > 0:
                 # don't update if prev layer is input layer
                 d_chain = cur_f.yn_d_yn1(cur_y, w_n)
-                if __debug__:
-                    print('layer {} d yn d yn-1 \n{}\n'.format(n, d_chain))
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
 
 #############################################
@@ -198,53 +192,33 @@ if __name__ == "__main__":
     timestamp = strftime('[%D-%H:%M:%S]')
 
     assert len(args.struct) == len(args.activation) + 1
-    if __debug__:
-        print('{}{}debug on{}{}'.format(line_ddash, line_ddash, line_ddash, line_ddash))
     net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost])
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
     data_set = Data(args.path_train, args.path_test, [TARGET, INPUT, INPUT, INPUT])
     conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
-    print(data_set)
 
-    if (args.profile):    # store the conf of the ANN for this run
-                        # could be identified by parse time
-        struct_info = [str(args.struct[i+1])+args.activation[i] for i in range(len(args.activation))]
-        net_struct = '{}lin'.format(args.struct[0])
-        net_struct += '-' + reduce(lambda a,b:a+'-'+b, struct_info)
+    if (args.profile):      # store the conf of the ANN for this run
+                            # could be identified by parse time
+        data_util.profile_net_conf(args, timestamp)
+        data_util.profile_raw_data_set(data_set, timestamp)
 
-        net_attr = ['struct', 'cost_type', 'train_data_name', 'test_data_name', 'batch_size', 'learn_rate', 'inc_rate', 'dec_rate', 'momentum']
-        net_val = np.array([net_struct, args.cost, args.path_train, args.path_test, 
-                args.batch, args.rate, args.inc_rate, args.dec_rate, args.momentum])
-        net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
-        data_util.populate_db(net_attr, net_attr_type, net_val, table_name='ann|meta', usr_time=timestamp)
-
+    # main training loop
     for epoch in range(conf.num_epoch):
         cost_bat = 0.
         batch = 0
+        epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
             batch = b + 1
             cur_net_out = net.net_act_forward(bat_ipt)
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
-            stride = None
-            if __debug__:
-                stride = 1
-            else:
-                stride = 10
-            if b % stride == 0:
-                if __debug__:
-                    print('\t{}\tepoch {} batch {}\n\tcost {}\n\t{}\n' \
-                            .format(line_star, epoch, b, Cost_sqr.act_forward(cur_net_out, bat_tgt), line_star))
-                    print('{}output of all layers\n{}\n{}'.format(line_ddash, net.y_list, line_ddash))
             net.back_prop(bat_tgt, conf)
-            print('{}cur net\n{}{}\n'.format(line_star, line_star, net))
         if args.profile:
-            # populate actual profiling data
-            prof_attr = ['epoch_num', 'batch_num', 'cost_sum']
-            prof_val = [epoch, batch, cost_bat]
-            prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
-            data_util.populate_db(prof_attr, prof_attr_type, prof_val, table_name='ann|profile', usr_time=timestamp)
-        print('{}end of epoch {}, sum of cost over all batches: {}\n{}' \
-                .format(line_ddash, epoch, cost_bat, line_ddash))
+            data_util.profile_cost(epoch, batch, cost_bat, timestamp)
+            if epoch % epc_stride == 0:
+                data_util.profile_net_data(epoch, batch, net, data_set.data, timestamp)
+
+        print('end of epoch {}, sum of cost over all batches: {}' \
+                .format(epoch, cost_bat))
 
     print('{}final net\n{}{}\n'.format(line_star, line_star, net))
     print('final output {}\n'.format(net.y_list[2]))
