@@ -1,21 +1,21 @@
 # conf for the ANN: 
 #   can be overwritten by cmd line arg
-STRUCT = [3, 7, 1]
+STRUCT = [3, 9, 1]
 ACTIVATION = ['sig', 'lin']
 COST = 'sqr'
-LEARN_RATE = 0.001
+LEARN_RATE = 0.01
 INC_RATE = 1.
 DEC_RATE = 1.
 MOMENTUM = 0.
 BATCH_SIZE = 1
-TRAIN_DATA = 'train_data/AttenSin3/3_04'
-TEST_DATA = 'train_data/AttenSin3/3_03'
+TRAIN_DATA = 'train_data/AttenSin3/3_08'
+TEST_DATA = 'train_data/AttenSin3/3_04'
 
 EPOCH = 100
 
 # specify which column in the data set file stands for target / input
-TARGET=0
-INPUT=1
+TARGET='TARGET'
+INPUT='INPUT'
 # utils for printing
 line_dash=('-' * 20) + '\n'
 line_ddash=('=' * 20) + '\n'

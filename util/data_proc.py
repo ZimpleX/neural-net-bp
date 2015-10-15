@@ -9,8 +9,9 @@ from time import strftime
 from functools import reduce
 import pdb
 
+DIR_PARENT='profile_data/'
 
-def populate_db(attr_name, attr_type, *d_tuple, db_path='profile_data/', db_name='ann.db', 
+def populate_db(attr_name, attr_type, *d_tuple, db_path=DIR_PARENT, db_name='ann.db', 
         table_name='null|null', overwrite=False, append_time=True, usr_time=None):
     """
     populate data into database
@@ -84,7 +85,7 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path='profile_data/', db_name
 
 
 
-def profile_net_conf(args, timestamp):
+def profile_net_conf(data_dir_name, args, timestamp):
     """
     populate the conf of the ANN, timestamp is to identify each run:
     for join of different tables in the future
@@ -100,33 +101,36 @@ def profile_net_conf(args, timestamp):
     net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
     populate_db(net_attr, net_attr_type, net_val, 
-            table_name='meta|ann', usr_time=timestamp)
+        db_path=DIR_PARENT+data_dir_name, table_name='meta|ann', 
+        usr_time=timestamp)
 
 
-def profile_raw_data_set(data_set, timestamp):
+def profile_raw_data_set(data_dir_name, data_set, timestamp):
     """
     populate the raw data set that is used to train ANN
     """
     data_attr = ['x{}'.format(i) for i in range(data_set.data.shape[1])]
     data_attr += ['y{}'.format(i) for i in range(data_set.target.shape[1])]
     data_attr_type = ['REAL'] * (data_set.data.shape[1] + data_set.target.shape[1])
-    populate_db(data_attr, data_attr_type, data_set.data, 
-            data_set.target, table_name='raw_data|ann', usr_time=timestamp)
+    populate_db(data_attr, data_attr_type, data_set.data, data_set.target,
+        db_path=DIR_PARENT+data_dir_name, table_name='raw_data|ann', 
+        usr_time=timestamp)
 
 
 
-def profile_cost(epoch, batch, cost_bat, timestamp):
+def profile_cost(data_dir_name, epoch, batch, cost_bat, timestamp):
     """
     cost_bat is the sum of cost over some batches
     """
     prof_attr = ['epoch_num', 'batch_num', 'cost_sum']
     prof_val = [epoch, batch, cost_bat]
     prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
-    populate_db(prof_attr, prof_attr_type, prof_val, 
-            table_name='profile_cost|ann', usr_time=timestamp)
+    populate_db(prof_attr, prof_attr_type, prof_val,
+        db_path=DIR_PARENT+data_dir_name, table_name='profile_cost|ann', 
+        usr_time=timestamp)
 
 
-def profile_net_data(epoch, batch, net, net_ip, timestamp):
+def profile_net_data(data_dir_name, epoch, batch, net, net_ip, timestamp):
     """
     net_ip: raw input data, fed to net
     """
@@ -135,5 +139,6 @@ def profile_net_data(epoch, batch, net, net_ip, timestamp):
     data_attr += ['x{}'.format(i) for i in range(net_ip.shape[1])]
     data_attr += ['y{}'.format(i) for i in range(net_op.shape[1])]
     data_attr_type = ['INTEGER', 'INTEGER'] + ['REAL'] * (net_ip.shape[1] + net_op.shape[1])
-    populate_db(data_attr, data_attr_type, array([epoch, batch]), net_ip, net_op, 
-            table_name='net_data|ann', usr_time=timestamp)
+    populate_db(data_attr, data_attr_type, array([epoch, batch]), net_ip, net_op,
+        db_path=DIR_PARENT+data_dir_name, table_name='net_data|ann', 
+        usr_time=timestamp)

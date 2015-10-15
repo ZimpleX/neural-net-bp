@@ -4,7 +4,7 @@ import numpy as np
 from conf import *
 
 class Data:
-    def __init__(self, file_train, file_test, tuple_format):
+    def __init__(self, file_train, file_test):
         """
         tuple_format specifies the format (ordering) of the data tuple
         e.g.: for a data tuple with 3 input and 2 output,
@@ -23,6 +23,17 @@ class Data:
                         masked_d.append(d_tuple[i])
                 return masked_d
             return mask
+
+        # setup tuple format
+        conf_file = file_train.split('/')
+        if len(conf_file) == 1:
+            conf_file = './conf'
+        else:
+            conf_file[-1] = 'conf'  # the whole list except last element
+            conf_file = '/'.join(conf_file)
+        fconf = open(conf_file, 'r')
+        tuple_format = fconf.readline().split()
+        fconf.close()
 
         self.data = np.loadtxt(file_train)
         mask = mask_closure(tuple_format, TARGET)

@@ -25,6 +25,7 @@ from time import strftime
 
 import pdb
 
+np.random.seed(0)
 
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
@@ -67,7 +68,12 @@ class Net_structure:
 
         self.w_list = [np.random.rand(layer_size_list[i], layer_size_list[i+1]) - 0.5
                         for i in range(self.num_layer)]
-        self.b_list = [np.random.rand(layer_size_list[i+1]) - 0.5 for i in range(self.num_layer)]
+        self.b_list = [np.random.rand(layer_size_list[i+1]) - 0.5 
+                        for i in range(self.num_layer)]
+        self.dw_list = [np.zeros((layer_size_list[i], layer_size_list[i+1]))
+                        for i in range(self.num_layer)]
+        self.db_list = [np.zeros(layer_size_list[i+1])
+                        for i in range(self.num_layer)]
         self.activ_list = activ_list
         self.cost = cost_type
         # store the output of each layer
@@ -121,6 +127,7 @@ class Net_structure:
         """
         b_rate = conf.b_rate
         w_rate = conf.w_rate
+        momentum = conf.momentum
         cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
         for n in range(self.num_layer-1, -1, -1):
             cur_f = self.activ_list[n]
@@ -132,16 +139,19 @@ class Net_structure:
             temp = cur_c_d_y * cur_f.y_d_b(cur_y)
             temp = temp.reshape(hi_sz, cur_y.shape[-1])
             temp = np.sum(temp, axis=0)
-            self.b_list[n] -= b_rate * temp
+            # add momentum
+            self.db_list[n] = momentum * self.db_list[n] + temp
+            self.b_list[n] -= b_rate * self.db_list[n]
             # update weight
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
             temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
-            #pdb.set_trace()
 
             temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
             temp = np.sum(temp, axis=0)
             w_n = np.copy(self.w_list[n])
-            self.w_list[n] -= w_rate * temp
+            # add momentum
+            self.dw_list[n] = momentum * self.dw_list[n] + temp
+            self.w_list[n] -= w_rate * self.dw_list[n]
             # update derivative of cost w.r.t prev layer output
             if n > 0:
                 # don't update if prev layer is input layer
@@ -154,7 +164,7 @@ def parse_args():
     """
     accept cmd line options for specifying the ANN coefficient
     """
-    parser = argparse.ArgumentParser('settings for the ANN')
+    parser = argparse.ArgumentParser('settings for the ANNi (accepting path of delimiter \'/\')')
     parser.add_argument('--struct', type=int, metavar='NET_STRUCT',
             default=STRUCT, nargs='+', help='specify the structure of the ANN (num of nodes in each layer)')
     parser.add_argument('--activation', type=str, metavar='NET_ACTIVATION',
@@ -190,17 +200,24 @@ if __name__ == "__main__":
 
     args = parse_args()
     timestamp = strftime('[%D-%H:%M:%S]')
+    # this is assuming that path of training data file is 
+    # residing inside a dir named by the task name, and using '/' as delimiter
+    task_name = args.path_train.split('/')
+    task_name = task_name[-2]
 
     assert len(args.struct) == len(args.activation) + 1
+    data_set = Data(args.path_train, args.path_test)
+    # auto correct shape of input / output layer of the ANN
+    args.struct[0] = data_set.data.shape[1]
+    args.struct[-1] = data_set.target.shape[1]
     net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost])
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
-    data_set = Data(args.path_train, args.path_test, [TARGET, INPUT, INPUT, INPUT])
     conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
 
     if (args.profile):      # store the conf of the ANN for this run
                             # could be identified by parse time
-        data_util.profile_net_conf(args, timestamp)
-        data_util.profile_raw_data_set(data_set, timestamp)
+        data_util.profile_net_conf(task_name, args, timestamp)
+        data_util.profile_raw_data_set(task_name, data_set, timestamp)
 
     # main training loop
     for epoch in range(conf.num_epoch):
@@ -213,9 +230,9 @@ if __name__ == "__main__":
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             net.back_prop(bat_tgt, conf)
         if args.profile:
-            data_util.profile_cost(epoch, batch, cost_bat, timestamp)
+            data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp)
             if epoch % epc_stride == 0:
-                data_util.profile_net_data(epoch, batch, net, data_set.data, timestamp)
+                data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
 
         print('end of epoch {}, sum of cost over all batches: {}' \
                 .format(epoch, cost_bat))
