@@ -6,10 +6,10 @@ define the general structure of the whole network, including:
 
 
 TODO:
-    <del>convert to mini-batch or online training</del>
+    how to escape local minimum
     sum Cost function w.r.t all examples in one mini-batch
     when obtaining delta, divide by size of mini-batch
-    add momentum / adapt learning rate
+    adapt learning rate
     add gradient checking using finite difference
 """
 
@@ -189,8 +189,10 @@ def parse_args():
             default=TRAIN_DATA, help='path to the training data set')
     parser.add_argument('-pts', '--path_test', type=str, metavar='PATH_TEST',
             default=TEST_DATA, help='path to the testing data set')
-    parser.add_argument('--profile', action='store_true',
-            help='do you want to store the profiling data into db')
+    parser.add_argument('--profile_cost', action='store_false',
+            help='add this flag if you do NOT want to store cost profile')
+    parser.add_argument('--profile_output', action='store_true',
+            help='add this flag if you DO want to store the net output profile')
     return parser.parse_args()
 
 
@@ -214,26 +216,34 @@ if __name__ == "__main__":
     print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
     conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
 
-    if (args.profile):      # store the conf of the ANN for this run
+    if (args.profile_cost): # store the conf of the ANN for this run
                             # could be identified by parse time
         data_util.profile_net_conf(task_name, args, timestamp)
         data_util.profile_raw_data_set(task_name, data_set, timestamp)
 
     # main training loop
+    batch = 0
     for epoch in range(conf.num_epoch):
+        ######################
+        #### Experimental ####
+        #if epoch % 50 == 0 and epoch != 0:
+        #    conf.w_rate *= 1.
+        #    conf.b_rate *= 1.
+        ######################
         cost_bat = 0.
-        batch = 0
         epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
-            batch = b + 1
+            batch += 1
             cur_net_out = net.net_act_forward(bat_ipt)
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             net.back_prop(bat_tgt, conf)
-        if args.profile:
+        if args.profile_cost:
             data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp)
-            if epoch % epc_stride == 0:
-                data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
-
+        if args.profile_output and epoch % epc_stride == 0:
+            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
+        elif epoch == conf.num_epoch - 1:
+            # populate final output data anyway
+            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
         print('end of epoch {}, sum of cost over all batches: {}' \
                 .format(epoch, cost_bat))
 
