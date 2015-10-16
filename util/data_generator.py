@@ -10,38 +10,63 @@ also note that the policy regarding data set is:
 adapted from original version:
     https://github.com/ZimpleX/spark-benchmark-python/blob/500b285aca981ccc4b817d0e5364d0bcd737735e/LogReg/DataGen.py
 """
+
+# TODO: auto generate conf in data dir
+
 from __future__ import print_function
 from util.embed_shell_script import runScript, ScriptException
 from util.training_data_func import trainingFunc
 from random import uniform
+import conf
+from node_activity import activation_dict
+from cost import cost_dict
 import os
 import argparse
+from functools import reduce
+import pdb
 
 trainingDirName = './train_data/'
 dataSetSizeStart = 3
-inputSizeDefault = 3
 dataSizeDefault = 12
+inputSizeDefault = 3
+outputSizeDefault = 1
 funcDefault = 'Sigmoid'
 
 inputSizeRangeDefault = range(1,11)
+outputSizeRangeDefault = range(1, 11)
 dataSizeRangeDefault = range(3,15)
 funcChoices = ['Sigmoid',
                'AttenSin1',
                'AttenSin2',
                'AttenSin3',
-               'Random']
+               'Random',
+               'ANN-bp']
 
 def parseArg():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser("generating training data for ANN")
     parser.add_argument("-is", "--input_size", type=int, metavar='M', 
             choices=inputSizeRangeDefault, default=inputSizeDefault, 
-            help="specify the num of input to the neuron")
+            help="specify the num of input to the ANN")
+    parser.add_argument("-os", "--output_size", type=int, metavar='S',
+            choices=outputSizeRangeDefault, default=outputSizeDefault,
+            help="specify the num of output to the ANN")
     parser.add_argument("-ds", "--data_size", type=int, metavar='N', 
             choices=dataSizeRangeDefault, default=dataSizeDefault, 
             help="specify the size of data set (in terms of 2^N)")
     parser.add_argument("-f", "--function", type=str, 
             choices=funcChoices, default=funcDefault, 
             help="Specify the training function to gen the data set")
+
+    # following args are only for training func of ANN-bp
+    parser.add_argument("--struct", type=int, metavar='NET_STRUCT', nargs='+',
+            default=conf.STRUCT, help='[ANN-bp]: specify the structure of the ANN (num of nodes in each layer)')
+    parser.add_argument('--activation', type=str, metavar='NET_ACTIVATION',
+            default=conf.ACTIVATION, nargs='+', help='[ANN-bp]: specify the activation of each layer',
+            choices=activation_dict.keys())
+    parser.add_argument('--cost', type=str, metavar='COST', 
+            default=conf.COST, help='[ANN-bp]: specify the cost function',
+            choices=cost_dict.keys())
+
     return parser.parse_args()
 
 
@@ -49,6 +74,8 @@ def parseArg():
 def dataGeneratorMain(args):
     taskName = args.function
     inputSize = args.input_size
+    if args.function == 'ANN-bp':
+        inputSize = args.struct[0]
     dataSetSize = args.data_size
     assert inputSize > 0 and inputSize <= 10
     assert dataSetSize <= 14 and dataSetSize >= 3
@@ -108,6 +135,11 @@ def dataGeneratorMain(args):
         #           suppose user provide 10, then data set with size 2^3, 2^4, 2^5, ... 2^10 will be generated,
         #           and be stored as separate files in the corresponding folder
         #   $3: indicate min number of tuples in the data-set
+        if args.function == 'ANN-bp':
+            structStr = reduce(lambda a,b: '{}-{}'.format(a,b), args.struct)
+            taskName += '_struct-{}'.format(structStr)
+        else:
+            taskName += '_in-{}-out-{}'.format(args.input_size, args.output_size)
         stdout, stderr = runScript(scriptFormatDir, [taskName, str(inputSize), str(dataSetSize), str(dataSetSizeStart)])
         print("============================")
         print("script msg: \n{}".format(stdout.decode('ascii')))
@@ -119,7 +151,7 @@ def dataGeneratorMain(args):
     #########################################
     #    generate data and write to file    #
     #########################################
-    genY = trainingFunc(taskName)
+    genY = trainingFunc(args.function)
     for dFile in os.listdir(trainingDirName + taskName):
         dFileFull = trainingDirName + taskName + '/' + dFile
         # all old files should already be read-only
@@ -127,7 +159,6 @@ def dataGeneratorMain(args):
             continue
         if 'conf' in dFile or 'ignore' in dFile:
             continue
-        print(dFile)
         ipSize, dSize = dFile.split("_")
         ipSize = int(ipSize)
         dSize = int(dSize)
@@ -139,7 +170,12 @@ def dataGeneratorMain(args):
         for i in range(0, numEntry):
             # randomly generate input list, within range 0 ~ 10
             xList = [uniform(0, 10) for k in range(0, inputSize)]
-            dataList = [genY(xList)] + xList
+            yList = None
+            if args.function == 'ANN-bp':
+                yList = genY(xList, args.struct, args.activation, args.cost)
+            else:
+                yList = genY(xList)
+            dataList = yList + xList
             dataStr = reduce(lambda x,y: str(x)+' '+str(y), dataList)
             print(dataStr, file=f)
         f.close()
@@ -156,6 +192,29 @@ def dataGeneratorMain(args):
             chmod 444 $orig_dir$dir_name$task_name/*
         """.format(trainingDirName)
         stdout, stderr = runScript(scriptChmod, [taskName])
+    except ScriptException as se:
+        print(se)
+
+
+    ####################
+    #    write conf    #
+    ####################
+    try:
+        scriptEchoConf = """
+            orig_dir="`pwd`/"
+            dir_name={}
+            task_name="$0"/
+            conf_full=$orig_dir$dir_name$task_name/conf
+            conf_str="$1"
+    
+            if [ ! -f $conf_full ]
+            then
+                echo $conf_str > $conf_full
+            fi
+        """.format(trainingDirName)
+        confStr = [conf.TARGET]*args.output_size + [conf.INPUT]*args.input_size
+        confStr = reduce(lambda a,b:'{} {}'.format(a,b), confStr)
+        stdout, stderr = runScript(scriptEchoConf, [taskName, confStr])
     except ScriptException as se:
         print(se)
 

@@ -1,0 +1,4 @@
+data_generator is an individual script: call it from ROOT dir
+    e.g.: `python3 -m util.data_generator <options>`
+
+array_proc and data_proc are utils for scripts in root dir
