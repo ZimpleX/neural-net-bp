@@ -36,9 +36,9 @@ inputSizeRangeDefault = range(1,11)
 outputSizeRangeDefault = range(1, 11)
 dataSizeRangeDefault = range(3,15)
 funcChoices = ['Sigmoid',
-               'AttenSin1',
-               'AttenSin2',
-               'AttenSin3',
+               'AttenSin',
+               'AttenSin-x0',
+               'AttenSin-abs-x0',
                'Random',
                'ANN-bp']
 
