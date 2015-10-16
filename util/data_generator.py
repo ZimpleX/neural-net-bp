@@ -25,7 +25,7 @@ import argparse
 from functools import reduce
 import pdb
 
-trainingDirName = './train_data/'
+trainingDirName = conf.TRAINING_DIR
 dataSetSizeStart = 3
 dataSizeDefault = 12
 inputSizeDefault = 3
@@ -74,8 +74,10 @@ def parseArg():
 def dataGeneratorMain(args):
     taskName = args.function
     inputSize = args.input_size
+    outputSize = args.output_size
     if args.function == 'ANN-bp':
         inputSize = args.struct[0]
+        outputSize = args.struct[-1]
     dataSetSize = args.data_size
     assert inputSize > 0 and inputSize <= 10
     assert dataSetSize <= 14 and dataSetSize >= 3
@@ -113,7 +115,7 @@ def dataGeneratorMain(args):
             existing_set="`ls`"
             for size_pow in $(eval echo "{{$set_size_pow_start..$set_size_pow}}")
             do
-                file_name=$ip_size'_'$size_pow
+                file_name=$size_pow
                 if [ "`find . -maxdepth 1 -type f -printf '%f\n' | grep $file_name`" ]
                 then 
                     echo "data set already exists: "$file_name    
@@ -137,9 +139,11 @@ def dataGeneratorMain(args):
         #   $3: indicate min number of tuples in the data-set
         if args.function == 'ANN-bp':
             structStr = reduce(lambda a,b: '{}-{}'.format(a,b), args.struct)
-            taskName += '_struct-{}'.format(structStr)
+            actStr = reduce(lambda a,b: '{}-{}'.format(a,b), args.activation)
+            costStr = args.cost
+            taskName += '_struct-{}_act-{}_cost-{}'.format(structStr, actStr, costStr)
         else:
-            taskName += '_in-{}-out-{}'.format(args.input_size, args.output_size)
+            taskName += '_in-{}-out-{}'.format(inputSize, outputSize)
         stdout, stderr = runScript(scriptFormatDir, [taskName, str(inputSize), str(dataSetSize), str(dataSetSizeStart)])
         print("============================")
         print("script msg: \n{}".format(stdout.decode('ascii')))
@@ -159,10 +163,8 @@ def dataGeneratorMain(args):
             continue
         if 'conf' in dFile or 'ignore' in dFile:
             continue
-        ipSize, dSize = dFile.split("_")
-        ipSize = int(ipSize)
+        dSize = dFile
         dSize = int(dSize)
-        assert ipSize == inputSize
         assert dSize >= dataSetSizeStart and dSize <= dataSetSize
         assert os.stat(dFileFull).st_size == 0
         f = open(dFileFull, 'w')
@@ -212,12 +214,13 @@ def dataGeneratorMain(args):
                 echo $conf_str > $conf_full
             fi
         """.format(trainingDirName)
-        confStr = [conf.TARGET]*args.output_size + [conf.INPUT]*args.input_size
+        confStr = [conf.TARGET]*outputSize + [conf.INPUT]*inputSize
         confStr = reduce(lambda a,b:'{} {}'.format(a,b), confStr)
         stdout, stderr = runScript(scriptEchoConf, [taskName, confStr])
     except ScriptException as se:
         print(se)
-
+    
+    return trainingDirName + taskName + '/'
 
 
 if __name__ == '__main__':
