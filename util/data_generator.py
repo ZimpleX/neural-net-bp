@@ -73,11 +73,14 @@ def parseArg():
 
 def dataGeneratorMain(args):
     taskName = args.function
-    inputSize = args.input_size
-    outputSize = args.output_size
+    inputSize = None
+    outputSize = None
     if args.function == 'ANN-bp':
         inputSize = args.struct[0]
         outputSize = args.struct[-1]
+    else:
+        inputSize = args.input_size
+        outputSize = args.output_size
     dataSetSize = args.data_size
     assert inputSize > 0 and inputSize <= 10
     assert dataSetSize <= 14 and dataSetSize >= 3

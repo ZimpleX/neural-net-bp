@@ -3,15 +3,16 @@
 STRUCT = [3, 9, 1]
 ACTIVATION = ['sig', 'lin']
 COST = 'sqr'
+TRAINING_DIR = './train_data/'
 LEARN_RATE = 0.01
 INC_RATE = 1.
 DEC_RATE = 1.
 MOMENTUM = 0.
 BATCH_SIZE = 1
-TRAIN_DATA = 'train_data/AttenSin3/3_08'
-TEST_DATA = 'train_data/AttenSin3/3_04'
+TRAIN_DATA = TRAINING_DIR + 'AttenSin_in-3-out-1/3_08'
+TEST_DATA = TRAINING_DIR + 'AttenSin_in-3-out-1/3_04'
 
-EPOCH = 100
+EPOCH = 500
 
 # specify which column in the data set file stands for target / input
 TARGET='TARGET'

@@ -6,6 +6,7 @@ define the general structure of the whole network, including:
 
 
 TODO:
+    could try generating data by the neural net itself, then see if the net can learn it
     how to escape local minimum
     sum Cost function w.r.t all examples in one mini-batch
     when obtaining delta, divide by size of mini-batch
@@ -163,8 +164,10 @@ class Net_structure:
 def parse_args():
     """
     accept cmd line options for specifying the ANN coefficient
+    this func is also utilized by ./test/test.py
     """
-    parser = argparse.ArgumentParser('settings for the ANNi (accepting path of delimiter \'/\')')
+    # TODO: add argument to enable choosing from several sets of default settings
+    parser = argparse.ArgumentParser('settings for the ANN (accepting path of delimiter \'/\')')
     parser.add_argument('--struct', type=int, metavar='NET_STRUCT',
             default=STRUCT, nargs='+', help='specify the structure of the ANN (num of nodes in each layer)')
     parser.add_argument('--activation', type=str, metavar='NET_ACTIVATION',
@@ -198,9 +201,10 @@ def parse_args():
 
 #############################################
 #############################################
-if __name__ == "__main__":
-
-    args = parse_args()
+def net_train_main(args):
+    """
+    define main separately to facilitate unittest
+    """
     timestamp = strftime('[%D-%H:%M:%S]')
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
@@ -251,3 +255,10 @@ if __name__ == "__main__":
     print('final output {}\n'.format(net.y_list[2]))
     print(line_star*3)
     print(net.net_act_forward(data_set.test_d))
+
+
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    net_train_main(args)

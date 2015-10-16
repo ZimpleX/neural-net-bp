@@ -1,6 +1,6 @@
 """
 NOTE:
-    invoke this script from parent dir
+    invoke this script from root dir
 """
 
 from cost import *
@@ -12,9 +12,12 @@ import unittest as ut
 from numpy import *
 from numpy.testing import *
 from util.data_proc import *
+from util.data_generator import *
 import os
+import argparse
 
 ACT_FORWARD_FAIL='net act forward failed'
+args = None
 
 class Test_deriv(ut.TestCase):
     def test_lin3_lin2_single_tuple(self, verbose=True):
@@ -40,8 +43,26 @@ class Test_util(ut.TestCase):
         populate_db(['a', 'b', 'c'], ['TEXT', 'INTEGER', 'REAL'], ['yo'], array(range(6)).reshape(3,2), db_path='data/', db_name='unittest.db')
         os.remove('data/unittest.db')
 
+class Test_net(ut.TestCase):
+    def test_3_layer_bp(self):
+        # generate data if not exist
+        dg_args = argparse.ArgumentParser()
+        dg_args.function = 'ANN-bp'
+        dg_args.data_size = 12
+        dg_args.struct = args.struct
+        dg_args.activation = args.activation
+        dg_args.cost = args.cost
+        p_data = dataGeneratorMain(dg_args)
+
+        args.path_train = p_data + '08'
+        args.path_test = p_data + '04'
+        net_train_main(args)
+        
+
 if __name__ == "__main__":
+    # accept args the same way as the main in net_structure.py
+    args = parse_args()
     # ut.main()
     #suite = ut.TestLoader().loadTestsFromTestCase(Test_deriv)
-    suite = ut.TestLoader().loadTestsFromTestCase(Test_util)
+    suite = ut.TestLoader().loadTestsFromTestCase(Test_net)
     ut.TextTestRunner(verbosity=2).run(suite)
