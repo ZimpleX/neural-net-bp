@@ -6,12 +6,12 @@ define the general structure of the whole network, including:
 
 
 TODO:
-    could try generating data by the neural net itself, then see if the net can learn it
-    how to escape local minimum
-    sum Cost function w.r.t all examples in one mini-batch
-    when obtaining delta, divide by size of mini-batch
-    adapt learning rate
-    add gradient checking using finite difference
+    * could try generating data by the neural net itself, then see if the net can learn it
+    * how to escape local minimum
+    * sum Cost function w.r.t all examples in one mini-batch
+      when obtaining delta, divide by size of mini-batch
+    * adapt learning rate
+    * add gradient checking using finite difference
 """
 
 import numpy as np

@@ -32,6 +32,15 @@ def trainingFunc(funcName):
             xSum = reduce(lambda x1, x2: x1+x2, xList) - 5*len(xList)
             return [ 1 / (1 + exp(-xSum)) ]
         return sigmoid
+    elif funcName == "Sin":
+        """
+        simple sin function
+        """
+        def sine(xList):
+            assert len(xList) >= 1
+            sinSum = reduce(lambda x1, x2: x1 + x2, xList)
+            return [ sin(sinSum) ]
+        return sine
     elif funcName == "AttenSin-abs-x0":
         """
         exponentially attenuating sin, with abs(), and x0 as exponent

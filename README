@@ -4,7 +4,7 @@
 
 --  To run the test: start from this dir, then `python -m test.test` (run as a module)
 
---  you can choose to profile the net performance
+--  you can choose to profile the net performance:
     metrics such as cost is populated into database
     --  you can inspect it using sqlite3
         common problem about sqlite3:

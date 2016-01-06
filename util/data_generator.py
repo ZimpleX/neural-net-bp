@@ -35,12 +35,13 @@ funcDefault = 'Sigmoid'
 inputSizeRangeDefault = range(1,11)
 outputSizeRangeDefault = range(1, 11)
 dataSizeRangeDefault = range(3,15)
-funcChoices = ['Sigmoid',
-               'AttenSin',
-               'AttenSin-x0',
-               'AttenSin-abs-x0',
-               'Random',
-               'ANN-bp']
+funcChoices = [	'Sigmoid',
+                'Sin',
+               	'AttenSin',
+               	'AttenSin-x0',
+               	'AttenSin-abs-x0',
+               	'Random',
+               	'ANN-bp']
 
 def parseArg():
     parser = argparse.ArgumentParser("generating training data for ANN")
@@ -161,7 +162,8 @@ def dataGeneratorMain(args):
     genY = trainingFunc(args.function)
     for dFile in os.listdir(trainingDirName + taskName):
         dFileFull = trainingDirName + taskName + '/' + dFile
-        # all old files should already be read-only
+        # NOTE: all old files should already be read-only
+        # so the "write once" policy is enforced by this permission check
         if not os.access(dFileFull, os.W_OK):
             continue
         if 'conf' in dFile or 'ignore' in dFile:
