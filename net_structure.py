@@ -124,6 +124,8 @@ class Net_structure:
         return layer_out
 
     def back_prop(self, target, conf):
+        # TODO: calculate c_d_ip (delta) instead of c_d_y
+        #       separate it out to another loop
         """
         do the actual back-propagation
         (refer to "Glossary" for notation & abbreviation)

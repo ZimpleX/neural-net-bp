@@ -1,3 +1,10 @@
+Levenberg-Marquardt Backpropagation:
+------------------------------------
+Reference:
+    <Training Feedforward Networks with the Marquardt Algorithm>
+----------------------------------------------------------------
+
+
 --  aim to build a general neural net whose num of layers, num of nodes in each layer & neuron activity in each layer can be arbitrarily specified. 
 --  training is using back-propagation
     supporting python3, no warrant for python2
