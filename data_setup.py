@@ -55,6 +55,7 @@ class Data:
         continuously yield mini-batches of data, 
         by segmenting the whole data set
         """
+        batch_size = (batch_size==-1) and self.data.shape[0] or batch_size
         if self.data.shape[0] % batch_size != 0:
             raise RuntimeError('num of data tuples is not a multiple of batch size')
         num_batch = self.data.shape[0] // batch_size
