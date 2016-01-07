@@ -42,6 +42,20 @@ class Node_activity:
 
     @classmethod
     @abstractmethod
+    def y_d_x(cls, y_n):
+        """
+        more intuitively, we should pass input of layer n, rather than output (y_n),
+        because y = f(x), and y' is usually expressed by x, not y.
+        But since we mostly use Sigmoid, and its derivative is more conveniently
+        expressed by y, not x. So I choose y_n as argument.
+
+        For other activation function, you may likely end up calculating x_n by inverse of f.
+        """
+        return np.ones(y_n.shape)
+
+    @classmethod
+    @abstractmethod
+    # TODO: may be obsolete now
     def y_d_w(cls, y_n, y_n_1):
         """
         NOTE: overwrite with classmethod
@@ -60,6 +74,7 @@ class Node_activity:
 
     @classmethod
     @abstractmethod
+    # TODO: may be obsolete now
     def y_d_b(cls, y_n):
         """
         NOTE: overwrite with classmethod
@@ -104,6 +119,10 @@ class Node_linear(Node_activity):
         return super(Node_linear, cls).act_forward(prev_layer_out, w, b)
 
     @classmethod
+    def y_d_x(cls, y_n, y_n_1):
+        return super(Node_linear, cls).y_d_x(y_n, y_n_1)
+
+    @classmethod
     def y_d_w(cls, y_n, y_n_1):
         return super(Node_linear, cls).y_d_w(y_n, y_n_1)
     
@@ -137,6 +156,11 @@ class Node_sigmoid(Node_activity):
         expz = np.array(expz)
         expz = expz.reshape(shape)
         return 1. / (1 + expz)
+
+    @classmethod
+    def y_d_x(cls, y_n):
+        d_sigmo = y_n * (1 - y_n)
+        return d_sigmo
 
     @classmethod
     def y_d_w(cls, y_n, y_n_1):

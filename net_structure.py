@@ -136,6 +136,17 @@ class Net_structure:
         # momentum will speed up training, according to Geoff Hinton
         momentum = conf.momentum
         cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
+        #-----------#
+        # get delta #
+        #-----------#
+        # delta: c_d_x where x is the input to each layer
+        # delta_list: delta of each layer excluding input layer
+        delta_list = [np.zeros(self.y_list[i+1].shape) for i in range(self.num_layer)]
+        prev_delta = None
+        for n in range(self.num_layer-1, -1, -1):   # exclude input layer
+            y_d_x = self.activ_list[n].y_d_x(self.y_list[n+1])
+            if prev_delta == None:
+                delta_list = y_d_x * 
         for n in range(self.num_layer-1, -1, -1):
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
