@@ -14,3 +14,10 @@
         (could then alias sqlite to 'rlwrap sqlite3')
     --  you can visualize db data using other tools, such as *benchtracker*
         [https://github.com/LemonPi/benchtracker]
+
+
+--  training method:
+    --  current implemented:
+        --  basic BP + momentum + online training
+    --  aimed version:
+        --  Levenburg-Marquardt BP + batch training (better for cluster acceleration)

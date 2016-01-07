@@ -8,14 +8,14 @@ so the class can simply be treated as providing a namespace for the specific neu
 theoritically, network of arbitrary layers can be constucted by the info in this file,
 and be trained recursively using chain rule
 """
-
+import pdb
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from math import exp
 import util.array_proc as arr_util
 from functools import reduce
-
+import sys
 
 class Node_activity:
     """
@@ -130,7 +130,8 @@ class Node_sigmoid(Node_activity):
         sz = z.size
         # flatten z and compute exp, then restore original shape
         # python3.x: have to convert to list first
-        expz = list(map(lambda x: exp(-x), z.reshape(sz)))
+        expz = list(map(lambda x: (x>-300) and exp(-x) or sys.float_info.max, 
+                        z.reshape(sz)))
         expz = np.array(expz)
         expz = expz.reshape(shape)
         return 1. / (1 + expz)

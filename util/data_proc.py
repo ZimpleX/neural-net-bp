@@ -87,6 +87,9 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=DIR_PARENT, db_name='ann
 
 def profile_net_conf(data_dir_name, args, timestamp):
     """
+    INPUT:
+        data_dir_name       appended with DIR_PARENT
+
     populate the conf of the ANN, timestamp is to identify each run:
     for join of different tables in the future
     """
@@ -107,6 +110,9 @@ def profile_net_conf(data_dir_name, args, timestamp):
 
 def profile_raw_data_set(data_dir_name, data_set, timestamp):
     """
+    INPUT:
+        data_dir_name       appended with DIR_PARENT
+
     populate the raw data set that is used to train ANN
     """
     data_attr = ['x{}'.format(i) for i in range(data_set.data.shape[1])]
@@ -120,6 +126,9 @@ def profile_raw_data_set(data_dir_name, data_set, timestamp):
 
 def profile_cost(data_dir_name, epoch, batch, cost_bat, timestamp):
     """
+    INPUT:
+        data_dir_name       appended with DIR_PARENT
+
     cost_bat is the sum of cost over some batches
     """
     prof_attr = ['epoch_num', 'batch_num', 'cost_sum']
@@ -132,6 +141,9 @@ def profile_cost(data_dir_name, epoch, batch, cost_bat, timestamp):
 
 def profile_net_data(data_dir_name, epoch, batch, net, net_ip, timestamp):
     """
+    INPUT:
+        data_dir_name       appended with DIR_PARENT
+
     net_ip: raw input data, fed to net
     """
     net_op = net.net_act_forward(net_ip)
