@@ -6,9 +6,17 @@ from conf import *
 class Data:
     def __init__(self, file_train, file_test):
         """
-        tuple_format specifies the format (ordering) of the data tuple
-        e.g.: for a data tuple with 3 input and 2 output,
-            [TARGET, TARGET, INPUT, INPUT, INPUT] indicates that target appears prior to input
+        Read in from the text file "file_train" & "file_test".
+        The text files should contain only float numbers, each line representing
+        one single training datum (target + input).
+        Within the same directory of the text file, there should be a conf file,
+        specifying the format (ordering) of the data tuple
+            e.g.: for a data tuple with 3 input and 2 output,
+                [TARGET, TARGET, INPUT, INPUT, INPUT] indicates that target appears prior to input
+        
+        NOTE:
+        It is recommended that you use the `util/data_generator.py` to generate
+        the training text file (conf will be dealt with automatically).
         """
         def mask_closure(tpl_format, msk_format):
             """
@@ -17,6 +25,12 @@ class Data:
             t_format = tpl_format
             m_key = msk_format
             def mask(d_tuple):
+                """
+                mask data according to tuple format & mask format.
+                e.g.:
+                    [TARGET, INPUT, TARGET, INPUT, INPUT] & TARGET
+                    ==> return the 1st and 3rd data in the tuple
+                """
                 masked_d = []
                 for i in range(len(d_tuple)):
                     if t_format[i] == m_key:
@@ -53,7 +67,7 @@ class Data:
     def get_batches(self, batch_size):
         """
         continuously yield mini-batches of data, 
-        by segmenting the whole data set
+        by segmenting the whole data set with batch_size
         """
         batch_size = (batch_size==-1) and self.data.shape[0] or batch_size
         if self.data.shape[0] % batch_size != 0:

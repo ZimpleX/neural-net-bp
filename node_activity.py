@@ -66,9 +66,10 @@ class Node_activity:
         get derivative w.r.t. the whole bias vector in one layer
 
         argument:
-        y_n     y list for layer n
+        y_n     y list for layer n (batch_size x layer_nodes)
 
-        return matrix shape: .. x .. x (nodes in n layer)
+        return:
+        shape: the same as input (batch_size x layer_nodes)
         """
         return np.ones(y_n.shape)
 
@@ -130,6 +131,7 @@ class Node_sigmoid(Node_activity):
         sz = z.size
         # flatten z and compute exp, then restore original shape
         # python3.x: have to convert to list first
+        # check -300: exp(300) will cause MathOverflow
         expz = list(map(lambda x: (x>-300) and exp(-x) or sys.float_info.max, 
                         z.reshape(sz)))
         expz = np.array(expz)

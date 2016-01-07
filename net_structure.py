@@ -39,6 +39,7 @@ class Net_structure:
                         layer 1, first hidden layer
                         ...
                         layer m, output layer
+                 f:     function of activation (e.g.: sigmoid)
                  y:     output of a neuron (node), index rule:
                         y_ij is the jth node on the ith layer
                  w:     weight between 2 adjacent layers, index rule:
@@ -66,7 +67,7 @@ class Net_structure:
         # -1 to exclude the input layer
         self.num_layer = len(layer_size_list) - 1
         assert len(activ_list) == self.num_layer
-
+        # *_list: list of 2D weight / 1D bias
         self.w_list = [np.random.rand(layer_size_list[i], layer_size_list[i+1]) - 0.5
                         for i in range(self.num_layer)]
         self.b_list = [np.random.rand(layer_size_list[i+1]) - 0.5 
@@ -109,8 +110,8 @@ class Net_structure:
         argument:
             data    matrix of input data, could be high dimension,
                     but the last 2 dimensions should be like this:
-                    n-1 = columns: num of input nodes
-                    n = rows: num of data pieces
+                    n-1 = columns: num of data pieces (batch size)
+                    n = rows: num of input nodes
         return:
             layer_out   the output from the output layer
         """
@@ -125,9 +126,12 @@ class Net_structure:
     def back_prop(self, target, conf):
         """
         do the actual back-propagation
+        (refer to "Glossary" for notation & abbreviation)
         """
+        # *_rate: learning rate (commonly referred to as alpha in literature)
         b_rate = conf.b_rate
         w_rate = conf.w_rate
+        # momentum will speed up training, according to Geoff Hinton
         momentum = conf.momentum
         cur_c_d_y = self.cost.c_d_y(self.y_list[-1], target)
         for n in range(self.num_layer-1, -1, -1):
@@ -136,14 +140,18 @@ class Net_structure:
             prev_y = self.y_list[n]
             # size of higher dimension (e.g.: num of training tuples)
             hi_sz = cur_y.size / cur_y.shape[-1]
-            # update bias
+            #-------------#
+            # update bias #
+            #-------------#
             temp = cur_c_d_y * cur_f.y_d_b(cur_y)
-            temp = temp.reshape(hi_sz, cur_y.shape[-1])
-            temp = np.sum(temp, axis=0)
+            temp = temp.reshape(hi_sz, cur_y.shape[-1]) # c_d_ip: batch_size x layer_nodes
+            temp = np.sum(temp, axis=0)                 # vector of length layer_nodes
             # add momentum
             self.db_list[n] = momentum * self.db_list[n] + temp
             self.b_list[n] -= b_rate * self.db_list[n]
-            # update weight
+            #---------------#
+            # update weight #
+            #---------------#
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
             temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
 
@@ -153,11 +161,17 @@ class Net_structure:
             # add momentum
             self.dw_list[n] = momentum * self.dw_list[n] + temp
             self.w_list[n] -= w_rate * self.dw_list[n]
-            # update derivative of cost w.r.t prev layer output
+            #---------------------------#
+            # update derivative of cost #
+            # w.r.t prev layer output   #
+            #---------------------------#
             if n > 0:
                 # don't update if prev layer is input layer
                 d_chain = cur_f.yn_d_yn1(cur_y, w_n)
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
+
+
+
 
 ###########################
 #        Arg Parse        #
@@ -198,6 +212,8 @@ def parse_args():
     parser.add_argument('--profile_output', action='store_true',
             help='add this flag if you DO want to store the net output profile')
     return parser.parse_args()
+
+
 
 
 #########################
