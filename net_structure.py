@@ -159,8 +159,9 @@ class Net_structure:
                 d_chain = cur_f.yn_d_yn1(cur_y, w_n)
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
 
-#############################################
-#############################################
+###########################
+#        Arg Parse        #
+###########################
 def parse_args():
     """
     accept cmd line options for specifying the ANN coefficient
@@ -199,8 +200,9 @@ def parse_args():
     return parser.parse_args()
 
 
-#############################################
-#############################################
+#########################
+#        NN flow        #
+#########################
 def net_train_main(args):
     """
     define main separately to facilitate unittest
