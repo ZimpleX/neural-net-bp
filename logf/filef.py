@@ -5,10 +5,10 @@ utility script for file operations:
     * log to file
 """
 
-import os
 from __future__ import print_function
-import logf.stringf as stringf
-import logf.printf as printf
+import os
+from logf.stringf import stringf
+from logf.printf import printf
 import stat
 
 import pdb
@@ -74,7 +74,7 @@ def set_f_perm(f_name, perm):
     I am not checking existence here.
     """
     perm = _perm_to_int(perm)
-    os.chmod(f_name, perm_stat)
+    os.chmod(f_name, perm)
 
 
 def print_to_file(f_name, msg, *reflex, type='INFO', separator='default', 
@@ -104,9 +104,9 @@ def print_to_file(f_name, msg, *reflex, type='INFO', separator='default',
         perm = (os.path.exists(f_full)) and os.stat(f_full).st_mode or '0444'
     # make sure directory exists
     mkdir_r(os.path.dirname(f_full))
-    set_f_perm(f_full, '0222')
     f = open(f_full, mode)
-    print(stingf(msg, reflex, type, separator), file=f)
+    set_f_perm(f_full, '0222')
+    print(stringf(msg, *reflex, type=type, separator=separator), file=f)
     printf('write to file: {}', f_full, separator=None)
     f.close()
     

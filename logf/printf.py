@@ -8,4 +8,4 @@ def printf(string, *reflex, type='INFO', separator='default'):
     """
     for usage, check out logf.stringf
     """
-    print(stringf(string, reflex, type, separator))
+    print(stringf(string, *reflex, type=type, separator=separator))

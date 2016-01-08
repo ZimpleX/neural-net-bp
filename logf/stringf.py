@@ -27,7 +27,7 @@ def stringf(string, *reflex, type='INFO', separator='default'):
         separator = _STRINGF_SEPA['others']
         separator = (type in _STRINGF_SEPA.keys()) and _STRINGF_SEPA[type] or separator
     if reflex:
-        string = string.format(reflex)
+        string = string.format(*reflex)
     if type == None or len(type) == 0:
         string = string
     else:
@@ -37,5 +37,6 @@ def stringf(string, *reflex, type='INFO', separator='default'):
         return string
     else:
         maxLen = reduce(lambda l1,strL2: (l1 < len(strL2)) and len(strL2) or l1, string.split("\n"), 0)
-        sepLine = separator*(maxLen//len(separator)) + separator[0:maxLen%separator]
+        sepLine = separator*(maxLen//len(separator)) \
+                + separator[0:maxLen%len(separator)]
         return '{}\n{}\n{}\n'.format(sepLine, string, sepLine)
