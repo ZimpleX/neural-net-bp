@@ -39,4 +39,4 @@ def stringf(string, *reflex, type='INFO', separator='default'):
         maxLen = reduce(lambda l1,strL2: (l1 < len(strL2)) and len(strL2) or l1, string.split("\n"), 0)
         sepLine = separator*(maxLen//len(separator)) \
                 + separator[0:maxLen%len(separator)]
-        return '{}\n{}\n{}\n'.format(sepLine, string, sepLine)
+        return '{}\n{}\n{}'.format(sepLine, string, sepLine)
