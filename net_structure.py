@@ -21,12 +21,15 @@ from data_setup import *
 from conf import *
 import util.array_proc as arr_util
 import util.data_proc as data_util
+from logf.stringf import *
+from logf.printf import *
+from logf.filef import *
 import argparse
 from time import strftime
 
 import pdb
 
-np.random.seed(0)
+np.random.seed(100)
 
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
@@ -94,13 +97,9 @@ class Net_structure:
         """
         net_stat = ''
         for i in range(self.num_layer-1, -1, -1):
-            net_stat += line_dash
-            net_stat += 'layer {}: {} nodes\n'.format(i+1, self.w_list[i].shape[1])
-            net_stat += line_dash
-            net_stat += 'weight\n{}\nbias\n{}\n'.format(self.w_list[i], self.b_list[i])
-        net_stat += line_dash
-        net_stat += 'layer {}: {} nodes\n'.format(0, self.w_list[0].shape[0])
-        net_stat += line_dash
+            net_stat += stringf('layer {}: {} nodes', i+1, self.w_list[i].shape[1], type=None, separator='-')
+            net_stat += '\nweight\n{}\nbias\n{}\n'.format(self.w_list[i], self.b_list[i])
+        net_stat += stringf('layer {}: {} nodes', 0, self.w_list[0].shape[0], type=None, separator='-')
         return net_stat
 
     def net_act_forward(self, data):
@@ -223,7 +222,9 @@ def net_train_main(args):
     """
     define main separately to facilitate unittest
     """
-    timestamp = strftime('[%D-%H:%M:%S]')
+    timestamp = strftime('%D-%H.%M.%S')
+    timestamp = timestamp.replace('/', '.')
+    timestamp_db = '[{}]'.format(timestamp)
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
     task_name = args.path_train.split('/')
@@ -235,16 +236,22 @@ def net_train_main(args):
     args.struct[0] = data_set.data.shape[1]
     args.struct[-1] = data_set.target.shape[1]
     net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost])
-    print('{}initial net\n{}{}\n'.format(line_star, line_star, net))
+    printf('INITIAL NET', separator='-=')
+    printf(net, type=None, separator=None)
     conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
+
+    print_to_file('{}-conf'.format(timestamp), conf)
 
     if (args.profile_cost): # store the conf of the ANN for this run
                             # could be identified by parse time
-        data_util.profile_net_conf(task_name, args, timestamp)
-        data_util.profile_raw_data_set(task_name, data_set, timestamp)
+        data_util.profile_net_conf(task_name, args, timestamp_db)
+        data_util.profile_raw_data_set(task_name, data_set, timestamp_db)
 
     # main training loop
     batch = 0
+    # populate initial output: as to evaluate initial weight
+    init_out = net.net_act_forward(data_set.data)
+    data_util.profile_net_data(task_name, -1, -1, net, data_set.data, timestamp_db)
     for epoch in range(conf.num_epoch):
         ######################
         #### Experimental ####
@@ -260,19 +267,19 @@ def net_train_main(args):
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             net.back_prop(bat_tgt, conf)
         if args.profile_cost:
-            data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp)
+            data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp_db)
         if args.profile_output and epoch % epc_stride == 0:
-            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
+            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp_db)
         elif epoch == conf.num_epoch - 1:
             # populate final output data anyway
-            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
-        print('end of epoch {}, sum of cost over all batches: {}' \
-                .format(epoch, cost_bat))
+            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp_db)
+        printf('end of epoch {}, sum of cost over all batches: {}', epoch, cost_bat, type='TRAIN', separator=None)
 
-    print('{}final net\n{}{}\n'.format(line_star, line_star, net))
-    print('final output {}\n'.format(net.y_list[2]))
-    print(line_star*3)
-    print(net.net_act_forward(data_set.test_d))
+    printf('FINAL NET')
+    printf(net, type=None, separator=None)
+    printf('FINAL OUTPUT')
+    printf(net.y_list[2], type=None, separator=None)
+    printf(net.net_act_forward(data_set.test_d))
 
 
 

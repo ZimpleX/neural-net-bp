@@ -9,7 +9,7 @@ TRAINING_DIR = './train_data/'
 LEARN_RATE = 0.01
 INC_RATE = 1.
 DEC_RATE = 1.
-MOMENTUM = 0.3
+MOMENTUM = 0.9
 BATCH_SIZE = 128
 TRAIN_DATA = TRAINING_DIR + 'Sin_in-1-out-1/08'
 TEST_DATA = TRAINING_DIR + 'Sin_in-1-out-1/04'
@@ -19,15 +19,14 @@ EPOCH = 500
 # specify which column in the data set file stands for target / input
 TARGET='TARGET'
 INPUT='INPUT'
-# utils for printing
-line_dash=('-' * 20) + '\n'
-line_ddash=('=' * 20) + '\n'
-line_star=('*' * 20) + '\n'
-
 
 
 
 class Conf:
+    """
+    storing all training configuration (which is independent of net configuration)
+    """
+
     def __init__(self, num_epoch, rate, inc_rate, dec_rate, momentum, t_cost):
         self.num_epoch = num_epoch
         self.b_rate = rate
@@ -37,3 +36,16 @@ class Conf:
         self.momentum = momentum
         # threshold of cost for stop training
         self.t_cost = t_cost
+
+    def __str__(self):
+        return  """
+                training parameters:
+                --------------------
+                learning rate (bias):   {}
+                learning rate (weight): {}
+                incremental rate:       {}
+                decremental rate:       {}
+                momentum:               {}
+                """.format(self.b_rate, self.w_rate, 
+                        self.inc_rate, self.dec_rate,
+                        self.momentum)

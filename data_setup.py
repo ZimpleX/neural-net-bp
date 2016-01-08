@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 from conf import *
+from logf.stringf import *
 
 class Data:
     def __init__(self, file_train, file_test):
@@ -62,7 +63,7 @@ class Data:
         self.test_d = np.array(list(map(mask, self.test_d)))
 
     def __str__(self):
-        return '{}data\n{}input is\n{}\ntarget is\n{}\n'.format(line_ddash, line_ddash, self.data, self.target)
+        return stringf('data') + stringf('input is:\n{}\ntarget is:\n{}', self.data, self.target, type=None, separator=None)
 
     def get_batches(self, batch_size):
         """
