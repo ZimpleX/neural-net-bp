@@ -26,10 +26,8 @@ def trainingFunc(funcName):
             simple sigmoid function:
                 most suitable for neuron of sigmoid activation
                 can be treated as baseline
-            xList element is ranging from 0 to 10, so to best capture
-            the shape of sigmoid, I left shift the exponential (xSum)
             """
-            xSum = reduce(lambda x1, x2: x1+x2, xList) - 5*len(xList)
+            xSum = reduce(lambda x1, x2: x1+x2, xList)
             return [ 1 / (1 + exp(-xSum)) ]
         return sigmoid
     elif funcName == "Sin":

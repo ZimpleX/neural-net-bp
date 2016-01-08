@@ -11,11 +11,10 @@ adapted from original version:
     https://github.com/ZimpleX/spark-benchmark-python/blob/500b285aca981ccc4b817d0e5364d0bcd737735e/LogReg/DataGen.py
 """
 
-# TODO: auto generate conf in data dir
-
 from __future__ import print_function
 from util.embed_shell_script import runScript, ScriptException
 from util.training_data_func import trainingFunc
+import util.file_operation
 from random import uniform
 import conf
 from node_activity import activation_dict
@@ -175,8 +174,8 @@ def dataGeneratorMain(args):
         f = open(dFileFull, 'w')
         numEntry = pow(2, dSize)
         for i in range(0, numEntry):
-            # randomly generate input list, within range 0 ~ 10
-            xList = [uniform(0, 10) for k in range(0, inputSize)]
+            # randomly generate input list, within range -1 ~ 1
+            xList = [uniform(-1, 1) for k in range(0, inputSize)]
             yList = None
             if args.function == 'ANN-bp':
                 yList = genY(xList, args.struct, args.activation, args.cost)
