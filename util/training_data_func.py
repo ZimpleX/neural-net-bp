@@ -30,6 +30,11 @@ def trainingFunc(funcName):
             xSum = reduce(lambda x1, x2: x1+x2, xList)
             return [ 1 / (1 + exp(-xSum)) ]
         return sigmoid
+    elif funcName == 'Lin':
+        def lin(xList):
+            assert len(xList) >= 1
+            return [ reduce(lambda x1, x2: x1 + x2, xList) ]
+        return lin
     elif funcName == "Sin":
         """
         simple sin function

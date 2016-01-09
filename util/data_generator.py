@@ -14,7 +14,9 @@ adapted from original version:
 from __future__ import print_function
 from util.embed_shell_script import runScript, ScriptException
 from util.training_data_func import trainingFunc
-import util.file_operation
+from logf.filef import *
+from logf.printf import *
+from logf.stringf import *
 from random import uniform
 import conf
 from node_activity import activation_dict
@@ -24,17 +26,20 @@ import argparse
 from functools import reduce
 import pdb
 
+_DGEN_INPUT = [-1, 1]
+
 trainingDirName = conf.TRAINING_DIR
 dataSetSizeStart = 3
 dataSizeDefault = 12
 inputSizeDefault = 3
 outputSizeDefault = 1
-funcDefault = 'Sigmoid'
+funcDefault = 'Lin'
 
 inputSizeRangeDefault = range(1,11)
 outputSizeRangeDefault = range(1, 11)
 dataSizeRangeDefault = range(3,15)
 funcChoices = [	'Sigmoid',
+                'Lin',
                 'Sin',
                	'AttenSin',
                	'AttenSin-x0',
@@ -50,6 +55,8 @@ def parseArg():
     parser.add_argument("-os", "--output_size", type=int, metavar='S',
             choices=outputSizeRangeDefault, default=outputSizeDefault,
             help="specify the num of output to the ANN")
+    parser.add_argument("-ir", "--input_range", type=int, metavar='R',
+            nargs=2, default=_DGEN_INPUT, help="range of input: min, max")
     parser.add_argument("-ds", "--data_size", type=int, metavar='N', 
             choices=dataSizeRangeDefault, default=dataSizeDefault, 
             help="specify the size of data set (in terms of 2^N)")
@@ -174,8 +181,8 @@ def dataGeneratorMain(args):
         f = open(dFileFull, 'w')
         numEntry = pow(2, dSize)
         for i in range(0, numEntry):
-            # randomly generate input list, within range -1 ~ 1
-            xList = [uniform(-1, 1) for k in range(0, inputSize)]
+            # randomly generate input list, within range ... ~ ...
+            xList = [uniform(args.input_range[0], args.input_range[1]) for k in range(0, inputSize)]
             yList = None
             if args.function == 'ANN-bp':
                 yList = genY(xList, args.struct, args.activation, args.cost)
