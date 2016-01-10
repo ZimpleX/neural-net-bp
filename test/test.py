@@ -15,8 +15,11 @@ from numpy import *
 from numpy.testing import *
 from util.data_proc import *
 from util.data_generator import *
+from db_util.basic import *
+import db_util as db
 import os
 import argparse
+import sqlite3
 
 ACT_FORWARD_FAIL='net act forward failed'
 args = None
@@ -60,11 +63,23 @@ class Test_net(ut.TestCase):
         args.path_test = p_data + '04'
         net_train_main(args)
         
+class Test_db_util(ut.TestCase):
+    def test_db_basic(self):
+        db_name = 'cool.db'
+        table_name = 'stuff'
+        db_path = './unittest/db/basic'
+        db.basic.populate_db(['this','is','cool'], ['INTEGER','TEXT','REAL'], 
+            [[0],[2],[1]], [['zero',0.],['two',0.2],['one',0.1]],
+            db_path=db_path, db_name=db_name, table_name=table_name)
+        db.basic.sanity_db(['is'], ['zero'], 'stuff', db_name=db_name, db_path=db_path)
+        db.basic.sanity_db(['is'], ['zero'], 'stuff', db_name=db_name, db_path=db_path)
+
+
 
 if __name__ == "__main__":
     # accept args the same way as the main in net_structure.py
     args = parse_args()
     # ut.main()
     #suite = ut.TestLoader().loadTestsFromTestCase(Test_deriv)
-    suite = ut.TestLoader().loadTestsFromTestCase(Test_net)
+    suite = ut.TestLoader().loadTestsFromTestCase(Test_db_util)
     ut.TextTestRunner(verbosity=2).run(suite)
