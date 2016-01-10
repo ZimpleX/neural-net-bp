@@ -18,6 +18,11 @@
 
 --  training method:
     --  current implemented:
-        --  basic BP + momentum + online training
+        --  basic BP + momentum + mini-batch training
     --  aimed version:
-        --  Levenburg-Marquardt BP + batch training (better for cluster acceleration)
+        -- find a dynamic discipline for updating learning parameters (learning rate / momentum)
+
+
+--  TODO:
+    --  data generator: populate to db directly, instead of to text
+    --  change the momuntum calculation from c_d_y to c_d_x

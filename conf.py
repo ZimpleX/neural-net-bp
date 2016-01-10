@@ -6,13 +6,15 @@ STRUCT = [3, 15, 1]
 ACTIVATION = ['sig', 'lin']
 COST = 'sqr'
 TRAINING_DIR = './train_data/'
-LEARN_RATE = 0.01
+LEARN_RATE = 0.001
 INC_RATE = 1.
 DEC_RATE = 1.
 MOMENTUM = 0.9
-BATCH_SIZE = 128
+BATCH_SIZE = -1
 TRAIN_DATA = TRAINING_DIR + 'Sin_in-1-out-1/08'
 TEST_DATA = TRAINING_DIR + 'Sin_in-1-out-1/04'
+INIT_RANGE = {'weight': 1,
+                'bias': 1}
 
 EPOCH = 500
 

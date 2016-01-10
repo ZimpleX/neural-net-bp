@@ -31,6 +31,12 @@ import pdb
 
 np.random.seed(100)
 
+timestamp = strftime('%D-%H.%M.%S')
+timestamp = timestamp.replace('/', '.')
+
+_LOG_FILE = {'net': '{}-net'.format(timestamp),
+            'conf': '{}-conf'.format(timestamp),}
+
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
 class Net_structure:
@@ -58,7 +64,8 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, layer_size_list, activ_list, cost_type):
+    def __init__(self, layer_size_list, activ_list, cost_type, 
+            w_range=INIT_RANGE['weight'], b_range=INIT_RANGE['bias']):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -71,9 +78,9 @@ class Net_structure:
         self.num_layer = len(layer_size_list) - 1
         assert len(activ_list) == self.num_layer
         # *_list: list of 2D weight / 1D bias
-        self.w_list = [np.random.rand(layer_size_list[i], layer_size_list[i+1]) - 0.5
+        self.w_list = [(np.random.rand(layer_size_list[i], layer_size_list[i+1]) - 0.5) * w_range
                         for i in range(self.num_layer)]
-        self.b_list = [np.random.rand(layer_size_list[i+1]) - 0.5 
+        self.b_list = [(np.random.rand(layer_size_list[i+1]) - 0.5) * b_range
                         for i in range(self.num_layer)]
         self.dw_list = [np.zeros((layer_size_list[i], layer_size_list[i+1]))
                         for i in range(self.num_layer)]
@@ -83,6 +90,9 @@ class Net_structure:
         self.cost = cost_type
         # store the output of each layer
         self.y_list = [None] * (self.num_layer + 1)
+        # current epoch / batch: for debugging & logging
+        self.epoch = -1
+        self.batch = -1
 
     def set_w_b(self, w_list, b_list):
         """
@@ -95,12 +105,23 @@ class Net_structure:
         """
         print the value of weight and bias array, for each layer
         """
-        net_stat = ''
+        net_stat = stringf('EPOCH {}', self.epoch, type='NET')
         for i in range(self.num_layer-1, -1, -1):
-            net_stat += stringf('layer {}: {} nodes', i+1, self.w_list[i].shape[1], type=None, separator='-')
-            net_stat += '\nweight\n{}\nbias\n{}\n'.format(self.w_list[i], self.b_list[i])
-        net_stat += stringf('layer {}: {} nodes', 0, self.w_list[0].shape[0], type=None, separator='-')
-        return net_stat
+            num_nodes = self.w_list[i].shape[1]
+            layer_str = 'layer {}: {} nodes'
+            net_stat = ('{}\n'
+                        '{}\n'
+                        'weight\n'
+                        '{}\n'
+                        'bias\n'
+                        '{}\n'
+                        'd_weight\n'
+                        '{}\n'
+                        'd_bias\n'
+                        '{}').format(net_stat, 
+                            stringf(layer_str, i+1, num_nodes, type=None, separator='-'),
+                            self.w_list[i], self.b_list[i], self.dw_list[i], self.db_list[i])
+        return '{}\n{}\n'.format(net_stat, stringf(layer_str, 0, self.w_list[0].shape[0], type=None, separator='-'))
 
     def net_act_forward(self, data):
         """
@@ -190,6 +211,10 @@ def parse_args():
     parser.add_argument('--cost', type=str, metavar='COST', 
             default=COST, help='specify the cost function',
             choices=cost_dict.keys())
+    parser.add_argument('--w_range', type=int, metavar='W_RANGE', 
+            default=INIT_RANGE['weight'], help='specify the range of weight initialization')
+    parser.add_argument('--b_range', type=int, metavar='B_RANGE',
+            default=INIT_RANGE['bias'], help='specify the range of bias initialization')
     parser.add_argument('-e', '--epoch', type=int, metavar='EPOCH',
             default=EPOCH, help='max num of iterations for training')
     parser.add_argument('-r', '--rate', type=float, metavar='RATE',
@@ -210,6 +235,8 @@ def parse_args():
             help='add this flag if you do NOT want to store cost profile')
     parser.add_argument('--profile_output', action='store_true',
             help='add this flag if you DO want to store the net output profile')
+    parser.add_argument('--log_verbose', type=int, metavar='LOG_V', 
+            default=0, help='verbosity of logging: print the net to log fileevery LOG_V batch')
     return parser.parse_args()
 
 
@@ -222,37 +249,34 @@ def net_train_main(args):
     """
     define main separately to facilitate unittest
     """
-    timestamp = strftime('%D-%H.%M.%S')
-    timestamp = timestamp.replace('/', '.')
-    timestamp_db = '[{}]'.format(timestamp)
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
     task_name = args.path_train.split('/')
     task_name = task_name[-2]
-
+    
     assert len(args.struct) == len(args.activation) + 1
     data_set = Data(args.path_train, args.path_test)
     # auto correct shape of input / output layer of the ANN
     args.struct[0] = data_set.data.shape[1]
     args.struct[-1] = data_set.target.shape[1]
-    net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost])
-    printf('INITIAL NET', separator='-=')
-    printf(net, type=None, separator=None)
+    net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost], args.w_range, args.b_range)
+    print_to_file(_LOG_FILE['net'], net, type=None)
     conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
 
-    print_to_file('{}-conf'.format(timestamp), conf)
+    print_to_file(_LOG_FILE['conf'], conf)
 
     if (args.profile_cost): # store the conf of the ANN for this run
                             # could be identified by parse time
-        data_util.profile_net_conf(task_name, args, timestamp_db)
-        data_util.profile_raw_data_set(task_name, data_set, timestamp_db)
+        data_util.profile_net_conf(task_name, args, timestamp)
+        data_util.profile_raw_data_set(task_name, data_set, timestamp)
 
     # main training loop
     batch = 0
     # populate initial output: as to evaluate initial weight
     init_out = net.net_act_forward(data_set.data)
-    data_util.profile_net_data(task_name, -1, -1, net, data_set.data, timestamp_db)
+    data_util.profile_net_data(task_name, -1, -1, net, data_set.data, timestamp)
     for epoch in range(conf.num_epoch):
+        net.epoch = epoch
         ######################
         #### Experimental ####
         #if epoch % 50 == 0 and epoch != 0:
@@ -263,23 +287,22 @@ def net_train_main(args):
         epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
             batch += 1
+            net.batch = batch
+            if args.log_verbose > 0 and batch % args.log_verbose == 0:
+                print_to_file(_LOG_FILE['net'], net, type=None) # logging
             cur_net_out = net.net_act_forward(bat_ipt)
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             net.back_prop(bat_tgt, conf)
         if args.profile_cost:
-            data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp_db)
+            data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp)
         if args.profile_output and epoch % epc_stride == 0:
-            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp_db)
+            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
         elif epoch == conf.num_epoch - 1:
             # populate final output data anyway
-            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp_db)
-        printf('end of epoch {}, sum of cost over all batches: {}', epoch, cost_bat, type='TRAIN', separator=None)
-
-    printf('FINAL NET')
-    printf(net, type=None, separator=None)
-    printf('FINAL OUTPUT')
-    printf(net.y_list[2], type=None, separator=None)
-    printf(net.net_act_forward(data_set.test_d))
+            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
+        printf('end of epoch {}, sum of cost over all batches: {}', epoch, cost_bat, type='TRAIN')
+    
+    print_to_file(_LOG_FILE['net'], net, type=None)
 
 
 

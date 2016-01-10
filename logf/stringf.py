@@ -9,6 +9,8 @@ import pdb
 _STRINGF_SEPA = {'INFO': '-',
                 'WARN': '=',
                 'ERROR': '*',
+                'DEBUG': '~',
+                'NET': '><',    # specific to ANN training
                 'others': ''}
 
 def stringf(string, *reflex, type='INFO', separator='default'):
