@@ -2,10 +2,16 @@
 basic building block for db manipulation:
 *   populate data
 *   remove data (sanity)
+
+CAUTION:
+    the functions in this module will do file permission manipulation. 
+    --> read-only will NOT protect your file when your call functions here.
+    --> you should be really clear about what you are doing when calling.
 """
 import os
 import sqlite3
 from time import strftime
+from db_util.conf import *
 import logf.filef as filef
 from logf.printf import *
 from functools import reduce
@@ -13,14 +19,10 @@ from numpy import *     # array()
 
 import pdb
 
-_DB_DIR_PARENT = './profile_data/'
-_DB_NAME = 'ann.db'
-_DB_TABLE = 'null|null' # format compatible with Benchtracker
 
 
-
-def populate_db(attr_name, attr_type, *d_tuple, db_path=_DB_DIR_PARENT, db_name=_DB_NAME, 
-        table_name=_DB_TABLE, append_time=True, usr_time=None, silent=False):
+def populate_db(attr_name, attr_type, *d_tuple, db_path=DB_DIR_PARENT, db_name=DB_NAME, 
+        table_name=DB_TABLE, append_time=True, usr_time=None, perm='default', silent=False):
     """
     populate data into database, with user defined schema
     optionally append the time to each data tuple.
@@ -38,11 +40,18 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=_DB_DIR_PARENT, db_name=
         db_name         name of database
         table_name      table name
         append_time     append timestamp to each data tuple if set true
+        perm            permission of file. Refer to logf.filef for details
         silent          won't log info after successful population if set True
     """
     file_opt = 'a'
     db_fullname = '{}/{}'.format(db_path, db_name)
     filef.mkdir_r(os.path.dirname(db_fullname))
+    # file permission policy
+    if perm == 'default':
+        perm = (os.path.exists(db_fullname)) and os.stat(db_fullname).st_mode or '0444'
+    if os.path.exists(db_fullname):
+        filef.set_f_perm(db_fullname, '0666')
+
     open(db_fullname, file_opt).close()
     # set-up
     num_tuples = -1
@@ -68,9 +77,9 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=_DB_DIR_PARENT, db_name=
             d_fulltuple = concatenate((d_fulltuple, d_arr), axis=1)
 
     if append_time:
-        attr_name = ['populate_time'] + list(attr_name)
+        attr_name = [TIME_ATTR] + list(attr_name)
         attr_type = ['TEXT'] + list(attr_type)
-        time_str = usr_time and usr_time or strftime('[%D-%H:%M:%S]')
+        time_str = usr_time and usr_time or strftime(TIME_FORMAT)
         time_col = array([time_str] * num_tuples) \
                 .reshape(num_tuples, 1)
         d_fulltuple = concatenate((time_col, d_fulltuple), axis=1)
@@ -92,6 +101,8 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=_DB_DIR_PARENT, db_name=
     # finish up
     conn.commit()
     conn.close()
+    # enforce file permission
+    set_f_perm(db_fullname, perm)
     # log
     if not silent:
         printf('success: populate {} entries into table {}', 
@@ -99,7 +110,7 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=_DB_DIR_PARENT, db_name=
 
 
 
-def sanity_db(attr_name, attr_val, table_name, db_name=_DB_NAME, db_path=_DB_DIR_PARENT, silent=False):
+def sanity_db(attr_name, attr_val, table_name, db_name=DB_NAME, db_path=DB_DIR_PARENT, silent=False):
     """
     remove entries in db file. Can be useful to keep the db clean
     when you do a lot of unstable testing for ANN.
@@ -118,6 +129,8 @@ def sanity_db(attr_name, attr_val, table_name, db_name=_DB_NAME, db_path=_DB_DIR
     if len(array(attr_val).shape) == 0:
         attr_val = [attr_val]
     db_fullname = '{}/{}'.format(db_path, db_name)
+    perm = os.stat(db_fullname).st_mode
+    filef.set_f_perm(db_fullname, '0666')
     # don't check file: leave it to user / wrapper function
     conn = sqlite3.connect(db_fullname)
     c = conn.cursor()
@@ -132,5 +145,6 @@ def sanity_db(attr_name, attr_val, table_name, db_name=_DB_NAME, db_path=_DB_DIR
     fina_row = c.execute('SELECT Count(*) FROM {}'.format(table_name)).fetchone()[0]
     conn.commit()
     conn.close()
+    filef.set_f_perm(db_fullname, perm)
     if not silent:
         printf('success: delete {} entries from {}', orig_row-fina_row, table_name, type='WARN')
