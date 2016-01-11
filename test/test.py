@@ -69,10 +69,10 @@ class Test_db_util(ut.TestCase):
         table_name = 'stuff'
         db_path = './unittest/db/basic'
         db.basic.populate_db(['this','is','cool'], ['INTEGER','TEXT','REAL'], 
-            [[0],[2],[1]], [['zero',0.],['two',0.2],['one',0.1]],
+            0, [['zero',0.],['two',0.2],['one',0.1]],
             db_path=db_path, db_name=db_name, table_name=table_name)
-        db.basic.sanity_db(['is'], ['zero'], 'stuff', db_name=db_name, db_path=db_path)
-        db.basic.sanity_db(['is'], ['zero'], 'stuff', db_name=db_name, db_path=db_path)
+        db.basic.sanity_db('is', ['zero'], 'stuff', db_name=db_name, db_path=db_path)
+        db.basic.sanity_db(['is'], 'zero', 'stuff', db_name=db_name, db_path=db_path)
 
 
 

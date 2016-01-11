@@ -57,6 +57,8 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=_DB_DIR_PARENT, db_name=
         num_tuples = 1
     for d in d_tuple:
         d_arr = array(d)
+        if len(d_arr.shape) == 0:
+            d_arr = array([d])
         if len(d_arr.shape) == 1:
             d_arr = d_arr.reshape(1, d_arr.size)
             d_arr = repeat(d_arr, num_tuples, axis=0)
@@ -110,6 +112,11 @@ def sanity_db(attr_name, attr_val, table_name, db_name=_DB_NAME, db_path=_DB_DIR
         db_path         the full path of db file is db_name + db_path
         silent          if silent, don't log info after successful deletion
     """
+    # convert arg to list if passing in single int / string
+    if len(array(attr_name).shape) == 0:
+        attr_name = [attr_name]
+    if len(array(attr_val).shape) == 0:
+        attr_val = [attr_val]
     db_fullname = '{}/{}'.format(db_path, db_name)
     # don't check file: leave it to user / wrapper function
     conn = sqlite3.connect(db_fullname)
