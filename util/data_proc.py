@@ -35,7 +35,7 @@ def profile_net_conf(data_dir_name, args, timestamp, db_path=DB_DIR_PARENT):
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
     populate_db(net_attr, net_attr_type, net_val, 
         db_path=db_path+data_dir_name, table_name='meta|ann', 
-        usr_time=timestamp)
+        usr_time=timestamp, perm='0444', silent=True)
 
 
 def profile_raw_data_set(data_dir_name, data_set, timestamp, db_path=DB_DIR_PARENT):
@@ -50,7 +50,7 @@ def profile_raw_data_set(data_dir_name, data_set, timestamp, db_path=DB_DIR_PARE
     data_attr_type = ['REAL'] * (data_set.data.shape[1] + data_set.target.shape[1])
     populate_db(data_attr, data_attr_type, data_set.data, data_set.target,
         db_path=db_path+data_dir_name, table_name='raw_data|ann', 
-        usr_time=timestamp)
+        usr_time=timestamp, perm='0444', silent=True)
 
 
 
@@ -66,7 +66,7 @@ def profile_cost(data_dir_name, epoch, batch, cost_bat, timestamp, db_path=DB_DI
     prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
     populate_db(prof_attr, prof_attr_type, prof_val,
         db_path=db_path+data_dir_name, table_name='profile_cost|ann', 
-        usr_time=timestamp)
+        usr_time=timestamp, perm='0444', silent=True)
 
 
 def profile_net_data(data_dir_name, epoch, batch, net, net_ip, timestamp, db_path=DB_DIR_PARENT):
@@ -83,4 +83,4 @@ def profile_net_data(data_dir_name, epoch, batch, net, net_ip, timestamp, db_pat
     data_attr_type = ['INTEGER', 'INTEGER'] + ['REAL'] * (net_ip.shape[1] + net_op.shape[1])
     populate_db(data_attr, data_attr_type, array([epoch, batch]), net_ip, net_op,
         db_path=db_path+data_dir_name, table_name='net_data|ann', 
-        usr_time=timestamp)
+        usr_time=timestamp, perm='0444', silent=True)
