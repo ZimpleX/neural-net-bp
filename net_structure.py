@@ -31,8 +31,7 @@ import pdb
 
 np.random.seed(100)
 
-timestamp = strftime('%D-%H.%M.%S')
-timestamp = timestamp.replace('/', '.')
+timestamp = strftime('%Y.%M.%D-%H.%M.%S')
 
 _LOG_FILE = {'net': '{}-net'.format(timestamp),
             'conf': '{}-conf'.format(timestamp),}

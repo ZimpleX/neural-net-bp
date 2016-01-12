@@ -8,7 +8,6 @@ CAUTION:
     --> read-only will NOT protect your file when your call functions here.
     --> you should be really clear about what you are doing when calling.
 """
-hh = 1
 
 import os
 import sqlite3

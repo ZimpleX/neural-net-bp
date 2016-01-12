@@ -87,8 +87,14 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
 
 
 
-def sanity_last_commit():
+def sanity_last_commit(num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARENT, time_attr=TIME_ATTR):
     """
-    delete the entries with the latest populate_time
+    delete the entries with the latest populate_time, for all tables with the time attr
+
+    ARGUMENTS:
+        num_run     delete entries with the last (num_run) populate time
+        time_attr   the name of the time attribute
     """
-    pass
+    db_fullpath = '{}/{}'.format(db_name, db_path)
+    time_attr = '[{}]'.format(time_attr)
+    
