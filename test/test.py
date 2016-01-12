@@ -2,7 +2,8 @@
 NOTE:
     invoke this script from root dir
 """
-
+#import db_util.interact
+#from db_util.basic import *
 from logf.printf import *
 from logf.filef import *
 from cost import *
@@ -15,7 +16,6 @@ from numpy import *
 from numpy.testing import *
 from util.data_proc import *
 from util.data_generator import *
-from db_util.basic import *
 import db_util as db
 import os
 import argparse
@@ -65,14 +65,25 @@ class Test_net(ut.TestCase):
         
 class Test_db_util(ut.TestCase):
     def test_db_basic(self):
+        print()
         db_name = 'cool.db'
         table_name = 'stuff'
-        db_path = './unittest/db/basic'
+        db_path = './unittest/db/basic/'
         db.basic.populate_db(['this','is','cool'], ['INTEGER','TEXT','REAL'], 
             0, [['zero',0.],['two',0.2],['one',0.1]],
             db_path=db_path, db_name=db_name, table_name=table_name)
         db.basic.sanity_db('is', ['zero'], 'stuff', db_name=db_name, db_path=db_path)
         db.basic.sanity_db(['is'], 'zero', 'stuff', db_name=db_name, db_path=db_path)
+        printf('CHECK THE DB YOURSELF TO SEE IF TEST IS PASSED!', type='WARN', separator='*')
+    def test_db_interact(self):
+        print()
+        db_path = './profile_data/Sin_in-1-out-1/'
+        db_name = 'ann.db'
+        meta_table = 'meta|ann'
+        data_table = 'profile_cost|ann'
+        db.interact.db_control_dim(meta_table, data_table, 'learn_rate', db_path=db_path, db_name=db_name)
+        printf('CHECK THE DB YOURSELF TO SEE IF TEST IS PASSED!', type='WARN', separator='*')
+       
 
 
 

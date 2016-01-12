@@ -8,12 +8,15 @@ CAUTION:
     --> read-only will NOT protect your file when your call functions here.
     --> you should be really clear about what you are doing when calling.
 """
+hh = 1
+
 import os
 import sqlite3
 from time import strftime
 from db_util.conf import *
 import logf.filef as filef
 from logf.printf import *
+from db_util.conf import *
 from functools import reduce
 from numpy import *     # array()
 
@@ -102,7 +105,7 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=DB_DIR_PARENT, db_name=D
     conn.commit()
     conn.close()
     # enforce file permission
-    set_f_perm(db_fullname, perm)
+    filef.set_f_perm(db_fullname, perm)
     # log
     if not silent:
         printf('success: populate {} entries into table {}', 
