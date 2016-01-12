@@ -87,14 +87,29 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
 
 
 
-def sanity_last_commit(num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARENT, time_attr=TIME_ATTR):
+def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARENT, time_attr=TIME_ATTR):
     """
     delete the entries with the latest populate_time, for all tables with the time attr
 
     ARGUMENTS:
+        table       if table=(), then delete entries for all tables, otherwise only delete for that in *table
         num_run     delete entries with the last (num_run) populate time
         time_attr   the name of the time attribute
     """
-    db_fullpath = '{}/{}'.format(db_name, db_path)
+    db_fullpath = '{}/{}'.format(db_path, db_name)
     time_attr = '[{}]'.format(time_attr)
+    conn = sqlite3.connect(db_fullpath)
+    c = conn.cursor()
+    if len(table) == 0:
+        table = list(c.execute('SELECT name FROM sqlite_master WHERE type=\'table\''))
+    table = list(map(lambda x: '[{}]'.format(x[0]), table))
+    for tbl in table:
+        time_list = list(c.execute('SELECT DISTINCT {} FROM {}'.format(time_attr, tbl)))
+        time_list = list(map(lambda x: x[0], time_list))
+        time_list.sort()
+        num_run = (num_run>len(time_list)) and len(time_list) or num_run
+        time_list = time_list[len(time_list)-num_run:]
+        for t in time_list:
+            sanity_db(time_attr[1:-1], t, tbl[1:-1], db_name=db_name, db_path=db_path)
     
+    printf('Done: cleared last {} commits for {}'.format(num_run, table))

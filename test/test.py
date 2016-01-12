@@ -83,6 +83,13 @@ class Test_db_util(ut.TestCase):
         data_table = 'profile_cost|ann'
         db.interact.db_control_dim(meta_table, data_table, 'learn_rate', db_path=db_path, db_name=db_name)
         printf('CHECK THE DB YOURSELF TO SEE IF TEST IS PASSED!', type='WARN', separator='*')
+    def test_db_sanity_last_n(self):
+        print()
+        db_path = './profile_data/Sin_in-1-out-1/'
+        db_name = 'ann.db'
+        db.interact.sanity_last_n_commit(db_name=db_name, db_path=db_path)
+        printf('CHECK THE DB YOURSELF TO SEE IF TEST IS PASSED!', type='WARN', separator='*')
+        
        
 
 
