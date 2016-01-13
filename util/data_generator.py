@@ -10,6 +10,7 @@ from node_activity import activation_dict
 from cost import cost_dict
 import argparse
 from random import uniform
+import os
 
 import pdb
 
@@ -28,11 +29,10 @@ _FUNC_DEFAULT = 'sin'
 func_choices = ['sigmoid',
                 'lin',
                 'sin',
-                'atten_sin',
                 'random',
                 'ann']
-_DB_NAME = 'data'
-_DB_PATH = conf.TRAIN_DIR
+_DB_NAME = 'data.db'
+_DB_PATH = conf.TRAINING_DIR
 
 def parseArg():
     parser = argparse.ArgumentParser("generating training data for ANN")
@@ -53,7 +53,7 @@ def parseArg():
             choices=func_choices, default=_FUNC_DEFAULT,
             help='specify the func to generate data')
     parser.add_argument('-n', '--db_name', type=str, metavar='DB',
-            default=_DB_NAME, help='provide the name of database (omit file extension)')
+            default=_DB_NAME, help='provide the name of database (include file extension)')
     parser.add_argument('-p', '--db_path', type=str, metavar='PATH',
             default=_DB_PATH, help='provide the path of database')
 
@@ -71,14 +71,14 @@ def parseArg():
 
 
 def dataGeneratorMain(args):
-    db_fullpath = '{}/{}.db'.format(args.db_path, args.db_name)
+    db_fullpath = '{}/{}'.format(args.db_path, args.db_name)
     func = args.function
-    table = '{}_is-{}-os-{}-ir-{},{}-or-{},{}'\
+    table = '{}_is-{}-os-{}-ir-{},{}-or-{},{}|ann'\
         .format(func, args.input_size, args.output_size, 
                 args.input_range[0], args.input_range[1],
                 args.output_range[0], args.output_range[1])
     if func == 'ann':
-        table = '{}_struct-{}-act-{}-cost-{}'\
+        table = '{}_struct-{}-act-{}-cost-{}|ann'\
             .format(func, args.struct, args.activation, args.cost)
         args.input_size = args.struct[0]
         args.output_size = args.struct[-1]
@@ -87,27 +87,29 @@ def dataGeneratorMain(args):
         # set new_entry: how many more entries are needed?
         conn = sqlite3.connect(db_fullpath)
         c = conn.cursor()
-        if table in list(c.execute('SELECT name FROM sqlite_master WHERE type=\'table\'')):
-            orig_entry = c.execute('SELECT Count(*) FROM {}'.format(table)).fetchone()[0]
+        table_list = list(c.execute('SELECT name FROM sqlite_master WHERE type=\'table\''))
+        table_list = list(map(lambda x: x[0], table_list))
+        if table in table_list:
+            orig_entry = c.execute('SELECT Count(*) FROM [{}]'.format(table)).fetchone()[0]
             new_entry = (new_entry>orig_entry) and (new_entry-orig_entry) or 0
         conn.close()
     # populate data into db
-    genY = trainingFunc(args.function)
-    attr_list = funcAttr(args.function)
+    genY, attr_list = trainingFunc(args.function, args.input_size, args.output_size)
     type_list = ['REAL'] * len(attr_list)
     dataList = None
     for i in range(0, new_entry):
         xList = [uniform(args.input_range[0], args.input_range[1]) for k in range(0, args.input_size)]
-        if args.function = 'ann':
-            yList = genY(xList, args.struct, args.activation, args.cost)
+        if args.function == 'ann':
+            xyList = genY(xList, args.struct, args.activation, args.cost)
         else:
-            yList = genY(xList, args.output_range)
+            xyList = genY(xList, args.output_range)
         if dataList == None:
-            dataList = [xList + yList]
+            dataList = [xyList]
         else:
-            dataList += [xList + yList]
+            dataList += [xyList]
 
-    db.populate_db(attr_list, type_list, dataList, db_path=args.db_path, db_name=args.db_name, table_name=table)
+    if dataList:
+        db.basic.populate_db(attr_list, type_list, dataList, db_path=args.db_path, db_name=args.db_name, table_name=table)
         
                 
 
