@@ -140,6 +140,14 @@ def sanity_db(attr_name, attr_val, table_name, db_name=DB_NAME, db_path=DB_DIR_P
     orig_row = c.execute('SELECT Count(*) FROM {}'.format(table_name)).fetchone()[0]
     attr_len = len(attr_name)
     assert attr_len == len(attr_val)
+    # check if the attr passed in is the attr in the db
+    db_attr_set = set(c.execute('pragma table_info({})'.format(table_name)))
+    db_attr_set = set(map(lambda x: x[1], db_attr_set))
+    try:
+        assert len(db_attr_set) == len(db_attr_set|set(attr_name))
+    except AssertionError:
+        printf('table {} doesn\'t contain some of the following attr: {}', table_name, attr_name, type='ERROR')
+        return
     attr_val = list(map(lambda s: (type(s)==type('')) and '\'{}\''.format(s) or s, attr_val))
     del_cond = ['[{}] = {}'.format(attr_name[i], attr_val[i]) for i in range(attr_len)]
     del_cond = reduce(lambda a,b: '{} and {}'.format(a,b), del_cond)

@@ -74,6 +74,7 @@ class Test_db_util(ut.TestCase):
             db_path=db_path, db_name=db_name, table_name=table_name)
         db.basic.sanity_db('is', ['zero'], 'stuff', db_name=db_name, db_path=db_path)
         db.basic.sanity_db(['is'], 'zero', 'stuff', db_name=db_name, db_path=db_path)
+        db.basic.sanity_db('shhhh', 'zero', 'stuff', db_name=db_name, db_path=db_path)
         printf('CHECK THE DB YOURSELF TO SEE IF TEST IS PASSED!', type='WARN', separator='*')
     def test_db_interact(self):
         print()

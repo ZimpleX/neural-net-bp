@@ -47,6 +47,7 @@ def _perm_to_int(perm):
         assert len(perm) == 4
     except AssertionError:
         printf(ERROR_PERM_FORMAT, type='ERROR')
+        exit()
     p_pos = ['','USR', 'GRP', 'OTH']   # don't care, owner, group, others
     p_ret = 0
     eval_str = 'stat.S_I{}{}'
@@ -56,6 +57,7 @@ def _perm_to_int(perm):
             assert p_int <= 7 and p_int >= 0
         except AssertionError:
             printf(ERROR_PERM_FORMAT, type='ERROR')
+            exit()
         if p_int >= 4:
             p_ret |= eval(eval_str.format('R', p_pos[n]))
         if p_int in [2,3,6,7]:

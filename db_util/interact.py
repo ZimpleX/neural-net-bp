@@ -97,7 +97,6 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
         time_attr   the name of the time attribute
     """
     db_fullpath = '{}/{}'.format(db_path, db_name)
-    time_attr = '[{}]'.format(time_attr)
     conn = sqlite3.connect(db_fullpath)
     c = conn.cursor()
     if len(table) == 0:
@@ -105,16 +104,26 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
         table = list(map(lambda x: '[{}]'.format(x[0]), table))
     else:
         table = list(map(lambda x: '[{}]'.format(x), table))
-    time_set = set()
+    # fliter table list to those actually contains the time_attr
+    table_flt = []
     for tbl in table:
-        #pdb.set_trace()
+        tbl_attr = list(c.execute('pragma table_info({})'.format(tbl)))
+        tbl_attr = list(map(lambda x: x[1], tbl_attr))
+        if time_attr in tbl_attr:
+            table_flt += [tbl]
+    time_attr = '[{}]'.format(time_attr)
+    time_set = set()
+    for tbl in table_flt:
         cur_time_set = set(c.execute('SELECT DISTINCT {} FROM {}'.format(time_attr, tbl)))
         time_set |= set(map(lambda x: x[0], cur_time_set))
     time_len = len(time_set)
     num_run = (num_run>time_len) and time_len or num_run
     time_list = sorted(list(time_set))[time_len-num_run:]
-    for tbl in table:
+    for tbl in table_flt:
         for t in time_list:
             sanity_db(time_attr[1:-1], t, tbl[1:-1], db_name=db_name, db_path=db_path)
     
-    printf('Done: cleared last {} commits for {}'.format(num_run, table))
+    printf('Done: cleared last {} commits for {}'.format(num_run, table_flt))
+    bad_table = set(table) - set(table_flt)
+    if bad_table:
+        printf('tables {} don\'t have attr {}', bad_table, time_attr, type='WARN')
