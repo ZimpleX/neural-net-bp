@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+
+# protect your profile data from being polluted by trial runs
+
+ANN_ROOT=$(pwd)
+PY3=$(which python3)
+db_name="'Sin_in-1-out-1/ann.db'"
+
+sanity_num=$1
+
+if [ "$sanity_num" == '' ]
+then
+    sanity_num='1'
+fi
+
+cd $ANN_ROOT
+$PY3 -c "from db_util.interact import *; sanity_last_n_commit(num_run=$sanity_num, db_name=$db_name)"
