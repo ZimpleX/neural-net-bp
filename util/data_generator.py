@@ -31,7 +31,6 @@ func_choices = ['sigmoid',
                 'sin',
                 'random',
                 'ann']
-_DB_NAME = 'data.db'
 _DB_PATH = conf.TRAINING_DIR
 
 def parseArg():
@@ -53,7 +52,7 @@ def parseArg():
             choices=func_choices, default=_FUNC_DEFAULT,
             help='specify the func to generate data')
     parser.add_argument('-n', '--db_name', type=str, metavar='DB',
-            default=_DB_NAME, help='provide the name of database (include file extension)')
+            default=conf.DB_DATA, help='provide the name of database (include file extension)')
     parser.add_argument('-p', '--db_path', type=str, metavar='PATH',
             default=_DB_PATH, help='provide the path of database')
 
@@ -85,14 +84,9 @@ def dataGeneratorMain(args):
     new_entry = pow(2, args.data_size)
     if os.path.exists(db_fullpath):
         # set new_entry: how many more entries are needed?
-        conn = sqlite3.connect(db_fullpath)
-        c = conn.cursor()
-        table_list = list(c.execute('SELECT name FROM sqlite_master WHERE type=\'table\''))
-        table_list = list(map(lambda x: x[0], table_list))
-        if table in table_list:
-            orig_entry = c.execute('SELECT Count(*) FROM [{}]'.format(table)).fetchone()[0]
+        if db.util.is_table_exist(db_fullpath, table):
+            orig_entry = db.util.count_entry(db_fullpath, table)
             new_entry = (new_entry>orig_entry) and (new_entry-orig_entry) or 0
-        conn.close()
     # populate data into db
     genY, attr_list = trainingFunc(args.function, args.input_size, args.output_size)
     type_list = ['REAL'] * len(attr_list)

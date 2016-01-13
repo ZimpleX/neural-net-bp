@@ -7,6 +7,7 @@ import os
 import sqlite3
 from db_util.conf import *
 from db_util.basic import *
+from db_util.util import *
 from logf.printf import *
 from time import strftime
 from numpy import *
@@ -52,16 +53,12 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
     var_attr = list(map(lambda x: '[{}]'.format(x), var_attr))
     # get list of attributes
     # attr in the meta table
-    l_attr_meta = list(c.execute('pragma table_info({})'.format(meta_table)))
-    l_attr_meta = list(map(lambda x: '[{}]'.format(x[1]), l_attr_meta))
+    l_attr_meta = list(get_attr_info(db_fullpath, meta_table).keys())
     l_attr_meta_flt = [item for item in l_attr_meta if item not in var_attr]
     l_attr_meta_flt = [item for item in l_attr_meta_flt if item not in ['[{}]'.format(TIME_ATTR)]]
     # attr in the data table
-    l_attr_data = list(c.execute('pragma table_info({})'.format(data_table)))
-    l_attr_data = list(map(lambda x: '[{}]'.format(x[1]), l_attr_data))
-    l_attr_type = {}
-    for t in list(c.execute('pragma table_info({})'.format(meta_table))):
-        l_attr_type['[{}]'.format(t[1])] = t[2]
+    l_attr_data = list(get_attr_info(db_fullpath, data_table).keys())
+    l_attr_type = get_attr_info(db_fullpath, meta_table)
     # store the index of attr if it is of TEXT type --> append quote later
     text_idx = [l_attr_meta_flt.index(itm) for itm in l_attr_meta_flt if l_attr_type[itm]=='TEXT']
     # attr list in the joined table
@@ -107,8 +104,7 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
     # fliter table list to those actually contains the time_attr
     table_flt = []
     for tbl in table:
-        tbl_attr = list(c.execute('pragma table_info({})'.format(tbl)))
-        tbl_attr = list(map(lambda x: x[1], tbl_attr))
+        tbl_attr = list(get_attr_info(db_fullpath, tbl, enclosing=False).keys())
         if time_attr in tbl_attr:
             table_flt += [tbl]
     time_attr = '[{}]'.format(time_attr)

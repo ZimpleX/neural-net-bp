@@ -13,9 +13,9 @@ import os
 import sqlite3
 from time import strftime
 from db_util.conf import *
+from db_util.util import *
 import logf.filef as filef
 from logf.printf import *
-from db_util.conf import *
 from functools import reduce
 from numpy import *     # array()
 
@@ -137,12 +137,11 @@ def sanity_db(attr_name, attr_val, table_name, db_name=DB_NAME, db_path=DB_DIR_P
     conn = sqlite3.connect(db_fullname)
     c = conn.cursor()
     table_name = '[{}]'.format(table_name)
-    orig_row = c.execute('SELECT Count(*) FROM {}'.format(table_name)).fetchone()[0]
+    orig_row = count_entry(db_fullname, table_name)
     attr_len = len(attr_name)
     assert attr_len == len(attr_val)
     # check if the attr passed in is the attr in the db
-    db_attr_set = set(c.execute('pragma table_info({})'.format(table_name)))
-    db_attr_set = set(map(lambda x: x[1], db_attr_set))
+    db_attr_set = set(get_attr_info(db_fullname, table_name, enclosing=False).keys())
     try:
         assert len(db_attr_set) == len(db_attr_set|set(attr_name))
     except AssertionError:
