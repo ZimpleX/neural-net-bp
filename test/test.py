@@ -87,6 +87,7 @@ class Test_db_util(ut.TestCase):
         print()
         db_path = './profile_data/Sin_in-1-out-1/'
         db_name = 'ann.db'
+        db.interact.sanity_last_n_commit('meta|ann',db_name=db_name, db_path=db_path)
         db.interact.sanity_last_n_commit(db_name=db_name, db_path=db_path)
         printf('CHECK THE DB YOURSELF TO SEE IF TEST IS PASSED!', type='WARN', separator='*')
         

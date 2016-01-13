@@ -102,13 +102,18 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
     c = conn.cursor()
     if len(table) == 0:
         table = list(c.execute('SELECT name FROM sqlite_master WHERE type=\'table\''))
-    table = list(map(lambda x: '[{}]'.format(x[0]), table))
+        table = list(map(lambda x: '[{}]'.format(x[0]), table))
+    else:
+        table = list(map(lambda x: '[{}]'.format(x), table))
+    time_set = set()
     for tbl in table:
-        time_list = list(c.execute('SELECT DISTINCT {} FROM {}'.format(time_attr, tbl)))
-        time_list = list(map(lambda x: x[0], time_list))
-        time_list.sort()
-        num_run = (num_run>len(time_list)) and len(time_list) or num_run
-        time_list = time_list[len(time_list)-num_run:]
+        #pdb.set_trace()
+        cur_time_set = set(c.execute('SELECT DISTINCT {} FROM {}'.format(time_attr, tbl)))
+        time_set |= set(map(lambda x: x[0], cur_time_set))
+    time_len = len(time_set)
+    num_run = (num_run>time_len) and time_len or num_run
+    time_list = sorted(list(time_set))[time_len-num_run:]
+    for tbl in table:
         for t in time_list:
             sanity_db(time_attr[1:-1], t, tbl[1:-1], db_name=db_name, db_path=db_path)
     
