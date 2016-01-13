@@ -116,6 +116,7 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
     for tbl in table_flt:
         cur_time_set = set(c.execute('SELECT DISTINCT {} FROM {}'.format(time_attr, tbl)))
         time_set |= set(map(lambda x: x[0], cur_time_set))
+    conn.close()
     time_len = len(time_set)
     num_run = (num_run>time_len) and time_len or num_run
     time_list = sorted(list(time_set))[time_len-num_run:]

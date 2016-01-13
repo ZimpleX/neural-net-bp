@@ -1,70 +1,63 @@
 """
-this script is to generate training data set for LogReg benchmark
-it uses a mix of shell script and python script, as i think shell script is
-more concise with regard to directory formatting
-
-also note that the policy regarding data set is:
-    never overwrite a data set file again --> to ensure that different runs of benchmark use the same data set
-
-
-adapted from original version:
-    https://github.com/ZimpleX/spark-benchmark-python/blob/500b285aca981ccc4b817d0e5364d0bcd737735e/LogReg/DataGen.py
+Generate training data for the neural net, store them in the sqlite3 db
 """
-
-from __future__ import print_function
-from util.embed_shell_script import runScript, ScriptException
 from util.training_data_func import trainingFunc
-from logf.filef import *
+import sqlite3
 from logf.printf import *
-from logf.stringf import *
-from random import uniform
+import db_util as db
 import conf
 from node_activity import activation_dict
 from cost import cost_dict
-import os
 import argparse
-from functools import reduce
+from random import uniform
+
 import pdb
 
-_DGEN_INPUT = [-1, 1]
 
-trainingDirName = conf.TRAINING_DIR
-dataSetSizeStart = 3
-dataSizeDefault = 12
-inputSizeDefault = 3
-outputSizeDefault = 1
-funcDefault = 'Lin'
+_NUM_NODES_RANGE = {'input': range(1,11),
+                    'output': range(1,11)}
+_NUM_NODES_DEFAULT = {'input': 3,
+                    'output': 1}
+_VAL_RANGE = {'input': [-1,1],
+            'output': [-5,5]}
+_DATA_SIZE_DEFAULT = 12
+_DATA_SIZE_RANGE = range(3, 15)
 
-inputSizeRangeDefault = range(1,11)
-outputSizeRangeDefault = range(1, 11)
-dataSizeRangeDefault = range(3,15)
-funcChoices = [	'Sigmoid',
-                'Lin',
-                'Sin',
-               	'AttenSin',
-               	'AttenSin-x0',
-               	'AttenSin-abs-x0',
-               	'Random',
-               	'ANN-bp']
+_FUNC_DEFAULT = 'sin'
+
+func_choices = ['sigmoid',
+                'lin',
+                'sin',
+                'atten_sin',
+                'random',
+                'ann']
+_DB_NAME = 'data'
+_DB_PATH = conf.TRAIN_DIR
 
 def parseArg():
     parser = argparse.ArgumentParser("generating training data for ANN")
-    parser.add_argument("-is", "--input_size", type=int, metavar='M', 
-            choices=inputSizeRangeDefault, default=inputSizeDefault, 
-            help="specify the num of input to the ANN")
-    parser.add_argument("-os", "--output_size", type=int, metavar='S',
-            choices=outputSizeRangeDefault, default=outputSizeDefault,
-            help="specify the num of output to the ANN")
-    parser.add_argument("-ir", "--input_range", type=int, metavar='R',
-            nargs=2, default=_DGEN_INPUT, help="range of input: min, max")
-    parser.add_argument("-ds", "--data_size", type=int, metavar='N', 
-            choices=dataSizeRangeDefault, default=dataSizeDefault, 
-            help="specify the size of data set (in terms of 2^N)")
-    parser.add_argument("-f", "--function", type=str, 
-            choices=funcChoices, default=funcDefault, 
-            help="Specify the training function to gen the data set")
+    parser.add_argument('-is', '--input_size', type=int, metavar='M',
+            choices=_NUM_NODES_RANGE['input'], default=_NUM_NODES_DEFAULT['input'],
+            help='specify the num of inputs the data have')
+    parser.add_argument('-os', '--output_size', type=int, metavar='S',
+            choices=_NUM_NODES_RANGE['output'], default=_NUM_NODES_DEFAULT['output'],
+            help='specify the num of outputs the data have')
+    parser.add_argument('-ir', '--input_range', type=int, metavar='IPR', 
+            nargs=2, default=_VAL_RANGE['input'], help='range of input: min, max')
+    parser.add_argument('-or', '--output_range', type=int, metavar='OPR',
+            nargs=2, default=_VAL_RANGE['output'], help='range of output: min, max')
+    parser.add_argument('-ds', '--data_size', type=int, metavar='EXP',
+            choices=_DATA_SIZE_RANGE, default=_DATA_SIZE_DEFAULT, 
+            help='how many entries you need? (in terms of 2^EXP)')
+    parser.add_argument('-f', '--function', type=str, 
+            choices=func_choices, default=_FUNC_DEFAULT,
+            help='specify the func to generate data')
+    parser.add_argument('-n', '--db_name', type=str, metavar='DB',
+            default=_DB_NAME, help='provide the name of database (omit file extension)')
+    parser.add_argument('-p', '--db_path', type=str, metavar='PATH',
+            default=_DB_PATH, help='provide the path of database')
 
-    # following args are only for training func of ANN-bp
+    # following is only for training func of ann
     parser.add_argument("--struct", type=int, metavar='NET_STRUCT', nargs='+',
             default=conf.STRUCT, help='[ANN-bp]: specify the structure of the ANN (num of nodes in each layer)')
     parser.add_argument('--activation', type=str, metavar='NET_ACTIVATION',
@@ -77,161 +70,46 @@ def parseArg():
     return parser.parse_args()
 
 
-
 def dataGeneratorMain(args):
-    taskName = args.function
-    inputSize = None
-    outputSize = None
-    if args.function == 'ANN-bp':
-        inputSize = args.struct[0]
-        outputSize = args.struct[-1]
-    else:
-        inputSize = args.input_size
-        outputSize = args.output_size
-    dataSetSize = args.data_size
-    assert inputSize > 0 and inputSize <= 10
-    assert dataSetSize <= 14 and dataSetSize >= 3
-    #################################
-    #    format the data set dir    #
-    #################################
-    try:
-        # shell script to be run as subprocess
-        scriptFormatDir = """
-            set -eu
-            # setup data set dir
-            orig_dir="`pwd`/"
-            dir_name={}
-            task_name="$0"
-            ip_size="$1"
-            set_size_pow="$2"
-            set_size_pow_start=0"$3"
-            if [ ! -d $orig_dir$dir_name ]
-            then
-                mkdir $orig_dir$dir_name
-                echo "created dir: $orig_dir$dir_name"
-            fi
-            if [ ! -d $orig_dir$dir_name$task_name ]
-            then
-                mkdir $orig_dir$dir_name$task_name
-                echo "created dir: $orig_dir$dir_name$task_name"
-            fi
-            echo "input size: "$ip_size
-            echo "set pow size: "$set_size_pow
-
-            task_dir=$orig_dir$dir_name$task_name
-            ##################
-            cd $task_dir     #
-            ##################
-            existing_set="`ls`"
-            for size_pow in $(eval echo "{{$set_size_pow_start..$set_size_pow}}")
-            do
-                file_name=$size_pow
-                if [ "`find . -maxdepth 1 -type f -printf '%f\n' | grep $file_name`" ]
-                then 
-                    echo "data set already exists: "$file_name    
-                else
-                    touch $file_name
-                    echo "created data set file: "$file_name
-                fi
-            done
-            ##################
-            cd $orig_dir     #
-            ##################
-        """.format(trainingDirName)
-        # args to the script:
-        #   $0: name for the training set (e.g.: sin: the data set should show characteristic of sin function)
-        #   $1: number of input to the sigmoid neuron
-        #   $2: indicate number of tuples in the data-set:
-        #       range: 3 ~ 14
-        #       e.g.:
-        #           suppose user provide 10, then data set with size 2^3, 2^4, 2^5, ... 2^10 will be generated,
-        #           and be stored as separate files in the corresponding folder
-        #   $3: indicate min number of tuples in the data-set
-        if args.function == 'ANN-bp':
-            structStr = reduce(lambda a,b: '{}-{}'.format(a,b), args.struct)
-            actStr = reduce(lambda a,b: '{}-{}'.format(a,b), args.activation)
-            costStr = args.cost
-            taskName += '_struct-{}_act-{}_cost-{}'.format(structStr, actStr, costStr)
-        else:
-            taskName += '_in-{}-out-{}'.format(inputSize, outputSize)
-        stdout, stderr = runScript(scriptFormatDir, [taskName, str(inputSize), str(dataSetSize), str(dataSetSizeStart)])
-        print("============================")
-        print("script msg: \n{}".format(stdout.decode('ascii')))
-        print("============================")
-    except ScriptException as se:
-        print(se)
-
-
-    #########################################
-    #    generate data and write to file    #
-    #########################################
+    db_fullpath = '{}/{}.db'.format(args.db_path, args.db_name)
+    func = args.function
+    table = '{}_is-{}-os-{}-ir-{},{}-or-{},{}'\
+        .format(func, args.input_size, args.output_size, 
+                args.input_range[0], args.input_range[1],
+                args.output_range[0], args.output_range[1])
+    if func == 'ann':
+        table = '{}_struct-{}-act-{}-cost-{}'\
+            .format(func, args.struct, args.activation, args.cost)
+        args.input_size = args.struct[0]
+        args.output_size = args.struct[-1]
+    new_entry = pow(2, args.data_size)
+    if os.path.exists(db_fullpath):
+        # set new_entry: how many more entries are needed?
+        conn = sqlite3.connect(db_fullpath)
+        c = conn.cursor()
+        if table in list(c.execute('SELECT name FROM sqlite_master WHERE type=\'table\'')):
+            orig_entry = c.execute('SELECT Count(*) FROM {}'.format(table)).fetchone()[0]
+            new_entry = (new_entry>orig_entry) and (new_entry-orig_entry) or 0
+        conn.close()
+    # populate data into db
     genY = trainingFunc(args.function)
-    for dFile in os.listdir(trainingDirName + taskName):
-        dFileFull = trainingDirName + taskName + '/' + dFile
-        # NOTE: all old files should already be read-only
-        # so the "write once" policy is enforced by this permission check
-        if not os.access(dFileFull, os.W_OK):
-            continue
-        if 'conf' in dFile or 'ignore' in dFile:
-            continue
-        dSize = dFile
-        dSize = int(dSize)
-        assert dSize >= dataSetSizeStart and dSize <= dataSetSize
-        assert os.stat(dFileFull).st_size == 0
-        f = open(dFileFull, 'w')
-        numEntry = pow(2, dSize)
-        for i in range(0, numEntry):
-            # randomly generate input list, within range ... ~ ...
-            xList = [uniform(args.input_range[0], args.input_range[1]) for k in range(0, inputSize)]
-            yList = None
-            if args.function == 'ANN-bp':
-                yList = genY(xList, args.struct, args.activation, args.cost)
-            else:
-                yList = genY(xList)
-            dataList = yList + xList
-            dataStr = reduce(lambda x,y: str(x)+' '+str(y), dataList)
-            print(dataStr, file=f)
-        f.close()
-    
+    attr_list = funcAttr(args.function)
+    type_list = ['REAL'] * len(attr_list)
+    dataList = None
+    for i in range(0, new_entry):
+        xList = [uniform(args.input_range[0], args.input_range[1]) for k in range(0, args.input_size)]
+        if args.function = 'ann':
+            yList = genY(xList, args.struct, args.activation, args.cost)
+        else:
+            yList = genY(xList, args.output_range)
+        if dataList == None:
+            dataList = [xList + yList]
+        else:
+            dataList += [xList + yList]
 
-    ##########################################################
-    #    always enforce read-only policy for data set dir    #
-    ##########################################################
-    try:
-        scriptChmod = """
-            orig_dir="`pwd`/"
-            dir_name={}
-            task_name="$0"
-            chmod 444 $orig_dir$dir_name$task_name/*
-        """.format(trainingDirName)
-        stdout, stderr = runScript(scriptChmod, [taskName])
-    except ScriptException as se:
-        print(se)
-
-
-    ####################
-    #    write conf    #
-    ####################
-    try:
-        scriptEchoConf = """
-            orig_dir="`pwd`/"
-            dir_name={}
-            task_name="$0"/
-            conf_full=$orig_dir$dir_name$task_name/conf
-            conf_str="$1"
-    
-            if [ ! -f $conf_full ]
-            then
-                echo $conf_str > $conf_full
-            fi
-        """.format(trainingDirName)
-        confStr = [conf.TARGET]*outputSize + [conf.INPUT]*inputSize
-        confStr = reduce(lambda a,b:'{} {}'.format(a,b), confStr)
-        stdout, stderr = runScript(scriptEchoConf, [taskName, confStr])
-    except ScriptException as se:
-        print(se)
-    
-    return trainingDirName + taskName + '/'
+    db.populate_db(attr_list, type_list, dataList, db_path=args.db_path, db_name=args.db_name, table_name=table)
+        
+                
 
 
 if __name__ == '__main__':

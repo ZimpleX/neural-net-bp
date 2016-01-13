@@ -21,7 +21,7 @@ def trainingFunc(funcName):
         the actual training function
     """
     if funcName == "Sigmoid":
-        def sigmoid(xList):
+        def sigmoid(xList, output_range):
             """
             simple sigmoid function:
                 most suitable for neuron of sigmoid activation
@@ -31,7 +31,7 @@ def trainingFunc(funcName):
             return [ 1 / (1 + exp(-xSum)) ]
         return sigmoid
     elif funcName == 'Lin':
-        def lin(xList):
+        def lin(xList, output_range):
             assert len(xList) >= 1
             return [ reduce(lambda x1, x2: x1 + x2, xList) ]
         return lin
@@ -39,7 +39,7 @@ def trainingFunc(funcName):
         """
         simple sin function
         """
-        def sine(xList):
+        def sine(xList, output_range):
             assert len(xList) >= 1
             sinSum = reduce(lambda x1, x2: x1 + x2, xList)
             return [ sin(sinSum) ]
@@ -48,21 +48,21 @@ def trainingFunc(funcName):
         """
         exponentially attenuating sin, with abs(), and x0 as exponent
         """
-        def attenSinAbsX0(xList):
+        def attenSinAbsX0(xList, output_range):
             assert len(xList) >= 1
             expPow = xList[0] * 0.2
             sinSum = reduce(lambda x1, x2: x1 + x2, xList) - xList[0]
             return [ exp(-abs(expPow)) * abs(sin(sinSum)) ]
         return attenSinAbsX0
     elif funcName == "Random":
-        def rand(xList):
+        def rand(xList, output_range):
             return [ uniform(0, 1) ]
         return rand
     elif funcName == "AttenSin-x0":
         """
         no abs(), but exponent is still controlled separately by x0
         """
-        def attenSinX0(xList):
+        def attenSinX0(xList, output_range):
             assert len(xList) >= 1
             expPow = xList[0] * 0.2
             sinSum = reduce(lambda x1, x2: x1 + x2, xList) - xList[0]
@@ -73,7 +73,7 @@ def trainingFunc(funcName):
         no abs(), phase of sin and exponent are all controlled by sum(xList)
         suitable for plotting: y - sum(xList)
         """
-        def attenSin(xList):
+        def attenSin(xList, output_range):
             sinSum = sum(xList)
             return [ exp(-0.06 * sinSum) * sin(sinSum) ]
         return attenSin
@@ -93,3 +93,10 @@ def trainingFunc(funcName):
             net.set_w_b(w_list, b_list)
             return list(net.net_act_forward(array(xList)))
         return forwardANN
+
+
+def funcAttr(funcName):
+    """
+    return the name list of attributes corresponding to funcName
+    """
+    pass
