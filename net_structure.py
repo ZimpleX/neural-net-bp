@@ -258,7 +258,7 @@ def net_train_main(args):
     db_name = ''
     
     assert len(args.struct) == len(args.activation) + 1
-    data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test)
+    data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test, profile=True)
     # auto correct shape of input / output layer of the ANN
     args.struct[0] = data_set.data.shape[1]
     args.struct[-1] = data_set.target.shape[1]
@@ -271,7 +271,6 @@ def net_train_main(args):
     if (args.profile_cost): # store the conf of the ANN for this run
                             # could be identified by parse time
         data_util.profile_net_conf(db_name, args, timestamp)
-        data_util.profile_raw_data_set(db_name, data_set, timestamp)
 
     # main training loop
     batch = 0
@@ -279,9 +278,10 @@ def net_train_main(args):
     start_time = timeit.default_timer()
     cost_data = None    # populate into db in one run
     # profile init net data
-    net_data = [[(-1, -1), net.net_act_forward(data_set.data)]]
+    net_data = [[(-1,-1), data_set.target]] \
+             + [[(0, 0), net.net_act_forward(data_set.data)]]
     for epoch in range(conf.num_epoch):
-        net.epoch = epoch
+        net.epoch = epoch + 1
         ######################
         #### Experimental ####
         #if epoch % 50 == 0 and epoch != 0:
@@ -300,18 +300,18 @@ def net_train_main(args):
             net.back_prop(bat_tgt, conf)
         if args.profile_cost:
             if cost_data == None:
-                cost_data = [[epoch, batch, cost_bat]]
+                cost_data = [[net.epoch, net.batch, cost_bat]]
             else:
-                cost_data += [[epoch, batch, cost_bat]]
-        if (args.profile_output and epoch % epc_stride == 0) or (epoch == conf.num_epoch-1):
-            net_data += [[(epoch, batch), net.net_act_forward(data_set.data)]]
-        printf('end of epoch {}, sum of cost over all batches: {}', epoch, cost_bat, type='TRAIN')
+                cost_data += [[net.epoch, net.batch, cost_bat]]
+        if (args.profile_output and net.epoch % epc_stride == 0) or (net.epoch == conf.num_epoch):
+            net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
+        printf('end of epoch {}, sum of cost over all batches: {}', net.epoch, cost_bat, type='TRAIN')
     end_time = timeit.default_timer()
     printf('training took: {}', end_time-start_time)
     print_to_file(_LOG_FILE['net'], net, type=None)
     
     start_time = timeit.default_timer()
-    data_util.profile_net_data(db_name, net_data, data_set.data, timestamp)
+    data_util.profile_net_data(db_name, net_data, timestamp)
     data_util.profile_cost(db_name, cost_data, timestamp)
     end_time = timeit.default_timer()
     printf('populate profiling data took: {}', end_time-start_time)
