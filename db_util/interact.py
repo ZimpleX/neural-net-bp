@@ -43,14 +43,12 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
     # not my duty to check file existence
     conn = sqlite3.connect(db_fullpath)
     c = conn.cursor()
-    meta_table = '[{}]'.format(meta_table)
-    data_table = '[{}]'.format(data_table)
-    temp_table = '[{}]'.format(temp_table)
+    meta_table, data_table, temp_table = surround_by_brackets([meta_table, data_table, temp_table])
     if len(array(comm_key).shape) == 0:
         comm_key = [comm_key]
-    comm_key = list(map(lambda x: '[{}]'.format(x), comm_key))
+    comm_key = surround_by_brackets(comm_key)
     comm_key = list(map(lambda x: '{}.{}={}.{}'.format(meta_table, x, data_table, x), comm_key))
-    var_attr = list(map(lambda x: '[{}]'.format(x), var_attr))
+    var_attr = surround_by_brackets(var_attr)
     # get list of attributes
     # attr in the meta table
     l_attr_meta = list(get_attr_info(db_fullpath, meta_table).keys())
@@ -69,7 +67,7 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
     control_var = list(c.execute('SELECT DISTINCT {} FROM {}'.format(','.join(l_attr_meta_flt), meta_table)))
     temp_fullpath = '{}/{}'.format(db_path, db_temp)
     open(temp_fullpath, 'w').close()    # always overwrite
-    db_temp = '[{}]'.format(db_temp)
+    db_temp = surround_by_brackets(db_temp)
     c.execute('ATTACH DATABASE \'{}\' AS {}'.format(temp_fullpath, db_temp))
     for flt in control_var:
         flt = [(flt.index(itm) in text_idx) and '\'{}\''.format(itm) or itm for itm in flt]
@@ -107,7 +105,7 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
         tbl_attr = list(get_attr_info(db_fullpath, tbl, enclosing=False).keys())
         if time_attr in tbl_attr:
             table_flt += [tbl]
-    time_attr = '[{}]'.format(time_attr)
+    time_attr = surround_by_brackets(time_attr)
     time_set = set()
     for tbl in table_flt:
         cur_time_set = set(c.execute('SELECT DISTINCT {} FROM {}'.format(time_attr, tbl)))

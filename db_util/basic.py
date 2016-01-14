@@ -88,7 +88,7 @@ def populate_db(attr_name, attr_type, *d_tuple, db_path=DB_DIR_PARENT, db_name=D
     # sqlite3
     conn = sqlite3.connect(db_fullname)
     c = conn.cursor()
-    table_name = '[{}]'.format(table_name)
+    table_name = surround_by_brackets(table_name)
     assert len(attr_name) == len(attr_type)
     create_clause = ['[{}] {}'.format(attr_name[i], attr_type[i]) \
                     for i in range(len(attr_name))]
@@ -136,7 +136,7 @@ def sanity_db(attr_name, attr_val, table_name, db_name=DB_NAME, db_path=DB_DIR_P
     # don't check file: leave it to user / wrapper function
     conn = sqlite3.connect(db_fullname)
     c = conn.cursor()
-    table_name = '[{}]'.format(table_name)
+    table_name = surround_by_brackets(table_name)
     orig_row = count_entry(db_fullname, table_name)
     attr_len = len(attr_name)
     assert attr_len == len(attr_val)
