@@ -26,6 +26,7 @@ from logf.printf import *
 from logf.filef import *
 import argparse
 from time import strftime
+import timeit
 
 import pdb
 
@@ -277,6 +278,8 @@ def net_train_main(args):
     # populate initial output: as to evaluate initial weight
     init_out = net.net_act_forward(data_set.data)
     data_util.profile_net_data(db_name, -1, -1, net, data_set.data, timestamp)
+    start_time = timeit.default_timer()
+    cost_data = None    # populate into db in one run
     for epoch in range(conf.num_epoch):
         net.epoch = epoch
         ######################
@@ -296,7 +299,10 @@ def net_train_main(args):
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             net.back_prop(bat_tgt, conf)
         if args.profile_cost:
-            data_util.profile_cost(db_name, epoch, batch, cost_bat, timestamp)
+            if cost_data == None:
+                cost_data = [[epoch, batch, cost_bat]]
+            else:
+                cost_data += [[epoch, batch, cost_bat]]
         if args.profile_output and epoch % epc_stride == 0:
             data_util.profile_net_data(db_name, epoch, batch, net, data_set.data, timestamp)
         elif epoch == conf.num_epoch - 1:
@@ -304,6 +310,9 @@ def net_train_main(args):
             data_util.profile_net_data(db_name, epoch, batch, net, data_set.data, timestamp)
         printf('end of epoch {}, sum of cost over all batches: {}', epoch, cost_bat, type='TRAIN')
     
+    data_util.profile_cost(db_name, cost_data, timestamp)
+    end_time = timeit.default_timer()
+    printf('training took: {}', end_time-start_time)
     print_to_file(_LOG_FILE['net'], net, type=None)
 
 

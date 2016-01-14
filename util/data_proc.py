@@ -54,7 +54,7 @@ def profile_raw_data_set(data_dir_name, data_set, timestamp, db_path=DB_DIR_PARE
 
 
 
-def profile_cost(data_dir_name, epoch, batch, cost_bat, timestamp, db_path=DB_DIR_PARENT):
+def profile_cost(data_dir_name, cost_data, timestamp, db_path=DB_DIR_PARENT):
     """
     INPUT:
         data_dir_name       appended with db_path
@@ -62,9 +62,8 @@ def profile_cost(data_dir_name, epoch, batch, cost_bat, timestamp, db_path=DB_DI
     cost_bat is the sum of cost over some batches
     """
     prof_attr = ['epoch_num', 'batch_num', 'cost_sum']
-    prof_val = [epoch, batch, cost_bat]
     prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
-    populate_db(prof_attr, prof_attr_type, prof_val,
+    populate_db(prof_attr, prof_attr_type, cost_data,
         db_path=db_path+data_dir_name, table_name='profile_cost|ann', 
         usr_time=timestamp, perm='0444', silent=True)
 
