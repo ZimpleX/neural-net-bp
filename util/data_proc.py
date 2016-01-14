@@ -68,18 +68,18 @@ def profile_cost(data_dir_name, cost_data, timestamp, db_path=DB_DIR_PARENT):
         usr_time=timestamp, perm='0444', silent=True)
 
 
-def profile_net_data(data_dir_name, epoch, batch, net, net_ip, timestamp, db_path=DB_DIR_PARENT):
+def profile_net_data(data_dir_name, net_data, net_ip, timestamp, db_path=DB_DIR_PARENT):
     """
     INPUT:
         data_dir_name       appended with db_path
 
     net_ip: raw input data, fed to net
     """
-    net_op = net.net_act_forward(net_ip)
     data_attr = ['epoch', 'batch']
     data_attr += ['x{}'.format(i) for i in range(net_ip.shape[1])]
-    data_attr += ['y{}'.format(i) for i in range(net_op.shape[1])]
-    data_attr_type = ['INTEGER', 'INTEGER'] + ['REAL'] * (net_ip.shape[1] + net_op.shape[1])
-    populate_db(data_attr, data_attr_type, array([epoch, batch]), net_ip, net_op,
-        db_path=db_path+data_dir_name, table_name='net_data|ann', 
-        usr_time=timestamp, perm='0444', silent=True)
+    data_attr += ['y{}'.format(i) for i in range(net_data[0][1].shape[1])]
+    data_attr_type = ['INTEGER', 'INTEGER'] + ['REAL'] * (net_ip.shape[1] + net_data[0][1].shape[1])
+    for dt in net_data:
+        populate_db(data_attr, data_attr_type, dt[0], net_ip, dt[1],
+            db_path=db_path+data_dir_name, table_name='net_data|ann', 
+            usr_time=timestamp, perm='0444', silent=True)
