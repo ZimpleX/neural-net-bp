@@ -8,21 +8,19 @@ COST = 'sqr'
 TRAINING_DIR = './train_data/'
 DB_DATA = 'data.db'
 DB_TEST = 'test.db'
+TABLE_DATA = 'sin_is-3-os-1-ir--10,10-or--5,5|ann'
+TABLE_TEST = 'sin_is-3-os-1-ir--10,10-or--5,5|ann'
+SIZE_DATA = 8
+SIZE_TEST = 4
 LEARN_RATE = 0.001
 INC_RATE = 1.
 DEC_RATE = 1.
 MOMENTUM = 0.9
 BATCH_SIZE = -1
-TRAIN_DATA = TRAINING_DIR + 'Sin_in-1-out-1/08'
-TEST_DATA = TRAINING_DIR + 'Sin_in-1-out-1/04'
 INIT_RANGE = {'weight': 1,
                 'bias': 1}
 
 EPOCH = 500
-
-# specify which column in the data set file stands for target / input
-TARGET='TARGET'
-INPUT='INPUT'
 
 
 

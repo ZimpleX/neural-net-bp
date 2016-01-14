@@ -27,11 +27,11 @@ def profile_net_conf(data_dir_name, args, timestamp, db_path=DB_DIR_PARENT):
     net_struct = '{}lin'.format(args.struct[0])
     net_struct += '-' + reduce(lambda a,b:a+'-'+b, struct_info)
 
-    net_attr = ['struct', 'cost_type', 'train_data_name', 'test_data_name', 
+    net_attr = ['struct', 'cost_type', 'train_func', 'test_func', 'train_size', 'test_size',
             'batch_size', 'learn_rate', 'inc_rate', 'dec_rate', 'momentum']
-    net_val = array([net_struct, args.cost, args.path_train, args.path_test, 
+    net_val = array([net_struct, args.cost, args.table_data, args.table_test, args.size_data, args.size_test,
             args.batch, args.rate, args.inc_rate, args.dec_rate, args.momentum])
-    net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 
+    net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 'INTEGER', 'INTEGER',
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
     populate_db(net_attr, net_attr_type, net_val, 
         db_path=db_path+data_dir_name, table_name='meta|ann', 

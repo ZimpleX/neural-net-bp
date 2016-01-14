@@ -4,7 +4,7 @@
 
 ANN_ROOT=$(pwd)
 PY3=$(which python3)
-db_name="'Sin_in-1-out-1/ann.db'"
+db_name="'ann.db'"
 
 sanity_num=$1
 

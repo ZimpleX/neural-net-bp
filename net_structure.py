@@ -211,9 +211,9 @@ def parse_args():
             default=COST, help='specify the cost function',
             choices=cost_dict.keys())
     parser.add_argument('--w_range', type=int, metavar='W_RANGE', 
-            default=INIT_RANGE['weight'], help='specify the range of weight initialization')
+            default=INIT_RANGE['weight'], help='specify the range of weight initialization\nrandomized between [-W_RANGE, W_RANGE]')
     parser.add_argument('--b_range', type=int, metavar='B_RANGE',
-            default=INIT_RANGE['bias'], help='specify the range of bias initialization')
+            default=INIT_RANGE['bias'], help='specify the range of bias initialization\nrandomized between [-B_RANGE, B_RANGE]')
     parser.add_argument('-e', '--epoch', type=int, metavar='EPOCH',
             default=EPOCH, help='max num of iterations for training')
     parser.add_argument('-r', '--rate', type=float, metavar='RATE',
@@ -226,10 +226,14 @@ def parse_args():
             default=MOMENTUM, help='momentum coefficient')
     parser.add_argument('-b', '--batch', type=int, metavar='BATCH',
             default=BATCH_SIZE, help='size of mini-batch')
-    parser.add_argument('-ptn', '--path_train', type=str, metavar='PATH_TRAIN',
-            default=TRAIN_DATA, help='path to the training data set')
-    parser.add_argument('-pts', '--path_test', type=str, metavar='PATH_TEST',
-            default=TEST_DATA, help='path to the testing data set')
+    parser.add_argument('-dtbl', '--table_data', type=str, metavar='TABLE_DATA',
+            default=TABLE_DATA, help='table name of training data')
+    parser.add_argument('-ttbl', '--table_test', type=str, metavar='TABLE_TEST',
+            default=TABLE_TEST, help='table name of test data')
+    parser.add_argument('-szd', '--size_data', type=int, metavar='SIZE_DATA',
+            default=SIZE_DATA, help='size of the data set (2^SIZE_DATA)')
+    parser.add_argument('-szt', '--size_test', type=int, metavar='SIZE_TEST',
+            default=SIZE_TEST, help='size of the test set (2^SIZE_TEST)')
     parser.add_argument('--profile_cost', action='store_false',
             help='add this flag if you do NOT want to store cost profile')
     parser.add_argument('--profile_output', action='store_true',
@@ -250,11 +254,10 @@ def net_train_main(args):
     """
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
-    task_name = args.path_train.split('/')
-    task_name = task_name[-2]
+    db_name = ''
     
     assert len(args.struct) == len(args.activation) + 1
-    data_set = Data(args.path_train, args.path_test)
+    data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test)
     # auto correct shape of input / output layer of the ANN
     args.struct[0] = data_set.data.shape[1]
     args.struct[-1] = data_set.target.shape[1]
@@ -266,14 +269,14 @@ def net_train_main(args):
 
     if (args.profile_cost): # store the conf of the ANN for this run
                             # could be identified by parse time
-        data_util.profile_net_conf(task_name, args, timestamp)
-        data_util.profile_raw_data_set(task_name, data_set, timestamp)
+        data_util.profile_net_conf(db_name, args, timestamp)
+        data_util.profile_raw_data_set(db_name, data_set, timestamp)
 
     # main training loop
     batch = 0
     # populate initial output: as to evaluate initial weight
     init_out = net.net_act_forward(data_set.data)
-    data_util.profile_net_data(task_name, -1, -1, net, data_set.data, timestamp)
+    data_util.profile_net_data(db_name, -1, -1, net, data_set.data, timestamp)
     for epoch in range(conf.num_epoch):
         net.epoch = epoch
         ######################
@@ -293,12 +296,12 @@ def net_train_main(args):
             cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
             net.back_prop(bat_tgt, conf)
         if args.profile_cost:
-            data_util.profile_cost(task_name, epoch, batch, cost_bat, timestamp)
+            data_util.profile_cost(db_name, epoch, batch, cost_bat, timestamp)
         if args.profile_output and epoch % epc_stride == 0:
-            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
+            data_util.profile_net_data(db_name, epoch, batch, net, data_set.data, timestamp)
         elif epoch == conf.num_epoch - 1:
             # populate final output data anyway
-            data_util.profile_net_data(task_name, epoch, batch, net, data_set.data, timestamp)
+            data_util.profile_net_data(db_name, epoch, batch, net, data_set.data, timestamp)
         printf('end of epoch {}, sum of cost over all batches: {}', epoch, cost_bat, type='TRAIN')
     
     print_to_file(_LOG_FILE['net'], net, type=None)
