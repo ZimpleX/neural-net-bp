@@ -3,7 +3,6 @@ set up data (training / testing) for training the ANN
 """
 from logf.printf import *
 from logf.stringf import *
-import numpy as np
 import conf
 import db_util as db
 import re
