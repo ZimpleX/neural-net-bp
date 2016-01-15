@@ -10,6 +10,8 @@ from db_util.basic import *
 from db_util.conf import *
 
 
+_PROF_PERM = '0444'
+
 """
 The following 4 profile_* functions are wrapper for populate db.
 They correspond to 4 tables in the ann.db file
@@ -35,22 +37,23 @@ def profile_net_conf(data_dir_name, args, timestamp, db_path=DB_DIR_PARENT):
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
     populate_db(net_attr, net_attr_type, net_val, 
         db_path=db_path+data_dir_name, table_name='meta|ann', 
-        usr_time=timestamp, perm='0444', silent=True)
+        usr_time=timestamp, perm=_PROF_PERM, silent=True)
 
 
-def profile_raw_data_set(data_dir_name, data_set, timestamp, db_path=DB_DIR_PARENT):
+def profile_input_data(data_dir_name, timestamp, attr_full, *data_x, db_path=DB_DIR_PARENT):
     """
     INPUT:
         data_dir_name       appended with db_path
 
     populate the raw data set that is used to train ANN
     """
-    data_attr = ['x{}'.format(i) for i in range(data_set.data.shape[1])]
-    data_attr += ['y{}'.format(i) for i in range(data_set.target.shape[1])]
-    data_attr_type = ['REAL'] * (data_set.data.shape[1] + data_set.target.shape[1])
-    populate_db(data_attr, data_attr_type, data_set.data, data_set.target,
-        db_path=db_path+data_dir_name, table_name='raw_data|ann', 
-        usr_time=timestamp, perm='0444', silent=True)
+    data_attr_type = ['REAL'] * len(attr_full)
+    attr_full = ['idx'] + attr_full # idx is corresponded to profile_output_data
+    data_attr_type = ['INTEGER'] + data_attr_type
+    idx_list = [[i+1] for i in range(data_x[0].shape[0])]
+    populate_db(attr_full, data_attr_type, idx_list, *data_x,
+        db_path=db_path+data_dir_name, table_name='input_data|ann', 
+        usr_time=timestamp, perm=_PROF_PERM, silent=True)
 
 
 
@@ -65,21 +68,21 @@ def profile_cost(data_dir_name, cost_data, timestamp, db_path=DB_DIR_PARENT):
     prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
     populate_db(prof_attr, prof_attr_type, cost_data,
         db_path=db_path+data_dir_name, table_name='profile_cost|ann', 
-        usr_time=timestamp, perm='0444', silent=True)
+        usr_time=timestamp, perm=_PROF_PERM, silent=True)
 
 
-def profile_net_data(data_dir_name, net_data, net_ip, timestamp, db_path=DB_DIR_PARENT):
+
+def profile_output_data(data_dir_name, net_data, timestamp, db_path=DB_DIR_PARENT):
     """
     INPUT:
         data_dir_name       appended with db_path
 
-    net_ip: raw input data, fed to net
     """
-    data_attr = ['epoch', 'batch']
-    data_attr += ['x{}'.format(i) for i in range(net_ip.shape[1])]
+    data_attr = ['idx', 'epoch', 'batch']   # add idx to join with raw_data table
     data_attr += ['y{}'.format(i) for i in range(net_data[0][1].shape[1])]
-    data_attr_type = ['INTEGER', 'INTEGER'] + ['REAL'] * (net_ip.shape[1] + net_data[0][1].shape[1])
+    data_attr_type = ['INTEGER', 'INTEGER', 'INTEGER'] + ['REAL'] * (net_data[0][1].shape[1])
+    idx_list = [[i+1] for i in range(net_data[0][1].shape[0])]
     for dt in net_data:
-        populate_db(data_attr, data_attr_type, dt[0], net_ip, dt[1],
-            db_path=db_path+data_dir_name, table_name='net_data|ann', 
-            usr_time=timestamp, perm='0444', silent=True)
+        populate_db(data_attr, data_attr_type, idx_list, dt[0], dt[1],
+            db_path=db_path+data_dir_name, table_name='output_data|ann', 
+            usr_time=timestamp, perm=_PROF_PERM, silent=True)

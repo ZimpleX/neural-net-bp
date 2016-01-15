@@ -255,10 +255,10 @@ def net_train_main(args):
     """
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
-    db_name = ''
+    db_subdir = ''
     
     assert len(args.struct) == len(args.activation) + 1
-    data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test, profile=True)
+    data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test, timestamp, profile=True, prof_subdir=db_subdir)
     # auto correct shape of input / output layer of the ANN
     args.struct[0] = data_set.data.shape[1]
     args.struct[-1] = data_set.target.shape[1]
@@ -270,7 +270,7 @@ def net_train_main(args):
 
     if (args.profile_cost): # store the conf of the ANN for this run
                             # could be identified by parse time
-        data_util.profile_net_conf(db_name, args, timestamp)
+        data_util.profile_net_conf(db_subdir, args, timestamp)
 
     # main training loop
     batch = 0
@@ -311,8 +311,8 @@ def net_train_main(args):
     print_to_file(_LOG_FILE['net'], net, type=None)
     
     start_time = timeit.default_timer()
-    data_util.profile_net_data(db_name, net_data, timestamp)
-    data_util.profile_cost(db_name, cost_data, timestamp)
+    data_util.profile_output_data(db_subdir, net_data, timestamp)
+    data_util.profile_cost(db_subdir, cost_data, timestamp)
     end_time = timeit.default_timer()
     printf('populate profiling data took: {}', end_time-start_time)
 

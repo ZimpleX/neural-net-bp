@@ -7,13 +7,16 @@ import conf
 import db_util as db
 import re
 import sqlite3
+import util.data_proc as data_util
 import timeit
 
 import pdb
 
+_TABLE_RAW = 'raw_data|ann'
+
 class Data:
-    def __init__(self, data_size, test_size, table_data, table_test,
-        db_dir=conf.TRAINING_DIR, db_data=conf.DB_DATA, db_test=conf.DB_TEST):
+    def __init__(self, data_size_exp, test_size_exp, table_data, table_test, timestamp, profile=True,
+        db_dir=conf.TRAINING_DIR, db_data=conf.DB_DATA, db_test=conf.DB_TEST, prof_subdir=''):
         """
         load training data and test data from table_name
         """
@@ -41,13 +44,25 @@ class Data:
         data_attr_y = [itm for itm in data_attr if regex_y.match(itm)]
         test_attr_x = [itm for itm in test_attr if regex_x.match(itm)]
         test_attr_y = [itm for itm in test_attr if regex_y.match(itm)]
-        # load
-        self.data = db.util.load_as_array(data_fullpath, table_data, data_attr_x, size=pow(2, data_size), c=c_d)
-        self.target = db.util.load_as_array(data_fullpath, table_data, data_attr_y, size=pow(2, data_size), c=c_d)
-        self.test_d = db.util.load_as_array(test_fullpath, table_test, test_attr_x, size=pow(2, test_size), c=c_t)
-        self.test_t = db.util.load_as_array(test_fullpath, table_test, test_attr_y, size=pow(2, test_size), c=c_t)
+        # load from db
+        data_size = pow(2, data_size_exp)
+        test_size = pow(2, test_size_exp)
+        self.data = db.util.load_as_array(data_fullpath, table_data, data_attr_x, size=data_size, c=c_d)
+        self.target = db.util.load_as_array(data_fullpath, table_data, data_attr_y, size=data_size, c=c_d)
+        self.test_d = db.util.load_as_array(test_fullpath, table_test, test_attr_x, size=test_size, c=c_t)
+        self.test_t = db.util.load_as_array(test_fullpath, table_test, test_attr_y, size=test_size, c=c_t)
         end_time = timeit.default_timer()
         printf('time spent on load data: {}', end_time-start_time)
+        # store raw into profile db
+        if profile:
+            start_time = timeit.default_timer()
+            regex_xothers = re.compile('^x.*$')
+            data_attr_xothers = [itm for itm in data_attr if regex_xothers.match(itm) and itm not in data_attr_x]
+            xothers = db.util.load_as_array(data_fullpath, table_data, data_attr_xothers, size=data_size, c=c_d)
+            attr_full = data_attr_x + data_attr_xothers
+            data_util.profile_input_data(prof_subdir, timestamp, attr_full, self.data, xothers)
+            end_time = timeit.default_timer()
+            printf('time spent on storing training data into db: {}', end_time-start_time)
         conn_d.close()
         conn_t.close()
 
