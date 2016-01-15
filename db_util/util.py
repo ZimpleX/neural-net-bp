@@ -174,13 +174,12 @@ def join_input_output_table(db_output, db_input, db_path=DB_DIR_PARENT, table_ou
         attr_in  = ['{}.{}.{}'.format(db_input, table_input, atr) for atr in attr_in]
         attr_inout = attr_in + attr_out
         # set up join clause
-        inout_join_attr = ['{}.{}.{}={}.{}'.format(db_input, table_input, a, table_output, a) for a in inout_join_attr]
+        inout_join_attr_full = ['{}.{}.{}={}.{}'.format(db_input, table_input, a, table_output, a) for a in inout_join_attr]
         # set new table
-        #pdb.set_trace()
         c.execute('CREATE TABLE {} AS SELECT {} FROM {} JOIN {} ON {}'\
                 .format(table_inoutput, ','.join(attr_inout),
                     table_output, '{}.{}'.format(db_input, table_input),
-                    ' and '.join(inout_join_attr)))
+                    ' and '.join(inout_join_attr_full)))
         # delete old table
         c.execute('DROP TABLE {}'.format(table_output))
 
