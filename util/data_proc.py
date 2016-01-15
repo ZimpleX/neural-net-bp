@@ -31,7 +31,7 @@ def profile_net_conf(data_dir_name, args, timestamp, db_path=DB_DIR_PARENT):
 
     net_attr = ['struct', 'cost_type', 'train_func', 'test_func', 'train_size', 'test_size',
             'batch_size', 'learn_rate', 'inc_rate', 'dec_rate', 'momentum']
-    net_val = array([net_struct, args.cost, args.table_data, args.table_test, args.size_data, args.size_test,
+    net_val = array([net_struct, args.cost, args.table_data.split('|')[0], args.table_test.split('|')[0], args.size_data, args.size_test,
             args.batch, args.rate, args.inc_rate, args.dec_rate, args.momentum])
     net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 'INTEGER', 'INTEGER',
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']

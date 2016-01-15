@@ -73,7 +73,8 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
     for flt in control_var:
         flt = [(flt.index(itm) in text_idx) and '\'{}\''.format(itm) or itm for itm in flt]
         flt_cond = ['{}.{}={}'.format(meta_table, l_attr_meta_flt[i], flt[i]) for i in range(len(flt))]
-        temp_table_i = temp_table.format(','.join(flt_cond).replace('[','').replace(']','').replace('|', '.'))
+        flt_cond_neat = ['{}={}'.format(l_attr_meta_flt[i], flt[i]) for i in range(len(flt))]
+        temp_table_i = temp_table.format(','.join(flt_cond_neat).replace('[','').replace(']',''))
         c.execute('CREATE TABLE {}.{} AS SELECT {} FROM {} JOIN {} ON {} WHERE {}'\
             .format(db_temp, temp_table_i, ','.join(l_attr),
                     meta_table, data_table, ' and '.join(comm_key),
