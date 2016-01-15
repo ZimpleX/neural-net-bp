@@ -17,6 +17,7 @@ import pdb
 def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
     db_path=DB_DIR_PARENT, db_name=DB_NAME, db_temp=ANALYSIS_DB, temp_table=ANALYSIS_TABLE):
     """
+    TODO: filter on populate_time & bp-version
     aggregate the meta_table with data_table, filter out some runs by controlling variable,
     write the final table to new table, new file --> ready for visualization.
 
@@ -27,7 +28,7 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
                         e.g.: if you want to analyze effect of momentum in ANN training.
                             then: var_attr='momentum', this will create multiple sub-tables,
                             with configurations such as learning rate, batch, etc., the same.
-        comm_key            join meta_table and data_table by comm_key
+        comm_key            list or string: join meta_table and data_table by comm_key
         db_path, db_name    tell me where to find the meta_table & data_table
         db_temp, temp_table tell me where to write the processed new tables
                             table_temp should specify reflex rule for indexing.
@@ -51,12 +52,12 @@ def db_control_dim(meta_table, data_table, *var_attr, comm_key=TIME_ATTR,
     var_attr = surround_by_brackets(var_attr)
     # get list of attributes
     # attr in the meta table
-    l_attr_meta = list(get_attr_info(db_fullpath, meta_table).keys())
+    l_attr_meta = list(get_attr_info(meta_table, db_fullpath=db_fullpath).keys())
     l_attr_meta_flt = [item for item in l_attr_meta if item not in var_attr]
     l_attr_meta_flt = [item for item in l_attr_meta_flt if item not in ['[{}]'.format(TIME_ATTR)]]
     # attr in the data table
-    l_attr_data = list(get_attr_info(db_fullpath, data_table).keys())
-    l_attr_type = get_attr_info(db_fullpath, meta_table)
+    l_attr_data = list(get_attr_info(data_table, db_fullpath=db_fullpath).keys())
+    l_attr_type = get_attr_info(meta_table, db_fullpath=db_fullpath)
     # store the index of attr if it is of TEXT type --> append quote later
     text_idx = [l_attr_meta_flt.index(itm) for itm in l_attr_meta_flt if l_attr_type[itm]=='TEXT']
     # attr list in the joined table
@@ -102,7 +103,7 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
     # fliter table list to those actually contains the time_attr
     table_flt = []
     for tbl in table:
-        tbl_attr = list(get_attr_info(db_fullpath, tbl, enclosing=False).keys())
+        tbl_attr = list(get_attr_info(tbl, enclosing=False, db_fullpath=db_fullpath).keys())
         if time_attr in tbl_attr:
             table_flt += [tbl]
     time_attr = surround_by_brackets(time_attr)

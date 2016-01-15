@@ -141,7 +141,7 @@ def sanity_db(attr_name, attr_val, table_name, db_name=DB_NAME, db_path=DB_DIR_P
     attr_len = len(attr_name)
     assert attr_len == len(attr_val)
     # check if the attr passed in is the attr in the db
-    db_attr_set = set(get_attr_info(db_fullname, table_name, enclosing=False).keys())
+    db_attr_set = set(get_attr_info(table_name, db_fullpath=db_fullname, enclosing=False).keys())
     try:
         assert len(db_attr_set) == len(db_attr_set|set(attr_name))
     except AssertionError:

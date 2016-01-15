@@ -36,8 +36,8 @@ class Data:
             printf('table not exist: {} or {} \npath: {} or {}', table_data, table_test, data_fullpath, test_fullpath, type='ERROR')
             exit()
         # setup x,y attr name list
-        data_attr = list(db.util.get_attr_info(data_fullpath, table_data, c=c_d, enclosing=False).keys())
-        test_attr = list(db.util.get_attr_info(test_fullpath, table_test, c=c_t, enclosing=False).keys())
+        data_attr = list(db.util.get_attr_info(table_data, c=c_d, enclosing=False).keys())
+        test_attr = list(db.util.get_attr_info(table_test, c=c_t, enclosing=False).keys())
         regex_x = re.compile('^x\d+$')
         regex_y = re.compile('^y\d+$')
         data_attr_x = [itm for itm in data_attr if regex_x.match(itm)]
