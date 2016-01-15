@@ -17,6 +17,7 @@ import util.array_proc as arr_util
 from functools import reduce
 import sys
 
+
 class Node_activity:
     """
     super class for all other node activity classes
@@ -39,12 +40,26 @@ class Node_activity:
         """
         return np.dot(prev_layer_out, w) + b
 
-
     @classmethod
     @abstractmethod
-    def y_d_w(cls, y_n, y_n_1):
+    def y_d_x(cls, y_n):
         """
         NOTE: overwrite with classmethod
+        This function is NOT meant to be called directly from outside class.
+        It should be wrapped by y_d_b & y_d_w
+
+        ARGUMENT:
+        y_n     y list for layer n (batch_size x layer_nodes)
+        
+        RETURN:
+        shape:  the same as input (batch_size x layer_nodes)
+        """
+        return np.ones(y_n.shape)
+
+    @classmethod
+    def y_d_w(cls, y_n, y_n_1):
+        """
+        NOTE: DON'T overwrite this function when creating subclass
 
         get derivative w.r.t. the whole weight matrix in one layer
 
@@ -56,13 +71,16 @@ class Node_activity:
             e.g.: return[..., i, j] = d(y_nj) / d(w_(n-1)ij)
         """
         # expansion on y_n_1
-        return arr_util.expand_col_swap(y_n_1, y_n.shape[-1])
+        d_chain = arr_util.expand_col_swap(y_n_1, y_n.shape[-1])
+        d_layer = cls.y_d_x(y_n)
+        d_layer = arr_util.expand_col(d_layer, y_n_1.shape[-1])
+        # apply chain rule
+        return d_chain * d_layer
 
     @classmethod
-    @abstractmethod
     def y_d_b(cls, y_n):
         """
-        NOTE: overwrite with classmethod
+        NOTE: DON'T overwrite this function when creating subclass
         get derivative w.r.t. the whole bias vector in one layer
 
         argument:
@@ -71,12 +89,13 @@ class Node_activity:
         return:
         shape: the same as input (batch_size x layer_nodes)
         """
-        return np.ones(y_n.shape)
+        return cls.y_d_x(y_n)
 
     @classmethod
-    @abstractmethod
     def yn_d_yn1(cls, y_n, w):
         """
+        NOTE: DON'T overwrite this function when creating subclass
+
         w is the weight array, which should be strictly 2D
         return the derivative of y_n w.r.t y_(n-1)
         return[...,i,j] = d(y_nj) / d(y_n1i)
@@ -85,10 +104,14 @@ class Node_activity:
         # shape w/o the last dimension
         hi_dim_shp = [y_n.shape[i] for i in range(len(y_n.shape)-1)]
         exp_coef = reduce(lambda x, y: x*y, hi_dim_shp)
-        w2 = np.expand_dims(w, axis=0)
-        w2 = np.repeat(w2, exp_coef, axis=0)
+        d_chain = np.expand_dims(w, axis=0)
+        d_chain = np.repeat(d_chain, exp_coef, axis=0)
         shape = hi_dim_shp + list(w.shape)
-        return w2.reshape(shape)
+        d_chain = d_chain.reshape(shape)
+
+        d_layer = cls.y_d_x(y_n)
+        d_layer = arr_util.expand_col(d_layer, w.shape[0])
+        return d_chain * d_layer
 
 
 
@@ -102,19 +125,13 @@ class Node_linear(Node_activity):
         feed forward linear neuron
         """
         return super(Node_linear, cls).act_forward(prev_layer_out, w, b)
-
-    @classmethod
-    def y_d_w(cls, y_n, y_n_1):
-        return super(Node_linear, cls).y_d_w(y_n, y_n_1)
     
     @classmethod
-    def y_d_b(cls, y_n):
-        return super(Node_linear, cls).y_d_b(y_n)
-
-    @classmethod
-    def yn_d_yn1(cls, y_n, w):
-        return super(Node_linear, cls).yn_d_yn1(y_n, w)
-
+    def y_d_x(cls, y_n):
+        """
+        linear derivative
+        """
+        return np.ones(y_n.shape)
 
 
 class Node_sigmoid(Node_activity):
@@ -139,27 +156,11 @@ class Node_sigmoid(Node_activity):
         return 1. / (1 + expz)
 
     @classmethod
-    def y_d_w(cls, y_n, y_n_1):
-        d_chain = super(Node_sigmoid, cls).y_d_w(y_n, y_n_1)
-        d_sigmo = y_n * (1 - y_n)
-        d_sigmo = arr_util.expand_col(d_sigmo, y_n_1.shape[-1])
-        # apply chain rule
-        return d_chain * d_sigmo
-
-    @classmethod
-    def y_d_b(cls, y_n):
-        d_sigmo = y_n * (1 - y_n)
-        d_chain = super(Node_sigmoid, cls).y_d_b(y_n)
-        # apply chain rule
-        return d_sigmo * d_chain
-
-    @classmethod
-    def yn_d_yn1(cls, y_n, w):
-        d_chain = super(Node_sigmoid, cls).yn_d_yn1(y_n, w)
-        d_sigmo = y_n * (1 - y_n)
-        d_sigmo = arr_util.expand_col(d_sigmo, w.shape[0])
-        # apply chain rule
-        return d_chain * d_sigmo
+    def y_d_x(cls, y_n):
+        """
+        sigmoid derivative, expressed in terms of y (NOT x)
+        """
+        return y_n * (1 - y_n)
 
 
 
