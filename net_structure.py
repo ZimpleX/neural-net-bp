@@ -161,7 +161,7 @@ class Net_structure:
             # size of higher dimension (e.g.: num of training tuples)
             hi_sz = cur_y.size / cur_y.shape[-1]
             #-------------#
-            # update bias #
+            # update bias # NOTE: bias not applicable to conv layer
             #-------------#
             temp = cur_c_d_y * cur_f.y_d_b(cur_y)
             temp = temp.reshape(hi_sz, cur_y.shape[-1]) # c_d_ip: batch_size x layer_nodes
@@ -170,7 +170,7 @@ class Net_structure:
             self.db_list[n] = momentum * self.db_list[n] + temp
             self.b_list[n] -= b_rate * self.db_list[n]
             #---------------#
-            # update weight #
+            # update weight # NOTE: conv layer: c_d_w = y_n_1 (*) flip(c_d_yn): with (*) representing conv operation
             #---------------#
             cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
             temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
@@ -187,6 +187,7 @@ class Net_structure:
             #---------------------------#
             if n > 0:
                 # don't update if prev layer is input layer
+                #NOTE: for conv layer, compute as follow: c_d_yn1 = c_d_y (*) w, with (*) representing the conv operation
                 d_chain = cur_f.yn_d_yn1(cur_y, w_n)
                 cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
 

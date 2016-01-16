@@ -71,6 +71,7 @@ class Node_activity:
             e.g.: return[..., i, j] = d(y_nj) / d(w_(n-1)ij)
         """
         # expansion on y_n_1
+        #NOTE: may want to change this: see the numpy broadcasting rule
         d_chain = arr_util.expand_col_swap(y_n_1, y_n.shape[-1])
         d_layer = cls.y_d_x(y_n)
         d_layer = arr_util.expand_col(d_layer, y_n_1.shape[-1])
@@ -104,6 +105,7 @@ class Node_activity:
         # shape w/o the last dimension
         hi_dim_shp = [y_n.shape[i] for i in range(len(y_n.shape)-1)]
         exp_coef = reduce(lambda x, y: x*y, hi_dim_shp)
+        # NOTE: reconsider this with numpy broadcasting rule
         d_chain = np.expand_dims(w, axis=0)
         d_chain = np.repeat(d_chain, exp_coef, axis=0)
         shape = hi_dim_shp + list(w.shape)
@@ -143,16 +145,9 @@ class Node_sigmoid(Node_activity):
         """
         feed forward sigmoid neuron
         """
-        z = super(Node_sigmoid, cls).act_forward(prev_layer_out, w, b)
-        shape = z.shape
-        sz = z.size
-        # flatten z and compute exp, then restore original shape
-        # python3.x: have to convert to list first
-        # check -300: exp(300) will cause MathOverflow
-        expz = list(map(lambda x: (x>-300) and exp(-x) or sys.float_info.max, 
-                        z.reshape(sz)))
-        expz = np.array(expz)
-        expz = expz.reshape(shape)
+        expz = super(Node_sigmoid, cls).act_forward(prev_layer_out, w, b)
+        expz = np.clip(expz, -400, np.finfo(np.float64).max) # prevent exp overflow
+        expz = np.exp(-expz)    # elementwise exp on ndarray
         return 1. / (1 + expz)
 
     @classmethod
@@ -163,8 +158,36 @@ class Node_sigmoid(Node_activity):
         return y_n * (1 - y_n)
 
 
+class Node_softmax(Node_activity):
+    """
+    softmax (logit) layer: node i value depends on all nodes on the same layer.
+    suitable for classification.
+        y = exp(x) / [E + exp(x)]
+    """
+    @classmethod
+    def act_forward(cls, prev_layer_out, w, b):
+        """
+        feed forward softmax
+        """
+        expz = super(Node_softmax, cls).act_forward(prev_layer_out, w, b)
+        expz = np.clip(expz, np.finfo(np.float64).min, 400) # prevent exp overflow
+        expz = np.exp(expz)     # elementwise exp on ndarray
+        # denominator: for normalizing output as a probability distribution
+        deno_z = np.sum(expz, axis=-1).reshape(expz.shape[0],1)
+        return expz / deno_z  # refer to numpy broadcasting rule
+    
+    @classmethod
+    def y_d_x(cls, y_n):
+        """
+        softmax derivative
+        """
+        return y_n * (1 - y_n)
+        
+
 
 #########################################
+#    currently supported activations    #
 #########################################
-activation_dict = {'sig': Node_sigmoid, 
-                   'lin': Node_linear}
+activation_dict = { 'sig': Node_sigmoid, 
+                    'lin': Node_linear,
+                    'softmax': Node_softmax}
