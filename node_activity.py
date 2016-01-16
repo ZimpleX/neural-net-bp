@@ -18,6 +18,9 @@ from functools import reduce
 import sys
 
 
+#########################################
+#    super class for all activations    #
+#########################################
 class Node_activity:
     """
     super class for all other node activity classes
@@ -34,9 +37,12 @@ class Node_activity:
         do the pre-calculation of feed forward provcess on the 
         part that is common to almost all types of neurons
 
-        argument:
-        prev_layer_out:     should be 2D, shape[0] is data piece index,
-                            shape[1] is num nodes in lower layer
+        ARGUMENT:
+            prev_layer_out:     (batch) x (N_n_1)
+            w:                  weight, (N_n_1) x (N_n)
+            b:                  bias, N_n
+        RETURN:
+            (batch) x (N_n)
         """
         return np.dot(prev_layer_out, w) + b
 
@@ -49,74 +55,66 @@ class Node_activity:
         It should be wrapped by y_d_b & y_d_w
 
         ARGUMENT:
-        y_n     y list for layer n (batch_size x layer_nodes)
-        
+            y_n     y list for layer n: (batch) x (N_n)
         RETURN:
-        shape:  the same as input (batch_size x layer_nodes)
+            (batch) x (N_n)
         """
         return np.ones(y_n.shape)
 
     @classmethod
-    def y_d_w(cls, y_n, y_n_1):
+    def c_d_w(cls, c_d_yn, y_n, y_n_1):
         """
         NOTE: DON'T overwrite this function when creating subclass
 
-        get derivative w.r.t. the whole weight matrix in one layer
+        get derivative of cost w.r.t. weight between layer n and n-1
 
-        argument:
-        y_n     y list of layer n
-        y_n_1   y list of layer n-1 (prev layer)
-
-        --> return matrix shape is .. x .. x (nodes in n-1 layer) x (nodes in n layer)
-            e.g.: return[..., i, j] = d(y_nj) / d(w_(n-1)ij)
+        ARGUMENT:
+            c_d_yn  derivative of cost w.r.t. layer n output:   (batch) x (N_n)
+            y_n     y list of layer n (cur layer):              (batch) x (N_n)
+            y_n_1   y list of layer n-1 (prev layer):           (batch) x (N_n_1)
+        RETURN:
+            weight derivative of shape:     (N_n_1) x (N_n)
+            the return has already summed over all batch entries
         """
-        # expansion on y_n_1
-        #NOTE: may want to change this: see the numpy broadcasting rule
-        d_chain = arr_util.expand_col_swap(y_n_1, y_n.shape[-1])
-        d_layer = cls.y_d_x(y_n)
-        d_layer = arr_util.expand_col(d_layer, y_n_1.shape[-1])
-        # apply chain rule
-        return d_chain * d_layer
+        d_chain = y_n_1                     # (batch) x (N_n_1)
+        c_d_xn = c_d_yn * cls.y_d_x(y_n)    # (batch) x (N_n)
+        return np.dot(d_chain.T, c_d_xn)    # dot product is summing over mini-batch
 
     @classmethod
-    def y_d_b(cls, y_n):
+    def c_d_b(cls, c_d_yn, y_n):
         """
         NOTE: DON'T overwrite this function when creating subclass
-        get derivative w.r.t. the whole bias vector in one layer
+        get derivative of cost w.r.t. bias vector in layer n
 
-        argument:
-        y_n     y list for layer n (batch_size x layer_nodes)
-
-        return:
-        shape: the same as input (batch_size x layer_nodes)
+        ARGUMENT:
+            c_d_yn  derivative of cost w.r.t. layer n output    (batch) x (N_n)
+            y_n     y list for layer n:                         (batch) x (N_n)
+        RETURN:
+            (N_n)
         """
-        return cls.y_d_x(y_n)
+        return np.sum((c_d_yn * cls.y_d_x(y_n)), axis=0)
 
     @classmethod
-    def yn_d_yn1(cls, y_n, w):
+    def c_d_yn1(cls, c_d_yn, y_n, w):
         """
         NOTE: DON'T overwrite this function when creating subclass
+        get derivative of cost w.r.t. output of layer n-1
 
-        w is the weight array, which should be strictly 2D
-        return the derivative of y_n w.r.t y_(n-1)
-        return[...,i,j] = d(y_nj) / d(y_n1i)
+        ARGUMENT:
+            c_d_yn  derivative of cost w.r.t. layer n output    (batch) x (N_n)
+            y_n     output of layer n                           (batch) x (N_n)
+            w       weight between layer n and n-1              (N_n_1) x (N_n)
+        RETURN
+            (batch) x (N_n_1)
         """
-        assert len(w.shape) == 2
-        # shape w/o the last dimension
-        hi_dim_shp = [y_n.shape[i] for i in range(len(y_n.shape)-1)]
-        exp_coef = reduce(lambda x, y: x*y, hi_dim_shp)
-        # NOTE: reconsider this with numpy broadcasting rule
-        d_chain = np.expand_dims(w, axis=0)
-        d_chain = np.repeat(d_chain, exp_coef, axis=0)
-        shape = hi_dim_shp + list(w.shape)
-        d_chain = d_chain.reshape(shape)
-
-        d_layer = cls.y_d_x(y_n)
-        d_layer = arr_util.expand_col(d_layer, w.shape[0])
-        return d_chain * d_layer
+        yn_d_x = cls.y_d_x(y_n)
+        return np.dot((c_d_yn * yn_d_x), w.T)
 
 
 
+##############################
+#    specific activations    #
+##############################
 class Node_linear(Node_activity):
     """
     linear neuron

@@ -158,39 +158,23 @@ class Net_structure:
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
-            # size of higher dimension (e.g.: num of training tuples)
-            hi_sz = cur_y.size / cur_y.shape[-1]
             #-------------#
-            # update bias # NOTE: bias not applicable to conv layer
+            # update bias #
             #-------------#
-            temp = cur_c_d_y * cur_f.y_d_b(cur_y)
-            temp = temp.reshape(hi_sz, cur_y.shape[-1]) # c_d_ip: batch_size x layer_nodes
-            temp = np.sum(temp, axis=0)                 # vector of length layer_nodes
+            cur_db = cur_f.c_d_b(cur_c_d_y, cur_y)
             # add momentum
-            self.db_list[n] = momentum * self.db_list[n] + temp
+            self.db_list[n] = momentum * self.db_list[n] + cur_db
             self.b_list[n] -= b_rate * self.db_list[n]
             #---------------#
             # update weight # NOTE: conv layer: c_d_w = y_n_1 (*) flip(c_d_yn): with (*) representing conv operation
             #---------------#
-            cur_c_d_y_exp = arr_util.expand_col(cur_c_d_y, self.w_list[n].shape[0])
-            temp = cur_c_d_y_exp * cur_f.y_d_w(cur_y, prev_y)
-
-            temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
-            temp = np.sum(temp, axis=0)
-            w_n = np.copy(self.w_list[n])   # TODO: probably not needing this: just move the cur_c_d_y computation up here
-            # add momentum
-            self.dw_list[n] = momentum * self.dw_list[n] + temp
-            self.w_list[n] -= w_rate * self.dw_list[n]
-            #---------------------------#
-            # update derivative of cost #
-            # w.r.t prev layer output   #
-            #---------------------------#
+            cur_dw = cur_f.c_d_w(cur_c_d_y, cur_y, prev_y)
             if n > 0:
-                # don't update if prev layer is input layer
-                #NOTE: for conv layer, compute as follow: c_d_yn1 = c_d_y (*) w, with (*) representing the conv operation
-                d_chain = cur_f.yn_d_yn1(cur_y, w_n)
-                cur_c_d_y = np.sum(cur_c_d_y_exp * d_chain, axis=-1)
-
+                # update derivative to prev layer before weight is updated
+                cur_c_d_y = cur_f.c_d_yn1(cur_c_d_y, cur_y, self.w_list[n])
+            # add momentum
+            self.dw_list[n] = momentum * self.dw_list[n] + cur_dw
+            self.w_list[n] -= w_rate * self.dw_list[n]
 
 
 
@@ -202,7 +186,6 @@ def parse_args():
     accept cmd line options for specifying the ANN coefficient
     this func is also utilized by ./test/test.py
     """
-    # TODO: add argument to enable choosing from several sets of default settings
     parser = argparse.ArgumentParser('settings for the ANN (accepting path of delimiter \'/\')')
     parser.add_argument('--struct', type=int, metavar='NET_STRUCT',
             default=STRUCT, nargs='+', help='specify the structure of the ANN (num of nodes in each layer)')
