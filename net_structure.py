@@ -177,7 +177,7 @@ class Net_structure:
 
             temp = temp.reshape([hi_sz] + list(self.w_list[n].shape))
             temp = np.sum(temp, axis=0)
-            w_n = np.copy(self.w_list[n])
+            w_n = np.copy(self.w_list[n])   # TODO: probably not needing this: just move the cur_c_d_y computation up here
             # add momentum
             self.dw_list[n] = momentum * self.dw_list[n] + temp
             self.w_list[n] -= w_rate * self.dw_list[n]
@@ -260,6 +260,9 @@ def net_train_main(args):
     
     assert len(args.struct) == len(args.activation) + 1
     data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test, timestamp, profile=True, prof_subdir=db_subdir)
+    # correct batch size if full batch is specified:
+    if args.batch == -1:
+        args.batch = data_set.data.shape[0]
     # auto correct shape of input / output layer of the ANN
     args.struct[0] = data_set.data.shape[1]
     args.struct[-1] = data_set.target.shape[1]
@@ -281,6 +284,7 @@ def net_train_main(args):
     # profile init net data
     net_data = [[(-1,-1), data_set.target]] \
              + [[(0, 0), net.net_act_forward(data_set.data)]]
+    num_batch = data_set.data.shape[0] / args.batch
     for epoch in range(conf.num_epoch):
         net.epoch = epoch + 1
         ######################
@@ -297,8 +301,12 @@ def net_train_main(args):
             if args.log_verbose > 0 and batch % args.log_verbose == 0:
                 print_to_file(_LOG_FILE['net'], net, type=None) # logging
             cur_net_out = net.net_act_forward(bat_ipt)
-            cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))
+            cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))/args.batch
             net.back_prop(bat_tgt, conf)
+            # TODO:
+            # after some batches, evaluate validataion set, 
+            # decrease learn rate if evaluation cost raises
+        cost_bat /= num_batch
         if args.profile_cost:
             if cost_data == None:
                 cost_data = [[net.epoch, net.batch, cost_bat]]

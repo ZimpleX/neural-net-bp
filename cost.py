@@ -36,7 +36,8 @@ class Cost_sqr(Cost):
         """
         return a derivative matrix
         """
-        return y_out - t
+        return (y_out - t) / y_out.shape[0]
+
 
 
 #####################################
