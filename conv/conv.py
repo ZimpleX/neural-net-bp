@@ -7,8 +7,8 @@ import pdb
 
 
 class Conv_layer:
-    def __init__(self):
-        pass
+    def __init__(self, node_activation):
+        self.node_activation = node_activation
 
     def _get_patch(self, layer, y_start_layer, x_start_layer, kern):
         """
@@ -71,3 +71,14 @@ class Conv_layer:
 
         return cur_layer
 
+    def y_d_x():
+        pass
+    
+    def c_d_w():
+        pass
+
+    def c_d_b():
+        pass
+    
+    def yn_d_yn1():
+        pass
