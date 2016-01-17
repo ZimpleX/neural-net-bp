@@ -2,8 +2,6 @@
 NOTE:
     invoke this script from root dir
 """
-#import db_util.interact
-#from db_util.basic import *
 from logf.printf import *
 from logf.filef import *
 from cost import *
@@ -20,6 +18,10 @@ import db_util as db
 import os
 import argparse
 import sqlite3
+
+import conv.conv as conv
+
+import pdb
 
 ACT_FORWARD_FAIL='net act forward failed'
 args = None
@@ -95,11 +97,43 @@ class Test_db_util(ut.TestCase):
        
 
 
+class Test_conv(ut.TestCase):
+    def test_conv(self):
+        image_path = './test/gs.jpg'
+        output_path = './test/outputgs.jpg'
+        from PIL import Image
+        layer_img = np.asarray(Image.open(image_path))
+        Y,X = layer_img.shape
+        C = 1
+        layer_img = layer_img.reshape(Y,X,C)
+        layer_img = layer_img.transpose((2,0,1)).reshape(1,C,Y,X)
+        kernel_core = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
+        #kernel = np.zeros((3,3,3,3))
+        #kernel[0,0,:,:] = kernel_core
+        #kernel[1,1,:,:] = kernel_core
+        #kernel[2,2,:,:] = kernel_core
+        kernel = np.zeros((1,1,3,3))
+        kernel[0,0,:,:] = kernel_core
+
+        conv_layer = conv.Conv_layer()
+        output_img = conv_layer.act_forward(layer_img, kernel, 1, 1)
+        output_img = output_img.reshape(C,Y,X).transpose(1,2,0)
+        output_img = output_img.reshape(Y,X)
+        #pdb.set_trace()
+        Image.fromarray(np.uint8(output_img)).save(output_path)
+        
+        manual_h = np.array([[1,2,3],[-1,4,-9],[13,3,21]]).reshape(1,1,3,3)
+        manual_h = manual_h[:, :, ::-1, ::-1]
+        manual_i = np.array([[1,5,2,3],[8,7,3,6],[1,31,32,33],[-2,-1,0,77]]).reshape(1,1,4,4)
+        print(conv_layer.act_forward(manual_i, manual_h, 1, 1))
+        return output_img
+
+
 
 if __name__ == "__main__":
     # accept args the same way as the main in net_structure.py
     args = parse_args()
     # ut.main()
     #suite = ut.TestLoader().loadTestsFromTestCase(Test_deriv)
-    suite = ut.TestLoader().loadTestsFromTestCase(Test_db_util)
+    suite = ut.TestLoader().loadTestsFromTestCase(Test_conv)
     ut.TextTestRunner(verbosity=2).run(suite)
