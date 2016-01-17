@@ -99,34 +99,41 @@ class Test_db_util(ut.TestCase):
 
 class Test_conv(ut.TestCase):
     def test_conv(self):
-        image_path = './test/gs.jpg'
-        output_path = './test/outputgs.jpg'
-        from PIL import Image
-        layer_img = np.asarray(Image.open(image_path))
-        Y,X = layer_img.shape
-        C = 1
-        layer_img = layer_img.reshape(Y,X,C)
-        layer_img = layer_img.transpose((2,0,1)).reshape(1,C,Y,X)
+        print()
+        image_path_gs = './test/grayscale.jpg'
+        output_path_gs = './test/output_grayscale.jpg'
+        image_path_rgb = './test/rgb.jpg'
+        output_path_rgb = './test/output_rgb.jpg'
         kernel_core = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-        #kernel = np.zeros((3,3,3,3))
-        #kernel[0,0,:,:] = kernel_core
-        #kernel[1,1,:,:] = kernel_core
-        #kernel[2,2,:,:] = kernel_core
-        kernel = np.zeros((1,1,3,3))
-        kernel[0,0,:,:] = kernel_core
-
         conv_layer = conv.Conv_layer()
-        output_img = conv_layer.act_forward(layer_img, kernel, 1, 1)
-        output_img = output_img.reshape(C,Y,X).transpose(1,2,0)
-        output_img = output_img.reshape(Y,X)
-        #pdb.set_trace()
-        Image.fromarray(np.uint8(output_img)).save(output_path)
+
+        from PIL import Image
+        printf('conv grayscale')
+        layer_img_gs = np.asarray(Image.open(image_path_gs))
+        Y,X = layer_img_gs.shape
+        C = 1
+        layer_img_gs = layer_img_gs.reshape(Y,X,C)
+        layer_img_gs = layer_img_gs.transpose((2,0,1)).reshape(1,C,Y,X)
+        kernel_gs = np.zeros((1,1,3,3))
+        kernel_gs[0,0,:,:] = kernel_core
+
+        output_img_gs = conv_layer.act_forward(layer_img_gs, kernel_gs, 1, 1)
+        output_img_gs = output_img_gs.reshape(C,Y,X).transpose(1,2,0)
+        output_img_gs = output_img_gs.reshape(Y,X)
+        Image.fromarray(np.uint8(output_img_gs.clip(0,255))).save(output_path_gs)
         
-        manual_h = np.array([[1,2,3],[-1,4,-9],[13,3,21]]).reshape(1,1,3,3)
-        manual_h = manual_h[:, :, ::-1, ::-1]
-        manual_i = np.array([[1,5,2,3],[8,7,3,6],[1,31,32,33],[-2,-1,0,77]]).reshape(1,1,4,4)
-        print(conv_layer.act_forward(manual_i, manual_h, 1, 1))
-        return output_img
+        printf('conv rgb')
+        layer_img_rgb = np.array(Image.open(image_path_rgb))
+        Y,X,C = layer_img_rgb.shape
+        layer_img_rgb = layer_img_rgb.transpose((2,0,1)).reshape(1,C,Y,X)
+        kernel_rgb = np.zeros((3,3,3,3))
+        kernel_rgb[0,0,:,:] = kernel_core
+        kernel_rgb[1,1,:,:] = kernel_core
+        kernel_rgb[2,2,:,:] = kernel_core
+        
+        output_img_rgb = conv_layer.act_forward(layer_img_rgb, kernel_rgb, 1, 1)
+        output_img_rgb = output_img_rgb.reshape(C,Y,X).transpose(1,2,0)
+        Image.fromarray(np.uint8(output_img_rgb.clip(0,255))).save(output_path_rgb)
 
 
 
