@@ -33,10 +33,8 @@ import pdb
 
 np.random.seed(100)
 
-timestamp = strftime('%Y.%m.%d-%H.%M.%S')
-
-_LOG_FILE = {'net': '{}-net'.format(timestamp),
-            'conf': '{}-conf'.format(timestamp),}
+_LOG_FILE = {'net': '{}-net',
+            'conf': '{}-conf'}
 
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
@@ -242,7 +240,10 @@ def net_train_main(args):
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
     db_subdir = ''
-    
+    timestamp = strftime('%Y.%m.%d-%H.%M.%S')
+    for f in _LOG_FILE.keys():
+        _LOG_FILE[f] = _LOG_FILE[f].format(timestamp)
+
     assert len(args.struct) == len(args.activation) + 1
     data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test, timestamp, profile=True, prof_subdir=db_subdir)
     # correct batch size if full batch is specified:
