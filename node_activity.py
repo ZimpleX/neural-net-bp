@@ -182,10 +182,3 @@ class Node_softmax(Node_activity):
         return y_n * (1 - y_n)
         
 
-
-#########################################
-#    currently supported activations    #
-#########################################
-activation_dict = { 'sig': Node_sigmoid, 
-                    'lin': Node_linear,
-                    'softmax': Node_softmax}

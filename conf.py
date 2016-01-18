@@ -51,3 +51,15 @@ class Conf:
                 """.format(self.b_rate, self.w_rate, 
                         self.inc_rate, self.dec_rate,
                         self.momentum)
+
+
+#########################################
+#    Currently supported activations    #
+#########################################
+from node_activity import *
+from conv.conv import *
+
+activation_dict = { 'sig': Node_sigmoid,
+                    'lin': Node_linear,
+                    'softmax': Node_softmax,
+                    'conv': Node_conv}

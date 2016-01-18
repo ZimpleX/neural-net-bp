@@ -105,7 +105,7 @@ class Test_conv(ut.TestCase):
         image_path_rgb = './test/rgb.jpg'
         output_path_rgb = './test/output_rgb.jpg'
         kernel_core = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-        conv_layer = conv.Conv_layer()
+        conv_layer = conv.Node_conv
 
         from PIL import Image
         printf('conv grayscale')
