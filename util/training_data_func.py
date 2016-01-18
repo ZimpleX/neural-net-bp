@@ -6,7 +6,7 @@ from math import exp, sin
 from random import uniform
 from net_structure import Net_structure
 from cost import cost_dict
-from node_activity import activation_dict
+from conf import activation_dict
 from numpy import *
 from functools import reduce
 from logf.printf import *

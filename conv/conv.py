@@ -78,6 +78,9 @@ class Node_conv(Node_activity):
 
     @classmethod
     def y_d_x(cls, y_n):
+        """
+        non-linearity is just clipping
+        """
         pass
    
     @classmethod 

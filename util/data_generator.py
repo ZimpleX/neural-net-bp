@@ -6,7 +6,7 @@ import sqlite3
 from logf.printf import *
 import db_util as db
 import conf
-from node_activity import activation_dict
+from conf import activation_dict
 from cost import cost_dict
 import argparse
 from random import uniform
@@ -72,7 +72,7 @@ def parseArg():
 def dataGeneratorMain(args):
     db_fullpath = '{}/{}'.format(args.db_path, args.db_name)
     func = args.function
-    table = '{}_is-{}-os-{}-ir-{},{}-or-{},{}|ann'\
+    table = '{}_is-{}-os-{}-ir-({}~{})-or-({}~{})|ann'\
         .format(func, args.input_size, args.output_size, 
                 args.input_range[0], args.input_range[1],
                 args.output_range[0], args.output_range[1])
