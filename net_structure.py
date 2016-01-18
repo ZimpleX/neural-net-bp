@@ -27,6 +27,7 @@ from logf.filef import *
 import argparse
 from time import strftime
 import timeit
+import sys
 
 import pdb
 
@@ -173,6 +174,7 @@ class Net_structure:
                 # update derivative to prev layer before weight is updated
                 cur_c_d_y = cur_f.c_d_yn1(cur_c_d_y, cur_y, self.w_list[n])
             # add momentum
+            # TODO: may not need to store the dw & db
             self.dw_list[n] = momentum * self.dw_list[n] + cur_dw
             self.w_list[n] -= w_rate * self.dw_list[n]
 
@@ -268,6 +270,8 @@ def net_train_main(args):
     net_data = [[(-1,-1), data_set.target]] \
              + [[(0, 0), net.net_act_forward(data_set.data)]]
     num_batch = data_set.data.shape[0] / args.batch
+    prev_accu_cost = sys.float_info.max
+    cur_accu_cost = 0
     for epoch in range(conf.num_epoch):
         net.epoch = epoch + 1
         ######################
@@ -284,11 +288,27 @@ def net_train_main(args):
             if args.log_verbose > 0 and batch % args.log_verbose == 0:
                 print_to_file(_LOG_FILE['net'], net, type=None) # logging
             cur_net_out = net.net_act_forward(bat_ipt)
-            cost_bat += sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))/args.batch
+            cur_cost_bat = sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))/args.batch
+            cost_bat += cur_cost_bat
             net.back_prop(bat_tgt, conf)
-            # TODO:
-            # after some batches, evaluate validataion set, 
-            # decrease learn rate if evaluation cost raises
+            ######################
+            #### Experimental ####
+            cur_accu_cost += cur_cost_bat
+            valid_batch = 0
+            if valid_batch and batch % valid_batch == 0:
+                if cur_accu_cost > prev_accu_cost:
+                    conf.w_rate *= .5
+                    conf.b_rate *= .5
+                    printf('learn rate is decayed by {}', 0.5)
+                else:
+                    conf.w_rate *= 2.
+                    conf.b_rate *= 2.
+                    printf('learn rate is increasing by {}', 2., type='WARN')
+                prev_accu_cost = cur_accu_cost
+                cur_accu_cost = 0
+            ####   End Exp    ####
+            ######################
+
         cost_bat /= num_batch
         if args.profile_cost:
             if cost_data == None:
