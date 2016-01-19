@@ -1,29 +1,33 @@
---  aim to build a general neural net whose num of layers, num of nodes in each layer & neuron activity in each layer can be arbitrarily specified. 
---  training is using back-propagation
+ABOUT
+-----
+
+--  Aim to build a general neural net supporting FC-layer and Convolutional layer
+--  Training is using back-propagation, mini-batch and momentum.
     supporting python3, no warrant for python2
 
---  To run the test: start from this dir, then `python -m test.test` (run as a module)
+--  To play with it, you can provide your own data stored in sqlite3 db, or generate with:
+    `python3 -m util.data_generator <options>`
+--  Start training with:
+    `python3 net_structure <options>`
+    the default setting is in `conf.py`. If you want to customized your own, check `--help`
 
 --  you can choose to profile the net performance:
-    metrics such as cost is populated into database
-    --  you can inspect it using sqlite3
-        common problem about sqlite3:
-        direction key may not work as expected in the sqlite3 shell, due to problem of readline lib
-        easiest work around for this:
-        `rlwrap sqlite3 <db_name>`
-        (could then alias sqlite to 'rlwrap sqlite3')
-    --  you can visualize db data using other tools, such as *benchtracker*
+    cost / net output of epoches are populated into sqlite3 db.
+    data is extracted into meta table and data table, related by their populate_time.
+    --  you can inspect them using sqlite3 viewer (recommended for meta table)
+    --  you can visualize db data using other tools, such as *benchtracker* (recommended for data table)
         [https://github.com/LemonPi/benchtracker]
+    --  util script is provided to facilitate data analysis.
+        It is highly recommended that you use it to pre-process data before you feed it to *benchtracker*:
+        `python3 -m profile_data.analyze <options>`
+    --  For exploring training configurations without polluting the db, it is better to sanity db after unstable runs:
+        `./sanity_trial_run <num of recent runs>`
 
 
---  training method:
-    --  current implemented:
-        --  basic BP + momentum + mini-batch training
-    --  aimed version:
-        -- find a dynamic discipline for updating learning parameters (learning rate / momentum)
+CUSTOMIZE
+---------
 
-
---  TODO:
-    --  data generator: populate to db directly, instead of to text
-    --  change the momuntum calculation from c_d_y to c_d_x
+--  To experiment your unique net structure, e.g.: new activation function / cost function
+    --  simply add your subclass specifying the forward function and first order derivative in:
+        `cost.py` & `node_activity.py`, then add an entry to the dictionary in `conf.py`
 
