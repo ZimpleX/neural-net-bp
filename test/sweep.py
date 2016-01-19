@@ -48,6 +48,8 @@ def yield_conf(args):
                         args_new.rate = r
                         args_new.struct = [1] + num_nodes_struct[s_idx]
                         args_new.activation = act_nodes_struct[s_idx]
+                        args_new.table_data = d
+                        args_new.table_test = d
                         yield args_new
 
 
