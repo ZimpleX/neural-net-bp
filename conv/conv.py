@@ -54,11 +54,11 @@ class Node_conv(Node_activity):
 
 
     @classmethod
-    def _convolution4d(cls, base_mat, sliding_mat, stride, padding):
+    def _conv4dflip(cls, base_mat, sliding_mat, stride, padding):
         """
-        Convolution method ONLY for 4d numpy array.
+        Convolution method for 4d numpy array array
         I won't optimize this for other dimensions as they won't appear in DCNN.
-        Operation is straight-forward: ret_mat = base_mat (*) sliding_mat.
+        Operation is straight-forward: ret_mat = base_mat (*) flipped(sliding_mat).
         [NOTE]: don't swap the position of base_mat and sliding_mat.
     
         The shape of input & output:
@@ -101,9 +101,9 @@ class Node_conv(Node_activity):
             padding:        append zero to periphery of prev_layer
         OUTPUT:
             (batch) x (channel_out) x (height') x (width')
-            please refer to _convolution4d.
+            please refer to _conv4dflip.
         """
-        return cls._convolution4d(prev_layer, np.swapaxes(w, 0, 1), stride, padding)
+        return cls._conv4dflip(prev_layer, np.swapaxes(w, 0, 1), stride, padding)
 
     @classmethod
     def y_d_x(cls, y_n):
