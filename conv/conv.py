@@ -13,9 +13,17 @@ class Node_conv(Node_activity):
     Conv node itself may have non-linear activation functions.
     Define this behavior by y_d_x.
     The main difference from normal node is how you get the input to nodes from w and b
+    
+    Design choice: 
+    It is arguable that I should not make a sub-class of Node_activity, cuz there is
+    not really anything to reuse from super-class. 
+    And in this sense, it may even be better to change the following from class method to 
+    normal method, and store kern size & padding & stride as member variable.
+    For now, I prefer not to do so, considering the consistency in main training body:
+    maintaining current implementation simplify the logic in main body.
     """
     @classmethod
-    def _get_patch(cls, layer, y_start_layer, x_start_layer, kern):
+    def _get_patch(cls, layer, y_start_layer, x_start_layer, dy, dx):
         """
         return a patch of the layer array
     
@@ -23,19 +31,19 @@ class Node_conv(Node_activity):
             layer:              (batch) x (channel) x (height) x (width)
             y_start_layer:      starting height index of this patch on [layer]
             x_start_layer:      starting width index of this patch on [layer]
-            kern:               kernal size, i.e.: patch width and height
+            dy, dx:             kernal size, i.e.: patch width and height
         RETURN:
-            (batch) x (channel) x (kern) x (kern)
+            (batch) x (channel) x (dy) x (dx)
         """
         batch, channel, Y, X = layer.shape
-        patch = np.zeros((batch, channel, kern, kern))
+        patch = np.zeros((batch, channel, dy, dx))
         # clip index when some pixels are in the padding
-        y_end_layer = y_start_layer + kern
-        x_end_layer = x_start_layer + kern
+        y_end_layer = y_start_layer + dy
+        x_end_layer = x_start_layer + dx
         y_start_patch = max(0, -y_start_layer)
         x_start_patch = max(0, -x_start_layer)
-        y_end_patch = kern - max(0, y_end_layer-Y)
-        x_end_patch = kern - max(0, x_end_layer-X)
+        y_end_patch = dy - max(0, y_end_layer-Y)
+        x_end_patch = dx - max(0, x_end_layer-X)
         y_start_layer = max(0, y_start_layer)
         x_start_layer = max(0, x_start_layer)
         y_end_layer = min(Y, y_end_layer)
@@ -44,37 +52,58 @@ class Node_conv(Node_activity):
             layer[..., y_start_layer:y_end_layer, x_start_layer:x_end_layer]
         return patch
 
+
+    @classmethod
+    def _convolution4d(cls, base_mat, sliding_mat, stride, padding):
+        """
+        Convolution method ONLY for 4d numpy array.
+        I won't optimize this for other dimensions as they won't appear in DCNN.
+        Operation is straight-forward: ret_mat = base_mat (*) sliding_mat.
+        [NOTE]: don't swap the position of base_mat and sliding_mat.
+    
+        The shape of input & output:
+            [A x b x c x d] (*) [E x b x f x g] = [A x E x m x n]
+            (where assuming c > f; d > g)
+            *   dimension A, E are retained
+            *   dimension b is eliminated
+            *   dimension m = [c + 2*padding - (f-1) - 1] / stride + 1
+                            = (c + 2*padding - f) / stride + 1
+            *   dimension n = [d + 2*padding - (g-1) - 1] / stride + 1
+                            = (d + 2*padding - g) / stride + 1
+        """
+        assert base_mat.shape[1] == sliding_mat.shape[1]
+        A, b, c, d = base_mat.shape
+        E, b, f, g = sliding_mat.shape
+        m = (c + 2*padding - f)//stride + 1 # TODO: probably want more strict: '/' instead of '//'
+        n = (c + 2*padding - g)//stride + 1
+        ret_mat = np.zeros((A, E, m, n))
+        sliding_mat_flat = sliding_mat.reshape(E, -1)
+        for i in range(m):
+            y = -padding + i*stride
+            for j in range(n):
+                x = -padding + j*stride
+                patch = cls._get_patch(base_mat, y, x, f, g).reshape(A, -1)
+                ret_mat[:,:,i,j] = np.dot(patch, sliding_mat_flat.T)
+        return ret_mat
+        
+
+
     @classmethod
     def act_forward(cls, prev_layer, w, stride, padding):
         """
+        NOTE:
+            w is actually the flipped kernel:
+            y = x (*) kernel = x (*) flipped(w)
         ARGUMENTS:
             prev_layer:     (batch) x (channel_in) x (height) x (width)
-            w:              (channel_out) x (channel_in) x (kernel) x (kernel)
+            w:              (channel_in) x (channel_out) x (kernel) x (kernel)
             stride:         integer specify stride of w kernel
             padding:        append zero to periphery of prev_layer
         OUTPUT:
             (batch) x (channel_out) x (height') x (width')
-            where:
-            height' = [height+2*padding-(kernel-1)-1]/stide + 1
-                    = (heigth+2*padding-kernel)/stride + 1
-            width'  = (width+2*padding-kernel)/stride + 1
+            please refer to _convolution4d.
         """
-        assert prev_layer.shape[1] == w.shape[1]
-        batch, chn_in, y_in, x_in = prev_layer.shape
-        chn_out, chn_in, kern, kern = w.shape
-        y_out = (y_in + 2*padding - kern)//stride + 1
-        x_out = (x_in + 2*padding - kern)//stride + 1
-        cur_layer = np.zeros((batch, chn_out, y_out, x_out))
-
-        w_flat = w.reshape(chn_out, -1)
-        for i in range(y_out):
-            y = -padding + i*stride
-            for j in range(x_out):
-                x = -padding + j*stride
-                patch = cls._get_patch(prev_layer, y, x, kern).reshape(batch, -1)
-                cur_layer[:, :, i, j] = np.dot(patch, w_flat.T)
-
-        return cur_layer
+        return cls._convolution4d(prev_layer, np.swapaxes(w, 0, 1), stride, padding)
 
     @classmethod
     def y_d_x(cls, y_n):
@@ -84,18 +113,23 @@ class Node_conv(Node_activity):
         pass
    
     @classmethod 
-    def c_d_w():
+    def c_d_w(cls, c_d_yn, y_n, y_n_1, stride, padding):
         """
+        c_d_w = y_n_1 (*) flipped(c_d_yn x yn_d_x)
         """
         pass
 
     @classmethod
-    def c_d_b(cls, c_d_yn, y_n):
+    def c_d_b(cls, c_d_yn, y_n, stride, padding):
         """
         probably not need to super class version of this
         """
         pass
     
     @classmethod
-    def c_d_yn1(cls, c_d_yn, y_n, w):
+    def c_d_yn1(cls, c_d_yn, y_n, w, stride, padding):
+        """
+        c_d_yn1 = (c_d_yn x yn_d_x) (*) w
+        """
+        
         pass

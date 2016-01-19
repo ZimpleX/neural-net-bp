@@ -117,7 +117,7 @@ class Test_conv(ut.TestCase):
         kernel_gs = np.zeros((1,1,3,3))
         kernel_gs[0,0,:,:] = kernel_core
 
-        output_img_gs = conv_layer.act_forward(layer_img_gs, kernel_gs, 1, 1)
+        output_img_gs = conv_layer.act_forward(layer_img_gs, np.swapaxes(kernel_gs,0,1), 1, 1)
         output_img_gs = output_img_gs.reshape(C,Y,X).transpose(1,2,0)
         output_img_gs = output_img_gs.reshape(Y,X)
         Image.fromarray(np.uint8(output_img_gs.clip(0,255))).save(output_path_gs)
@@ -131,7 +131,7 @@ class Test_conv(ut.TestCase):
         kernel_rgb[1,1,:,:] = kernel_core
         kernel_rgb[2,2,:,:] = kernel_core
         
-        output_img_rgb = conv_layer.act_forward(layer_img_rgb, kernel_rgb, 1, 1)
+        output_img_rgb = conv_layer.act_forward(layer_img_rgb, np.swapaxes(kernel_rgb,0,1), 1, 1)
         output_img_rgb = output_img_rgb.reshape(C,Y,X).transpose(1,2,0)
         Image.fromarray(np.uint8(output_img_rgb.clip(0,255))).save(output_path_rgb)
 
