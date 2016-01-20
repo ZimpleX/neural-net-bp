@@ -31,7 +31,7 @@ import sys
 
 import pdb
 
-np.random.seed(100)
+np.random.seed(0)
 
 _LOG_FILE = {'net': '{}-net',
             'conf': '{}-conf'}
