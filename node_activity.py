@@ -62,7 +62,16 @@ class Node_activity:
         return np.ones(y_n.shape)
 
     @classmethod
-    def c_d_w(cls, c_d_yn, y_n, y_n_1):
+    def _c_d_xn(cls, c_d_yn, y_n):
+        """
+        NOTE: DON'T overwrite this function when creating subclass
+
+        return matrix of this function will be used by c_d_w & c_d_b & c_d_yn1
+        """
+        return c_d_yn * cls.y_d_x(y_n)
+
+    @classmethod
+    def c_d_w_b_yn1(cls, c_d_yn, y_n, y_n_1, w, is_c_d_yn1=1):
         """
         NOTE: DON'T overwrite this function when creating subclass
 
@@ -72,43 +81,22 @@ class Node_activity:
             c_d_yn  derivative of cost w.r.t. layer n output:   (batch) x (N_n)
             y_n     y list of layer n (cur layer):              (batch) x (N_n)
             y_n_1   y list of layer n-1 (prev layer):           (batch) x (N_n_1)
+            w       weight between layer n and n-1              (N_n_1) x (N_n)
+            is_c_d_yn1  flag controlling whether you want to calculate c_d_yn1
+                        --> you don't want this if you have propagated to input layer
         RETURN:
             weight derivative of shape:     (N_n_1) x (N_n)
-            the return has already summed over all batch entries
+            bias derivative of shape:       (N_n)
+            y_n_1 derivative of shape:      (batch) x (N_n_1)
         """
+        c_d_xn = cls._c_d_xn(c_d_yn, y_n)   # (batch) x (N_n)
         d_chain = y_n_1                     # (batch) x (N_n_1)
-        c_d_xn = c_d_yn * cls.y_d_x(y_n)    # (batch) x (N_n)
-        return np.dot(d_chain.T, c_d_xn)    # dot product is summing over mini-batch
-
-    @classmethod
-    def c_d_b(cls, c_d_yn, y_n):
-        """
-        NOTE: DON'T overwrite this function when creating subclass
-        get derivative of cost w.r.t. bias vector in layer n
-
-        ARGUMENT:
-            c_d_yn  derivative of cost w.r.t. layer n output    (batch) x (N_n)
-            y_n     y list for layer n:                         (batch) x (N_n)
-        RETURN:
-            (N_n)
-        """
-        return np.sum((c_d_yn * cls.y_d_x(y_n)), axis=0)
-
-    @classmethod
-    def c_d_yn1(cls, c_d_yn, y_n, w):
-        """
-        NOTE: DON'T overwrite this function when creating subclass
-        get derivative of cost w.r.t. output of layer n-1
-
-        ARGUMENT:
-            c_d_yn  derivative of cost w.r.t. layer n output    (batch) x (N_n)
-            y_n     output of layer n                           (batch) x (N_n)
-            w       weight between layer n and n-1              (N_n_1) x (N_n)
-        RETURN
-            (batch) x (N_n_1)
-        """
-        yn_d_x = cls.y_d_x(y_n)
-        return np.dot((c_d_yn * yn_d_x), w.T)
+        c_d_w = np.dot(d_chain.T, c_d_xn)   # dot product is summing over mini-batch
+        c_d_b = np.sum(c_d_xn, axis=0)
+        c_d_yn1 = None
+        if is_c_d_yn1:
+            c_d_yn1 = np.dot(c_d_xn, w.T)
+        return c_d_w, c_d_b, c_d_yn1
 
 
 

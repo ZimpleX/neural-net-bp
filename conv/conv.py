@@ -14,16 +14,19 @@ class Node_conv(Node_activity):
     Define this behavior by y_d_x.
     The main difference from normal node is how you get the input to nodes from w and b
     
-    Design choice: 
-    It is arguable that I should not make a sub-class of Node_activity, cuz there is
+    [Design choice]: 
+    It is arguable that I should not make this sub-class of Node_activity, cuz there is
     not really anything to reuse from super-class. 
     And in this sense, it may even be better to change the following from class method to 
     normal method, and store kern size & padding & stride as member variable.
     For now, I prefer not to do so, considering the consistency in main training body:
     maintaining current implementation simplify the logic in main body.
+
+    [NOTE]:
+    make sure that the kernel width is equal to kernel height!!
     """
     @classmethod
-    def _get_patch(cls, layer, y_start_layer, x_start_layer, dy, dx):
+    def _get_patch(cls, layer, y_start_layer, x_start_layer, dy, dx, stride):
         """
         return a patch of the layer array
     
@@ -32,9 +35,11 @@ class Node_conv(Node_activity):
             y_start_layer:      starting height index of this patch on [layer]
             x_start_layer:      starting width index of this patch on [layer]
             dy, dx:             kernal size, i.e.: patch width and height
+            stride:             used in bp of conv layer --> if sliding window act_forward has [stride != 1]
         RETURN:
             (batch) x (channel) x (dy) x (dx)
         """
+        # TODO: add support for stride
         batch, channel, Y, X = layer.shape
         patch = np.zeros((batch, channel, dy, dx))
         # clip index when some pixels are in the padding
@@ -59,8 +64,9 @@ class Node_conv(Node_activity):
         Convolution method for 4d numpy array array
         I won't optimize this for other dimensions as they won't appear in DCNN.
         Operation is straight-forward: ret_mat = base_mat (*) flipped(sliding_mat).
-        [NOTE]: don't swap the position of base_mat and sliding_mat.
-    
+        [NOTE1]: don't swap the position of base_mat & sliding_mat: padding is added to base_mat
+        [NOTE2]: it won't matter here if `sliding_mat.shape[-1] != sliding_mat.shape[-2]`,
+            HOWEVER, if that is the case, other places may be broken.
         The shape of input & output:
             [A x b x c x d] (*) [E x b x f x g] = [A x E x m x n]
             (where assuming c > f; d > g)
@@ -103,6 +109,7 @@ class Node_conv(Node_activity):
             (batch) x (channel_out) x (height') x (width')
             please refer to _conv4dflip.
         """
+        # TODO: may want non-linear activation: ReU
         return cls._conv4dflip(prev_layer, np.swapaxes(w, 0, 1), stride, padding)
 
     @classmethod
@@ -117,19 +124,20 @@ class Node_conv(Node_activity):
         """
         c_d_w = y_n_1 (*) flipped(c_d_yn x yn_d_x)
         """
+        c_d_xn = c_d_yn * cls.y_d_x(y_n)
+
         pass
 
-    @classmethod
-    def c_d_b(cls, c_d_yn, y_n, stride, padding):
-        """
-        probably not need to super class version of this
-        """
-        pass
-    
     @classmethod
     def c_d_yn1(cls, c_d_yn, y_n, w, stride, padding):
         """
         c_d_yn1 = (c_d_yn x yn_d_x) (*) w
+        [NOTE1]: things get tricky when stride not equal to 1:
+            basically you have to get a patch with holes
+        [NOTE2]: padding passed in is the feed-forward padding, not the padding 
+            used for conv in this function
         """
-        
-        pass
+        c_d_xn = c_d_yn * cls.y_d_x(y_n)
+        assert w.shape[-1] == w.shape[-2]   # kernel must be square
+        padding2 = w.shape[-1] - padding - 1
+        return cls._conv4dflip(c_d_xn, w[:,:,::-1,::-1], stride, padding2)

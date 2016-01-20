@@ -157,22 +157,15 @@ class Net_structure:
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
+            cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n)
             #-------------#
             # update bias #
             #-------------#
-            cur_db = cur_f.c_d_b(cur_c_d_y, cur_y)
-            # add momentum
             self.db_list[n] = momentum * self.db_list[n] + cur_db
             self.b_list[n] -= b_rate * self.db_list[n]
             #---------------#
-            # update weight # NOTE: conv layer: c_d_w = y_n_1 (*) flip(c_d_yn): with (*) representing conv operation
+            # update weight #
             #---------------#
-            cur_dw = cur_f.c_d_w(cur_c_d_y, cur_y, prev_y)
-            if n > 0:
-                # update derivative to prev layer before weight is updated
-                cur_c_d_y = cur_f.c_d_yn1(cur_c_d_y, cur_y, self.w_list[n])
-            # add momentum
-            # TODO: may not need to store the dw & db
             self.dw_list[n] = momentum * self.dw_list[n] + cur_dw
             self.w_list[n] -= w_rate * self.dw_list[n]
 
