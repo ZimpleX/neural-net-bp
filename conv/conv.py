@@ -7,6 +7,8 @@ import numpy as np
 from node_activity import Node_activity
 import pdb
 
+from fractions import Fraction, gcd
+from math import ceil, floor
 
 class Node_conv(Node_activity):
     """
@@ -26,70 +28,72 @@ class Node_conv(Node_activity):
     make sure that the kernel width is equal to kernel height!!
     """
     @classmethod
-    def _get_patch(cls, layer, y_start_layer, x_start_layer, dy, dx, stride):
+    def _get_patch(cls, base_mat, y_start_base, x_start_base, dy, dx, unit):
         """
-        return a patch of the layer array
-    
+        return a patch of the base matrix
+        [NOTE]: y_start_base, x_start_base can be fractional number; dx, dy is counted in `unit`
         ARGUMENTS:
-            layer:              (batch) x (channel) x (height) x (width)
-            y_start_layer:      starting height index of this patch on [layer]
-            x_start_layer:      starting width index of this patch on [layer]
+            base_mat:           (batch) x (channel) x (height) x (width)
+            y_start_base:       starting height index of this patch on [base_mat]
+            x_start_base:       starting width index of this patch on [base_mat]
             dy, dx:             kernal size, i.e.: patch width and height
-            stride:             used in bp of conv layer --> if sliding window act_forward has [stride != 1]
+            unit:               increment index by `unit` a time: can be fractional
         RETURN:
             (batch) x (channel) x (dy) x (dx)
         """
-        # TODO: add support for stride
-        batch, channel, Y, X = layer.shape
+        batch, channel, Y, X = base_mat.shape
         patch = np.zeros((batch, channel, dy, dx))
-        # clip index when some pixels are in the padding
-        y_end_layer = y_start_layer + dy
-        x_end_layer = x_start_layer + dx
-        y_start_patch = max(0, -y_start_layer)
-        x_start_patch = max(0, -x_start_layer)
-        y_end_patch = dy - max(0, y_end_layer-Y)
-        x_end_patch = dx - max(0, x_end_layer-X)
-        y_start_layer = max(0, y_start_layer)
-        x_start_layer = max(0, x_start_layer)
-        y_end_layer = min(Y, y_end_layer)
-        x_end_layer = min(X, x_end_layer)
-        patch[..., y_start_patch:y_end_patch, x_start_patch:x_end_patch] = \
-            layer[..., y_start_layer:y_end_layer, x_start_layer:x_end_layer]
+        # base mat: index setup
+        stride_patch = max(1/unit, 1)
+        stride_base  = max(unit, 1)
+        y_start_idx = max(int(ceil(y_start_base)), 0)
+        x_start_idx = max(int(ceil(x_start_base)), 0)
+        y_end_idx = min(ceil(y_start_base + dy*unit), Y)
+        x_end_idx = min(ceil(x_start_base + dx*unit), X)
+        patch_fill = base_mat[..., y_start_idx:y_end_idx:stride_base, x_start_idx:x_end_idx:stride_base]
+        # patch: index setup
+        num_x, num_y = patch_fill[-2::]
+        y_padding = ceil((max(ceil(y_start_base), 0) - y_start_base) / unit)
+        x_padding = ceil((max(ceil(x_start_base), 0) - x_start_base) / unit)
+        y_patch_end = (num_y-1)*stride_base + 1
+        x_patch_end = (num_x-1)*stride_base + 1
+        # fill in
+        patch[..., y_padding:y_patch_end:stride_base, x_padding:x_patch_end:stride_base] = patch_fill
         return patch
 
 
     @classmethod
-    def _conv4dflip(cls, base_mat, sliding_mat, stride, padding):
+    def _conv4dflip(cls, base_mat, kern_mat, sliding_stride, patch_stride, padding):
         """
-        Convolution method for 4d numpy array array
-        I won't optimize this for other dimensions as they won't appear in DCNN.
-        Operation is straight-forward: ret_mat = base_mat (*) flipped(sliding_mat).
-        [NOTE1]: don't swap the position of base_mat & sliding_mat: padding is added to base_mat
-        [NOTE2]: it won't matter here if `sliding_mat.shape[-1] != sliding_mat.shape[-2]`,
+        Convolution method ONLY for 4d numpy array
+        Operation: ret_mat = base_mat (*) flipped(kern_mat).
+        [NOTE1]: don't swap the position of base_mat & kern_mat: padding is added to base_mat
+        [NOTE2]: it won't matter here if `kern_mat.shape[-1] != kern_mat.shape[-2]`,
             HOWEVER, if that is the case, other places may be broken.
+        [NOTE3]: padding & patch_stride & sliding_stride can all be fractional
         The shape of input & output:
             [A x b x c x d] (*) [E x b x f x g] = [A x E x m x n]
             (where assuming c > f; d > g)
             *   dimension A, E are retained
             *   dimension b is eliminated
-            *   dimension m = [c + 2*padding - (f-1) - 1] / stride + 1
-                            = (c + 2*padding - f) / stride + 1
-            *   dimension n = [d + 2*padding - (g-1) - 1] / stride + 1
-                            = (d + 2*padding - g) / stride + 1
+            *   dimension m = (c + 2*padding - unit - (f-1)*patch_stride) / sliding_stride + 1
+            *   dimension n = (d + 2*padding - unit - (g-1)*patch_stride) / sliding_stride + 1
+                [where unit = gcd(patch_stride, sliding_stride, padding) if one of them is fractional]
         """
-        assert base_mat.shape[1] == sliding_mat.shape[1]
+        assert base_mat.shape[1] == kern_mat.shape[1]
         A, b, c, d = base_mat.shape
-        E, b, f, g = sliding_mat.shape
-        m = (c + 2*padding - f)//stride + 1 # TODO: probably want more strict: '/' instead of '//'
-        n = (c + 2*padding - g)//stride + 1
+        E, b, f, g = kern_mat.shape
+        unit = min(1, gcd(gcd(base_mat, kern_mat), padding))
+        m = (c + 2*padding - unit - (f-1)*patch_stride)/sliding_stride + 1
+        n = (c + 2*padding - unit - (g-1)*patch_stride)/sliding_stride + 1
         ret_mat = np.zeros((A, E, m, n))
-        sliding_mat_flat = sliding_mat.reshape(E, -1)
+        kern_mat_flat = kern_mat.reshape(E, -1)
         for i in range(m):
-            y = -padding + i*stride
+            y = -padding + i*sliding_stride
             for j in range(n):
-                x = -padding + j*stride
-                patch = cls._get_patch(base_mat, y, x, f, g).reshape(A, -1)
-                ret_mat[:,:,i,j] = np.dot(patch, sliding_mat_flat.T)
+                x = -padding + j*sliding_stride
+                patch = cls._get_patch(base_mat, y, x, f, g, unit).reshape(A, -1)
+                ret_mat[:,:,i,j] = np.dot(patch, kern_mat_flat.T)
         return ret_mat
         
 
@@ -140,4 +144,4 @@ class Node_conv(Node_activity):
         c_d_xn = c_d_yn * cls.y_d_x(y_n)
         assert w.shape[-1] == w.shape[-2]   # kernel must be square
         padding2 = w.shape[-1] - padding - 1
-        return cls._conv4dflip(c_d_xn, w[:,:,::-1,::-1], stride, padding2)
+        return cls._conv4dflip(c_d_xn, w[:,:,::-1,::-1], 1, padding2, patch_stride=stride)
