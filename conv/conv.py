@@ -12,21 +12,14 @@ from math import ceil, floor
 
 class Node_conv(Node_activity):
     """
-    Conv node itself may have non-linear activation functions.
-    Define this behavior by y_d_x.
-    The main difference from normal node is how you get the input to nodes from w and b
+    Convolutional layer: both the forward-acting and backward gradient can be expressed by conv.
     
-    [Design choice]: 
-    It is arguable that I should not make this sub-class of Node_activity, cuz there is
-    not really anything to reuse from super-class. 
-    And in this sense, it may even be better to change the following from class method to 
-    normal method, and store kern size & padding & stride as member variable.
-    For now, I prefer not to do so, considering the consistency in main training body:
-    maintaining current implementation simplify the logic in main body.
-
     [NOTE]:
     make sure that the kernel width is equal to kernel height!!
     """
+    __metaclass__ = ABCMeta
+    def __init__():
+        pass
     @classmethod
     def _get_patch(cls, base_mat, y_start_base, x_start_base, dy, dx, unit):
         """
@@ -55,11 +48,11 @@ class Node_conv(Node_activity):
         # patch: index setup
         stride_patch = max(1/unit, 1)
         num_x, num_y = patch_fill[-2::]
-        unit = (unit>1) and 1 or unit
+        unit = min(1, unit)
         y_patch_start = (max(ceil(y_start_base), 0) - y_start_base) / unit
         x_patch_start = (max(ceil(x_start_base), 0) - x_start_base) / unit
-        y_patch_end = (num_y-1)*stride_patch + 1 + y_patch_start
-        x_patch_end = (num_x-1)*stride_patch + 1 + x_patch_start
+        y_patch_end = (num_y-1)*stride_patch + y_patch_start + 1
+        x_patch_end = (num_x-1)*stride_patch + x_patch_start + 1
         # fill in
         patch[..., y_patch_start:y_patch_end:stride_patch, \
                     x_patch_start:x_patch_end:stride_patch] = patch_fill
@@ -114,54 +107,42 @@ class Node_conv(Node_activity):
             padding:        append zero to periphery of prev_layer
         OUTPUT:
             (batch) x (channel_out) x (height') x (width')
-            please refer to _conv4dflip.
+            please refer to _conv4dflip for height' and width'
         """
-        # TODO: may want non-linear activation: ReU
-        """
-        Feed forward:
-            padding: integer
-            sliding_stride: >= 1, integer
-            patch_stride: = 1
-        """
-        return cls._conv4dflip(prev_layer, np.swapaxes(w, 0, 1), stride, padding)
+        ret = cls._conv4dflip(prev_layer, np.swapaxes(w, 0, 1), stride, 1, padding)
+        return np.clip(ret, 0, np.finfo(np.float64).max)    # ReLU
 
     @classmethod
     def y_d_x(cls, y_n):
         """
-        non-linearity is just clipping
+        ReLU: non-linearity is just clipping
         """
-        pass
+        return np.greater(y_n, 0.)
    
-    @classmethod 
-    def c_d_w(cls, c_d_yn, y_n, y_n_1, stride, padding):
-        """
-        c_d_w = y_n_1 (*) flipped(c_d_yn x yn_d_x)
-        """
-        """
-        patch_stride = S
-        sliding_stride = 1
-        padding = p
-        """
-
-        c_d_xn = c_d_yn * cls.y_d_x(y_n)
-
-        pass
 
     @classmethod
-    def c_d_yn1(cls, c_d_yn, y_n, w, stride, padding):
+    def c_d_w_b_yn1(cls, c_d_yn, y_n, y_n_1, w, stride, padding, is_c_d_yn1=1):
         """
-        c_d_yn1 = (c_d_yn x yn_d_x) (*) w
-        [NOTE1]: things get tricky when stride not equal to 1:
-            basically you have to get a patch with holes
-        [NOTE2]: padding passed in is the feed-forward padding, not the padding 
-            used for conv in this function
+        stride, padding are both the integer value in the feed forward case.
+        get derivative of cost w.r.t. weight, bias, prev_layer.
         """
-        c_d_xn = c_d_yn * cls.y_d_x(y_n)
-        assert w.shape[-1] == w.shape[-2]   # kernel must be square
-        padding2 = w.shape[-1] - padding - 1
-        """
-        padding = (k-p-1)/S
-        patch_stride = 1/S
-        sliding_stride = 1/S
-        """
-        return cls._conv4dflip(c_d_xn, w[:,:,::-1,::-1], 1, padding2, patch_stride=stride)
+        c_d_xn = cls._c_d_xn(c_d_yn, y_n)
+        c_d_b = np.sum(c_d_xn, axis=0)
+        ####  c_d_w  ####
+        ##  y_n_1 (*) flipped(c_d_xn)
+        #   patch_stride = stride
+        #   padding = padding
+        #   slide_stride = 1
+        c_d_w = cls._conv4dflip(np.swapaxes(y_n_1,0,1), 
+                    np.swapaxes(c_d_xn,0,1), 1, stride, padding)
+        assert c_d_w.shape == w.shape
+        ####  c_d_yn1  ####
+        ##  c_d_xn (*) w ##
+        #   patch_stride = 1/stride
+        #   padding = (kern-padding-1)/stride
+        #   slide_stride = 1/stride
+        pad2 = Fraction(w.shape[-1] - padding - 1, stride)
+        c_d_yn1 = cls._conv4dflip(c_d_xn, w[:,:,::-1,::-1], 
+                    Fraction(1, stride), Fraction(1, stride), pad2)
+        assert c_d_yn1.shape == y_n_1.shape
+        return c_d_w, c_d_b, c_d_yn1

@@ -75,7 +75,7 @@ class Node_activity:
         """
         NOTE: DON'T overwrite this function when creating subclass
 
-        get derivative of cost w.r.t. weight between layer n and n-1
+        get derivative of cost w.r.t. weight, bias, prev_layer.
 
         ARGUMENT:
             c_d_yn  derivative of cost w.r.t. layer n output:   (batch) x (N_n)
