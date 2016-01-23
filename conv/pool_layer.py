@@ -4,7 +4,9 @@ pooling layer to be operated together with conv layer.
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from node_activity import Node_activity
-from conv.conv import Node_conv
+from conv.conv_layer import Node_conv
+import conv.convolution as conv
+
 
 class Node_pool(Node_conv):
     """
@@ -31,7 +33,7 @@ class Node_pool(Node_conv):
             y = -self.padding + i*self.stride
             for j in range(width_out):
                 x = -self.padding + j*self.stride
-                patch = self._get_patch(prev_layer, y, x, self.kern, self.kern, self.stride)
+                patch = conv.get_patch(prev_layer, y, x, self.kern, self.kern, 1)
                 ret_mat[:,:,i,j] = patch.reshape(batch, channel, -1).max(axis=2)
         return ret_mat
     
@@ -39,16 +41,20 @@ class Node_pool(Node_conv):
     def y_d_x(cls, y_n):
         pass
 
-    def c_d_w_b_yn1(self, c_d_yn, y_n, y_n_1):
+    def c_d_yn1(self, c_d_yn, y_n, y_n_1):
         """
         NO derivative of w and b
         """
         batch, channel, height_n1, width_n1 = y_n_1.shape
+        c_d_yn1 = np.zeros(y_n_1.shape)
         for i in range(c_d_yn.shape[-2]):
             y = -self.padding + i*self.stride
             for j in range(c_d_yn.shape[-1]):
                 x = -self.padding + j*self.stride
-                patch = self._get_patch(y_n_1, y, x, self.kern, self.kern, self.stride)
-                sel_max = y_n[:,:,i,j,np.newaxis,np.newaxis]    # w/o new axis, it is 2D
-                sel_deriv = c_d_yn[:,:,i,j,np.newaxis,np.newaxis]
+                patch = conv.get_patch(y_n_1, y, x, self.kern, self.kern, self.stride)
+                max_flt = y_n[:,:,i,j,np.newaxis,np.newaxis]    # w/o new axis, it is 2D
+                deriv_flt = c_d_yn[:,:,i,j,np.newaxis,np.newaxis]
+                deriv_patch = (patch == max_flt) * deriv_flt    # broadcast rule
+                conv.update_patch(c_d_yn1, deriv_patch, y, x)
+        return c_d_yn1
                 

@@ -45,9 +45,10 @@ def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     return patch
 
 
-def conv4dflip(base_mat, kern_mat, sliding_stride, patch_stride, padding):
+def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
+                patch_func, pre_proc, *f_args):
     """
-    Convolution method ONLY for 4d numpy array
+    Method ONLY for 4d numpy array
     Operation: ret_mat = base_mat (*) flipped(kern_mat).
     [NOTE1]: don't swap the position of base_mat & kern_mat: padding is added to base_mat
     [NOTE2]: it won't matter here if `kern_mat.shape[-1] != kern_mat.shape[-2]`,
@@ -66,15 +67,33 @@ def conv4dflip(base_mat, kern_mat, sliding_stride, patch_stride, padding):
     E, b, f, g = kern_mat.shape
     unit = min(1, gcd(gcd(base_mat, kern_mat), padding))
     m = (c + 2*padding - 1 - (f-1)*patch_stride)/sliding_stride + 1
-    n = (c + 2*padding - 1 - (g-1)*patch_stride)/sliding_stride + 1
+    n = (d + 2*padding - 1 - (g-1)*patch_stride)/sliding_stride + 1
     ret_mat = np.zeros((A, E, m, n))
-    kern_mat_flat = kern_mat.reshape(E, -1)
+    pre_arg = pre_proc(base_mat, kern_mat)
+    y = x = -padding
     for i in range(m):
-        y = -padding + i*sliding_stride
+        y += sliding_stride
         for j in range(n):
-            x = -padding + j*sliding_stride
-            patch = get_patch(base_mat, y, x, f, g, patch_stride).reshape(A, -1)
-            ret_mat[:,:,i,j] = np.dot(patch, kern_mat_flat.T)
+            x += sliding_stride
+            patch = get_patch(base_mat, y, x, f, g, patch_stride)
+            ret_mat[:,:,i,j] = patch_func(patch, *pre_arg, *f_args)
     return ret_mat
 
 
+###########################
+#  operations on a patch  #
+###########################
+def conv_reshape(base, kern):
+    """
+    this is to avoid the reshape operation inside the double for loop.
+    Python won't automatically optimize it for you.
+    """
+    A = base.shape[0]
+    E = kern.shape[0]
+    return kern.reshape(E, -1).T, A
+
+def conv(patch, kern_trans, A):
+    """
+    operation for convolution
+    """
+    return np.dot(patch.reshape(A,-1), kern_trans)

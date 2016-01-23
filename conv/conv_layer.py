@@ -36,9 +36,10 @@ class Node_conv(Node_activity):
             padding:        append zero to periphery of prev_layer
         OUTPUT:
             (batch) x (channel_out) x (height') x (width')
-            please refer to conv4dflip for height' and width'
+            please refer to slid_win_4d_flip for height' and width'
         """
-        ret = conv.conv4dflip(prev_layer, np.swapaxes(w, 0, 1), self.stride, 1, self.padding)
+        ret = conv.slid_win_4d_flip(prev_layer, np.swapaxes(w, 0, 1), 
+                self.stride, 1, self.padding, conv.conv, conv.conv_reshape)
         return np.clip(ret+b, 0, np.finfo(np.float64).max)    # ReLU
 
     @classmethod
@@ -67,8 +68,8 @@ class Node_conv(Node_activity):
         #   patch_stride = stride
         #   padding = padding
         #   slide_stride = 1
-        c_d_w = conv.conv4dflip(np.swapaxes(y_n_1,0,1), 
-                    np.swapaxes(c_d_xn,0,1), 1, self.stride, self.padding)
+        c_d_w = conv.slid_win_4d_flip(np.swapaxes(y_n_1,0,1), np.swapaxes(c_d_xn,0,1), 
+                1, self.stride, self.padding, conv.conv, conv.conv_reshape)
         assert c_d_w.shape == w.shape
         ####  c_d_yn1  ####
         ##  c_d_xn (*) w ##
@@ -76,7 +77,7 @@ class Node_conv(Node_activity):
         #   padding = (kern-padding-1)/stride
         #   slide_stride = 1/stride
         pad2 = Fraction(w.shape[-1] - self.padding - 1, self.stride)
-        c_d_yn1 = conv.conv4dflip(c_d_xn, w[:,:,::-1,::-1], 
-                    Fraction(1, self.stride), Fraction(1, self.stride), pad2)
+        c_d_yn1 = conv.slid_win_4d_flip(c_d_xn, w[:,:,::-1,::-1], Fraction(1, self.stride), 
+                Fraction(1, self.stride), pad2, conv.conv, conv.conv_reshape)
         assert c_d_yn1.shape == y_n_1.shape
         return c_d_w, c_d_b, c_d_yn1
