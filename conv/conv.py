@@ -32,33 +32,37 @@ class Node_conv(Node_activity):
         """
         return a patch of the base matrix
         [NOTE]: y_start_base, x_start_base can be fractional number; dx, dy is counted in `unit`
+                i.e.: this `unit` is the patch_stride
         ARGUMENTS:
             base_mat:           (batch) x (channel) x (height) x (width)
             y_start_base:       starting height index of this patch on [base_mat]
             x_start_base:       starting width index of this patch on [base_mat]
             dy, dx:             kernal size, i.e.: patch width and height
             unit:               increment index by `unit` a time: can be fractional
+                                if index is non-integer, then the value is zero
         RETURN:
             (batch) x (channel) x (dy) x (dx)
         """
         batch, channel, Y, X = base_mat.shape
         patch = np.zeros((batch, channel, dy, dx))
         # base mat: index setup
-        stride_patch = max(1/unit, 1)
         stride_base  = max(unit, 1)
-        y_start_idx = max(int(ceil(y_start_base)), 0)
-        x_start_idx = max(int(ceil(x_start_base)), 0)
+        y_start_idx = max(ceil(y_start_base), 0)
+        x_start_idx = max(ceil(x_start_base), 0)
         y_end_idx = min(ceil(y_start_base + dy*unit), Y)
         x_end_idx = min(ceil(x_start_base + dx*unit), X)
         patch_fill = base_mat[..., y_start_idx:y_end_idx:stride_base, x_start_idx:x_end_idx:stride_base]
         # patch: index setup
+        stride_patch = max(1/unit, 1)
         num_x, num_y = patch_fill[-2::]
-        y_padding = ceil((max(ceil(y_start_base), 0) - y_start_base) / unit)
-        x_padding = ceil((max(ceil(x_start_base), 0) - x_start_base) / unit)
-        y_patch_end = (num_y-1)*stride_base + 1
-        x_patch_end = (num_x-1)*stride_base + 1
+        unit = (unit>1) and 1 or unit
+        y_patch_start = (max(ceil(y_start_base), 0) - y_start_base) / unit
+        x_patch_start = (max(ceil(x_start_base), 0) - x_start_base) / unit
+        y_patch_end = (num_y-1)*stride_patch + 1 + y_patch_start
+        x_patch_end = (num_x-1)*stride_patch + 1 + x_patch_start
         # fill in
-        patch[..., y_padding:y_patch_end:stride_base, x_padding:x_patch_end:stride_base] = patch_fill
+        patch[..., y_patch_start:y_patch_end:stride_patch, \
+                    x_patch_start:x_patch_end:stride_patch] = patch_fill
         return patch
 
 
@@ -76,23 +80,22 @@ class Node_conv(Node_activity):
             (where assuming c > f; d > g)
             *   dimension A, E are retained
             *   dimension b is eliminated
-            *   dimension m = (c + 2*padding - unit - (f-1)*patch_stride) / sliding_stride + 1
-            *   dimension n = (d + 2*padding - unit - (g-1)*patch_stride) / sliding_stride + 1
-                [where unit = gcd(patch_stride, sliding_stride, padding) if one of them is fractional]
+            *   dimension m = (c + 2*padding - 1 - (f-1)*patch_stride) / sliding_stride + 1
+            *   dimension n = (d + 2*padding - 1 - (g-1)*patch_stride) / sliding_stride + 1
         """
         assert base_mat.shape[1] == kern_mat.shape[1]
         A, b, c, d = base_mat.shape
         E, b, f, g = kern_mat.shape
         unit = min(1, gcd(gcd(base_mat, kern_mat), padding))
-        m = (c + 2*padding - unit - (f-1)*patch_stride)/sliding_stride + 1
-        n = (c + 2*padding - unit - (g-1)*patch_stride)/sliding_stride + 1
+        m = (c + 2*padding - 1 - (f-1)*patch_stride)/sliding_stride + 1
+        n = (c + 2*padding - 1 - (g-1)*patch_stride)/sliding_stride + 1
         ret_mat = np.zeros((A, E, m, n))
         kern_mat_flat = kern_mat.reshape(E, -1)
         for i in range(m):
             y = -padding + i*sliding_stride
             for j in range(n):
                 x = -padding + j*sliding_stride
-                patch = cls._get_patch(base_mat, y, x, f, g, unit).reshape(A, -1)
+                patch = cls._get_patch(base_mat, y, x, f, g, patch_stride).reshape(A, -1)
                 ret_mat[:,:,i,j] = np.dot(patch, kern_mat_flat.T)
         return ret_mat
         
@@ -114,6 +117,12 @@ class Node_conv(Node_activity):
             please refer to _conv4dflip.
         """
         # TODO: may want non-linear activation: ReU
+        """
+        Feed forward:
+            padding: integer
+            sliding_stride: >= 1, integer
+            patch_stride: = 1
+        """
         return cls._conv4dflip(prev_layer, np.swapaxes(w, 0, 1), stride, padding)
 
     @classmethod
@@ -128,6 +137,12 @@ class Node_conv(Node_activity):
         """
         c_d_w = y_n_1 (*) flipped(c_d_yn x yn_d_x)
         """
+        """
+        patch_stride = S
+        sliding_stride = 1
+        padding = p
+        """
+
         c_d_xn = c_d_yn * cls.y_d_x(y_n)
 
         pass
@@ -144,4 +159,9 @@ class Node_conv(Node_activity):
         c_d_xn = c_d_yn * cls.y_d_x(y_n)
         assert w.shape[-1] == w.shape[-2]   # kernel must be square
         padding2 = w.shape[-1] - padding - 1
+        """
+        padding = (k-p-1)/S
+        patch_stride = 1/S
+        sliding_stride = 1/S
+        """
         return cls._conv4dflip(c_d_xn, w[:,:,::-1,::-1], 1, padding2, patch_stride=stride)
