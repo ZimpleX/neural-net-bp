@@ -12,7 +12,6 @@ import pdb
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
-from math import exp
 import util.array_proc as arr_util
 from functools import reduce
 import sys
@@ -166,7 +165,15 @@ class Node_softmax(Node_activity):
     def y_d_x(cls, y_n):
         """
         softmax derivative
+        [NOTE]: softmax derivative is special:
+                     /  yi x (1-yi):if i==j
+            yi_d_xj = 
+                     \ - yi x yj:   if i!=j
+            In this case, c_d_xi = sigma_{c_d_yj x yj_d_xi}
+                                != c_d_yi x yi_d_xi
+            However, the nice thing about [softmax + cross_entropy] is:
+                c_d_xi = yi - ti
+            So the solution is: compute c_d_x directly in CE definition, and leave this function redundant
         """
-        return y_n * (1 - y_n)
-        
+        return np.ones(y_n.shape)
 

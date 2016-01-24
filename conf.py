@@ -57,9 +57,19 @@ class Conf:
 #    Currently supported activations    #
 #########################################
 from node_activity import *
-from conv.conv import *
+from conv.conv_layer import *
+from conv.pool_layer import *
 
 activation_dict = { 'sig': Node_sigmoid,
                     'lin': Node_linear,
                     'softmax': Node_softmax,
-                    'conv': Node_conv}
+                    'conv': Node_conv,
+                    'pool': Node_pool}
+
+##################################
+#    Currently supported cost    #
+##################################
+from cost import *
+
+cost_dict = {'sqr': Cost_sqr,
+                'ce': Cost_ce}
