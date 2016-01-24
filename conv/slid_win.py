@@ -4,7 +4,7 @@ abstract out the convolution operation from the conv_layer.
 
 import numpy as np
 from math import ceil, floor
-from fractions import gcd
+from abc import ABCMeta, abstractmethod
 
 
 def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
@@ -34,9 +34,8 @@ def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     # patch: index setup
     stride_patch = max(1/unit, 1)
     num_x, num_y = patch_fill[-2::]
-    unit = min(1, unit)
-    y_patch_start = (max(ceil(y_start_base), 0) - y_start_base) / unit
-    x_patch_start = (max(ceil(x_start_base), 0) - x_start_base) / unit
+    y_patch_start = ceil((max(ceil(y_start_base), 0) - y_start_base) / unit)
+    x_patch_start = ceil((max(ceil(x_start_base), 0) - x_start_base) / unit)
     y_patch_end = (num_y-1)*stride_patch + y_patch_start + 1
     x_patch_end = (num_x-1)*stride_patch + x_patch_start + 1
     # fill in
@@ -45,11 +44,11 @@ def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     return patch
 
 
-def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
-                patch_func, pre_proc, *f_args):
+def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj):
     """
     Method ONLY for 4d numpy array
-    Operation: ret_mat = base_mat (*) flipped(kern_mat).
+    Operation: slide kern_mat through base_mat, according to stride and padding.
+        func_obj        object specifying (patch,kern) operation, preprocessing, and additional args
     [NOTE1]: don't swap the position of base_mat & kern_mat: padding is added to base_mat
     [NOTE2]: it won't matter here if `kern_mat.shape[-1] != kern_mat.shape[-2]`,
         HOWEVER, if that is the case, other places may be broken.
@@ -65,35 +64,81 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding,
     assert base_mat.shape[1] == kern_mat.shape[1]
     A, b, c, d = base_mat.shape
     E, b, f, g = kern_mat.shape
-    unit = min(1, gcd(gcd(base_mat, kern_mat), padding))
     m = (c + 2*padding - 1 - (f-1)*patch_stride)/sliding_stride + 1
     n = (d + 2*padding - 1 - (g-1)*patch_stride)/sliding_stride + 1
     ret_mat = np.zeros((A, E, m, n))
-    pre_arg = pre_proc(base_mat, kern_mat)
+    func_obj.pre_proc(base_mat, kern_mat)
     y = x = -padding
     for i in range(m):
         y += sliding_stride
         for j in range(n):
             x += sliding_stride
             patch = get_patch(base_mat, y, x, f, g, patch_stride)
-            ret_mat[:,:,i,j] = patch_func(patch, *pre_arg, *f_args)
+            ret_mat[:,:,i,j] = func_obj.patch_func(patch,i,j)
     return ret_mat
 
 
 ###########################
 #  operations on a patch  #
 ###########################
-def conv_reshape(base, kern):
+class slide_operation:
     """
-    this is to avoid the reshape operation inside the double for loop.
-    Python won't automatically optimize it for you.
+    protocal for all sliding-window type of processing functions
     """
-    A = base.shape[0]
-    E = kern.shape[0]
-    return kern.reshape(E, -1).T, A
+    __metaclass__ = ABCMeta
+    def __init__():
+        pass
+    @abstractmethod
+    def pre_proc(self, base, kern):
+        pass
+    @abstractmethod
+    def patch_func(self, patch, i, j):
+        pass
 
-def conv(patch, kern_trans, A):
+
+
+class convolution(slide_operation):
+    def __init__(self): pass
+        
+    def pre_proc(self, base, kern):
+        """
+        this is to avoid the reshape operation inside the double for loop.
+        Python won't automatically optimize it for you.
+        """
+        self.A = base.shape[0]
+        E = kern.shape[0]
+        self.kern_trans = kern.reshape(E, -1).T
+    def patch_func(self, patch, i, j):
+        """
+        operation for convolution
+        """
+        return np.dot(patch.reshape(self.A,-1), self.kern_trans)
+
+
+class pool_ff(slide_operation):
     """
-    operation for convolution
+    feed-forward of pooling layer
     """
-    return np.dot(patch.reshape(A,-1), kern_trans)
+    def __init__(self): pass
+
+    def pre_proc(self, base, kern): pass
+
+    def patch_func(self, patch, i, j):
+        return patch.max(axis=(-1,-2))
+
+
+class pool_bp(slide_operation):
+    """
+    back-prop of pooling layer
+    """
+    def __init__(self, y_n_1):
+        self.y_n_1 = y_n_1
+
+    def pre_proc(self, base, kern):
+        self.channel = base.shape[1]/2
+    
+    def patch_func(self, patch, i, j):
+        y_n_patch = patch[:,0:self.channel,:,:]
+        c_d_yn_patch = patch[:,self.channel::,:,:]
+        y_n1_flt = self.y_n_1[:,:,i,j,np.newaxis,np.newaxis]
+        return np.sum((y_n1_flt == y_n_patch) * c_d_yn_patch, axis=(-1,-2))

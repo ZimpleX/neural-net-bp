@@ -5,7 +5,8 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from node_activity import Node_activity
 from conv.conv_layer import Node_conv
-import conv.convolution as conv
+import conv.slid_win as slid
+from fractions import Fraction
 
 
 class Node_pool(Node_conv):
@@ -21,40 +22,28 @@ class Node_pool(Node_conv):
         self.stride = stride
         self.padding = padding
 
+
     def act_forward(self, prev_layer):
         """
         input and output have the same number of channels
         """
-        batch, channel, height_in, width_in = prev_layer.shape
-        height_out = (height_in + 2*self.padding - self.kern) / self.stride + 1
-        width_out  = (width_in + 2*self.padding - self.kern) / self.stride + 1
-        ret_mat = np.zeros((batch, channel, height_out, width_out))
-        for i in range(height_out):
-            y = -self.padding + i*self.stride
-            for j in range(width_out):
-                x = -self.padding + j*self.stride
-                patch = conv.get_patch(prev_layer, y, x, self.kern, self.kern, 1)
-                ret_mat[:,:,i,j] = patch.reshape(batch, channel, -1).max(axis=2)
-        return ret_mat
+        batch, channel = prev_layer.shape[0:2]
+        pseudo_kern = np.zeros((batch, channel, self.kern, self.kern))
+        return slid.slid_win_4d_flip(prev_layer, pseudo_kern, self.stride, 1, self.padding, slid.pool_ff())
     
-    @classmethod
-    def y_d_x(cls, y_n):
-        pass
 
-    def c_d_yn1(self, c_d_yn, y_n, y_n_1):
+    @classmethod
+    def y_d_x(cls, y_n): pass
+
+
+    def c_d_w_b_yn1(self, c_d_yn, y_n, y_n_1):
         """
         NO derivative of w and b
         """
-        batch, channel, height_n1, width_n1 = y_n_1.shape
-        c_d_yn1 = np.zeros(y_n_1.shape)
-        for i in range(c_d_yn.shape[-2]):
-            y = -self.padding + i*self.stride
-            for j in range(c_d_yn.shape[-1]):
-                x = -self.padding + j*self.stride
-                patch = conv.get_patch(y_n_1, y, x, self.kern, self.kern, self.stride)
-                max_flt = y_n[:,:,i,j,np.newaxis,np.newaxis]    # w/o new axis, it is 2D
-                deriv_flt = c_d_yn[:,:,i,j,np.newaxis,np.newaxis]
-                deriv_patch = (patch == max_flt) * deriv_flt    # broadcast rule
-                conv.update_patch(c_d_yn1, deriv_patch, y, x)
-        return c_d_yn1
-                
+        batch, channel = prev_layer.shape[0:2]
+        pseudo_kern = np.zeros((batch, channel, self.kern, self.kern))
+        yn_zip = np.concatenate((y_n,c_d_yn), axis=1)    # double the channel
+        pd = Fraction(self.kern - self.padding - 1, self.stride)
+        ps = ss = Fraction(1, self.stride)
+        c_d_yn1 = slid.slid_win_4d_flip(yn_zip, pseudo_kern, ss, ps, pd, slid.pool_bp(y_n_1))
+        return None, None, c_d_yn1

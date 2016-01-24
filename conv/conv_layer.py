@@ -5,7 +5,7 @@ the efficiency may depend on the image size and net struct
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from node_activity import Node_activity
-import conv.convolution as conv
+import conv.slide_win as slid
 import pdb
 
 from fractions import Fraction
@@ -38,8 +38,8 @@ class Node_conv(Node_activity):
             (batch) x (channel_out) x (height') x (width')
             please refer to slid_win_4d_flip for height' and width'
         """
-        ret = conv.slid_win_4d_flip(prev_layer, np.swapaxes(w, 0, 1), 
-                self.stride, 1, self.padding, conv.conv, conv.conv_reshape)
+        ret = slid.slid_win_4d_flip(prev_layer, np.swapaxes(w, 0, 1), 
+                self.stride, 1, self.padding, slid.convolution())
         return np.clip(ret+b, 0, np.finfo(np.float64).max)    # ReLU
 
     @classmethod
@@ -68,8 +68,8 @@ class Node_conv(Node_activity):
         #   patch_stride = stride
         #   padding = padding
         #   slide_stride = 1
-        c_d_w = conv.slid_win_4d_flip(np.swapaxes(y_n_1,0,1), np.swapaxes(c_d_xn,0,1), 
-                1, self.stride, self.padding, conv.conv, conv.conv_reshape)
+        c_d_w = slid.slid_win_4d_flip(np.swapaxes(y_n_1,0,1), np.swapaxes(c_d_xn,0,1), 
+                1, self.stride, self.padding, slid.convolution())
         assert c_d_w.shape == w.shape
         ####  c_d_yn1  ####
         ##  c_d_xn (*) w ##
@@ -77,7 +77,7 @@ class Node_conv(Node_activity):
         #   padding = (kern-padding-1)/stride
         #   slide_stride = 1/stride
         pad2 = Fraction(w.shape[-1] - self.padding - 1, self.stride)
-        c_d_yn1 = conv.slid_win_4d_flip(c_d_xn, w[:,:,::-1,::-1], Fraction(1, self.stride), 
-                Fraction(1, self.stride), pad2, conv.conv, conv.conv_reshape)
+        c_d_yn1 = slid.slid_win_4d_flip(c_d_xn, w[:,:,::-1,::-1], Fraction(1, self.stride), 
+                Fraction(1, self.stride), pad2, slid.convolution())
         assert c_d_yn1.shape == y_n_1.shape
         return c_d_w, c_d_b, c_d_yn1
