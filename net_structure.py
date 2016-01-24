@@ -158,7 +158,7 @@ class Net_structure:
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
             cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n)
-            if not cur_dw:  # skip pooling layer
+            if cur_dw == None:  # skip pooling layer
                 continue
             #-------------#
             # update bias #
