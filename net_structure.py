@@ -158,6 +158,8 @@ class Net_structure:
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
             cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n)
+            if not cur_dw:  # skip pooling layer
+                continue
             #-------------#
             # update bias #
             #-------------#
@@ -236,44 +238,47 @@ def net_train_main(args):
     timestamp = strftime('%Y.%m.%d-%H.%M.%S')
     for f in _LOG_FILE.keys():
         _LOG_FILE[f] = _LOG_FILE[f].format(timestamp)
-
-    assert len(args.struct) == len(args.activation) + 1
-    data_set = Data(args.size_data, args.size_test, args.table_data, args.table_test, timestamp, profile=True, prof_subdir=db_subdir)
-    # correct batch size if full batch is specified:
-    if args.batch == -1:
+    
+    #----------------#
+    #  data & setup  #
+    #----------------#
+    data_set = Data(args.size_data, args.size_test, args.table_data, 
+                    args.table_test, timestamp, profile=True, prof_subdir=db_subdir)
+    if args.batch == -1:    # full batch: correct batch size
         args.batch = data_set.data.shape[0]
-    # auto correct shape of input / output layer of the ANN
-    args.struct[0] = data_set.data.shape[1]
-    args.struct[-1] = data_set.target.shape[1]
-    net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], cost_dict[args.cost], args.w_range, args.b_range)
-    print_to_file(_LOG_FILE['net'], net, type=None)
-    conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
+    args.struct[0] = data_set.data.shape[1]     # correct input layer shape
+    args.struct[-1] = data_set.target.shape[1]  # correct output layer shape
 
+    #--------------#
+    #  net & conf  #
+    #--------------#
+    net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], 
+                        cost_dict[args.cost], args.w_range, args.b_range)
+    print_to_file(_LOG_FILE['net'], net, type=None)
+
+    conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
     print_to_file(_LOG_FILE['conf'], conf)
 
     if (args.profile_cost): # store the conf of the ANN for this run
-                            # could be identified by parse time
         data_util.profile_net_conf(db_subdir, args, timestamp)
 
-    # main training loop
-    batch = 0
-    # populate initial output: as to evaluate initial weight
+    #---------------------------#
+    #  populate initial output  #
+    #---------------------------#
     start_time = timeit.default_timer()
-    cost_data = None    # populate into db in one run
-    # profile init net data
+    cost_data = None    # populate into db in single db connection
     net_data = [[(-1,-1), data_set.target]] \
              + [[(0, 0), net.net_act_forward(data_set.data)]]
+
+    #-----------------#
+    #    main loop    #
+    #-----------------#
     num_batch = data_set.data.shape[0] / args.batch
     prev_accu_cost = sys.float_info.max
     cur_accu_cost = 0
+    batch = 0
     for epoch in range(conf.num_epoch):
         net.epoch = epoch + 1
-        ######################
-        #### Experimental ####
-        #if epoch % 50 == 0 and epoch != 0:
-        #    conf.w_rate *= 1.
-        #    conf.b_rate *= 1.
-        ######################
         cost_bat = 0.
         epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
@@ -282,7 +287,7 @@ def net_train_main(args):
             if args.log_verbose > 0 and batch % args.log_verbose == 0:
                 print_to_file(_LOG_FILE['net'], net, type=None) # logging
             cur_net_out = net.net_act_forward(bat_ipt)
-            cur_cost_bat = sum(Cost_sqr.act_forward(cur_net_out, bat_tgt))/args.batch
+            cur_cost_bat = sum(net.cost.act_forward(cur_net_out, bat_tgt))/args.batch
             cost_bat += cur_cost_bat
             net.back_prop(bat_tgt, conf)
             ######################
@@ -312,15 +317,20 @@ def net_train_main(args):
         if (args.profile_output and net.epoch % epc_stride == 0) or (net.epoch == conf.num_epoch):
             net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
         printf('end of epoch {}, sum of cost over all batches: {}', net.epoch, cost_bat, type='TRAIN')
+
     end_time = timeit.default_timer()
     printf('training took: {}', end_time-start_time)
     print_to_file(_LOG_FILE['net'], net, type=None)
-    
+
+    #--------------------#
+    #  populate into db  #
+    #--------------------#
     start_time = timeit.default_timer()
     data_util.profile_output_data(db_subdir, net_data, timestamp)
     data_util.profile_cost(db_subdir, cost_data, timestamp)
     end_time = timeit.default_timer()
     printf('populate profiling data took: {}', end_time-start_time)
+
 
 
 
