@@ -2,42 +2,21 @@
 default configuration for the ANN: 
     can be overwritten by cmd line arg
 """
-STRUCT = [3, 15, 1]
-ACTIVATION = ['sig', 'lin']
-COST = 'sqr'
 TRAINING_DIR = './train_data/'
-DB_DATA = 'data.db'
-DB_TEST = 'test.db'
-TABLE_DATA = 'sin_is-3-os-1-ir-(-10~10)-or-(-5~5)|ann'
-TABLE_TEST = 'sin_is-3-os-1-ir-(-10~10)-or-(-5~5)|ann'
-SIZE_DATA = 8
-SIZE_TEST = 4
-LEARN_RATE = 0.04
-INC_RATE = 1.
-DEC_RATE = 1.
-MOMENTUM = 0.9
-BATCH_SIZE = -1
-INIT_RANGE = {'weight': 1,
-                'bias': 1}
-
-EPOCH = 1000
-
 
 
 class Conf:
     """
     storing all training configuration (which is independent of net configuration)
     """
-
-    def __init__(self, num_epoch, rate, inc_rate, dec_rate, momentum, t_cost):
-        self.num_epoch = num_epoch
-        self.b_rate = rate
-        self.w_rate = rate
-        self.inc_rate = inc_rate
-        self.dec_rate = dec_rate
-        self.momentum = momentum
-        # threshold of cost for stop training
-        self.t_cost = t_cost
+    def __init__(self, yaml_model):
+        self.num_epoch = yaml_model['epoch']
+        self.batch = yaml_model['batch']
+        self.b_rate = yaml_model['alpha']
+        self.w_rate = yaml_model['alpha']
+        self.inc_rate = yaml_model['inc_rate']
+        self.dec_rate = yaml_model['dec_rate']
+        self.momentum = yaml_model['momentum']
 
     def __str__(self):
         return  """
@@ -60,16 +39,16 @@ from node_activity import *
 from conv.conv_layer import *
 from conv.pool_layer import *
 
-activation_dict = { 'sig': Node_sigmoid,
-                    'lin': Node_linear,
-                    'softmax': Node_softmax,
-                    'conv': Node_conv,
-                    'pool': Node_pool}
+activation_dict = { 'FC_SIG': Node_sigmoid,
+                    'FC_LIN': Node_linear,
+                    'FC_SOFTMAX': Node_softmax,
+                    'CONVOLUTION': Node_conv,
+                    'MAXPOOL': Node_pool}
 
 ##################################
 #    Currently supported cost    #
 ##################################
 from cost import *
 
-cost_dict = {'sqr': Cost_sqr,
-                'ce': Cost_ce}
+cost_dict = {'SQR': Cost_sqr,
+                'CE': Cost_ce}

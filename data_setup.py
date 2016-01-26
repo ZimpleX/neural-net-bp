@@ -15,56 +15,64 @@ import pdb
 _TABLE_RAW = 'raw_data|ann'
 
 class Data:
-    def __init__(self, data_size_exp, test_size_exp, table_data, table_test, timestamp, profile=True,
-        db_dir=conf.TRAINING_DIR, db_data=conf.DB_DATA, db_test=conf.DB_TEST, prof_subdir=''):
-        """
-        load training data and test data from table_name
-        """
-        data_fullpath = '{}/{}'.format(db_dir, db_data)
-        test_fullpath = '{}/{}'.format(db_dir, db_test)
-        # check table exists
+    """
+    load training / testing data for neural net
+    """
+    def _load_db(self, yaml_model, timestamp, profile=True):
+        db_dir = conf.TRAINING_DIR
+        db_name = yaml_model['data_path']
+        db_table = yaml_model['data_table']
+        db_fullpath = '{}/{}'.format(db_dir, db_name)
+        data_size = yaml_model['data_size']
+        test_size = yaml_model['test_size']
         start_time = timeit.default_timer()
-        conn_d = sqlite3.connect(data_fullpath)
-        c_d = conn_d.cursor()
-        conn_t = sqlite3.connect(test_fullpath)
-        c_t = conn_t.cursor()
+        conn = sqlite3.connect(db_fullpath)
+        c = conn.cursor()
         end_time = timeit.default_timer()
         printf('time spent on db connection: {}', end_time-start_time)
+        # check table exists
         start_time = timeit.default_timer()
-        if not db.util.is_table_exist(data_fullpath, table_data, c=c_d) or \
-            not db.util.is_table_exist(test_fullpath, table_test, c=c_t):
-            printf('table not exist: {} or {} \npath: {} or {}', table_data, table_test, data_fullpath, test_fullpath, type='ERROR')
+        if not db.util.is_table_exist(db_fullpath, db_table, c=c):
+            printf('table not exist: {}\npath: {}', db_table, db_fullpath, type='ERROR')
             exit()
         # setup x,y attr name list
-        data_attr = list(db.util.get_attr_info(table_data, c=c_d, enclosing=False).keys())
-        test_attr = list(db.util.get_attr_info(table_test, c=c_t, enclosing=False).keys())
+        data_attr = list(db.util.get_attr_info(db_table, c=c, enclosing=False).keys())
         regex_x = re.compile('^x\d+$')
         regex_y = re.compile('^y\d+$')
-        data_attr_x = sorted([itm for itm in data_attr if regex_x.match(itm)])
-        data_attr_y = sorted([itm for itm in data_attr if regex_y.match(itm)])
-        test_attr_x = sorted([itm for itm in test_attr if regex_x.match(itm)])
-        test_attr_y = sorted([itm for itm in test_attr if regex_y.match(itm)])
+        attr_x = sorted([itm for itm in data_attr if regex_x.match(itm)])
+        attr_y = sorted([itm for itm in data_attr if regex_y.match(itm)])
         # load from db
-        data_size = pow(2, data_size_exp)
-        test_size = pow(2, test_size_exp)
-        self.data = db.util.load_as_array(data_fullpath, table_data, data_attr_x, size=data_size, c=c_d)
-        self.target = db.util.load_as_array(data_fullpath, table_data, data_attr_y, size=data_size, c=c_d)
-        self.test_d = db.util.load_as_array(test_fullpath, table_test, test_attr_x, size=test_size, c=c_t)
-        self.test_t = db.util.load_as_array(test_fullpath, table_test, test_attr_y, size=test_size, c=c_t)
+        data_entire = db.util.load_as_array(db_fullpath, db_table, attr_x, size=(data_size+test_size), c=c)
+        self.data = data_entire[0:data_size]
+        self.test_d = data_entire[-test_size::]
+        target_entire = db.util.load_as_array(db_fullpath, db_table, attr_y, size=(data_size+test_size), c=c)
+        self.target = target_entire[0:data_size]
+        self.test_t = target_entire[-test_size::]
         end_time = timeit.default_timer()
         printf('time spent on load data: {}', end_time-start_time)
         # store raw into profile db
+        prof_subdir = ''
         if profile:
+            # don't store y: they will be stored when training starts
             start_time = timeit.default_timer()
             regex_xothers = re.compile('^x.*$')
-            data_attr_xothers = [itm for itm in data_attr if regex_xothers.match(itm) and itm not in data_attr_x]
-            xothers = db.util.load_as_array(data_fullpath, table_data, data_attr_xothers, size=data_size, c=c_d)
-            attr_full = data_attr_x + data_attr_xothers
+            attr_xothers = [itm for itm in data_attr if regex_xothers.match(itm) and itm not in attr_x]
+            xothers = db.util.load_as_array(db_fullpath, db_table, attr_xothers, size=data_size, c=c)
+            attr_full = attr_x + attr_xothers
             data_util.profile_input_data(prof_subdir, timestamp, attr_full, self.data, xothers)
             end_time = timeit.default_timer()
             printf('time spent on storing training data into db: {}', end_time-start_time)
-        conn_d.close()
-        conn_t.close()
+        conn.close()
+
+
+        
+    def __init__(self, yaml_model, timestamp, profile=True):
+        data_type = yaml_model['data_path'].split('.')[-1]
+        if data_type == 'db':
+            self._load_db(yaml_model, timestamp, profile=profile)
+        # else:
+        #   ...
+
 
     def __str__(self):
         return stringf('data') + stringf('input is:\n{}\ntarget is:\n{}', self.data, self.target, type=None, separator=None)

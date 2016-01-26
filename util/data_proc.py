@@ -17,7 +17,7 @@ The following 4 profile_* functions are wrapper for populate db.
 They correspond to 4 tables in the ann.db file
 """
 
-def profile_net_conf(data_dir_name, args, timestamp, db_path=DB_DIR_PARENT):
+def profile_net_conf(data_dir_name, yaml_model, timestamp, db_path=DB_DIR_PARENT):
     """
     INPUT:
         data_dir_name       appended with db_path
@@ -25,15 +25,16 @@ def profile_net_conf(data_dir_name, args, timestamp, db_path=DB_DIR_PARENT):
     populate the conf of the ANN, timestamp is to identify each run:
     for join of different tables in the future
     """
-    struct_info = [str(args.struct[i+1])+args.activation[i] for i in range(len(args.activation))]
-    net_struct = '{}lin'.format(args.struct[0])
-    net_struct += '-' + reduce(lambda a,b:a+'-'+b, struct_info)
+    net_struct = ['{}FC_LIN'.format(yaml_model['input_num_channels'])]
+    for l in yaml_model['network']:
+        net_struct += ['{}{}'.format(l['num_channels'], l['type'])]
+    net_struct = reduce(lambda a,b:a+'-'+b, net_struct)
 
-    net_attr = ['struct', 'cost_type', 'train_func', 'test_func', 'train_size', 'test_size',
+    net_attr = ['struct', 'cost_type', 'train_func', 'train_size', 'test_size',
             'batch_size', 'learn_rate', 'inc_rate', 'dec_rate', 'momentum']
-    net_val = array([net_struct, args.cost, args.table_data.split('|')[0], args.table_test.split('|')[0], args.size_data, args.size_test,
-            args.batch, args.rate, args.inc_rate, args.dec_rate, args.momentum])
-    net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'TEXT', 'INTEGER', 'INTEGER',
+    net_val = array([net_struct, yaml_model['cost'], yaml_model['obj_name'], yaml_model['data_size'], yaml_model['test_size'],
+            yaml_model['batch'], yaml_model['alpha'], yaml_model['inc_rate'], yaml_model['dec_rate'], yaml_model['momentum']])
+    net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'INTEGER', 'INTEGER',
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
     populate_db(net_attr, net_attr_type, net_val, 
         db_path=db_path+data_dir_name, table_name='meta|ann', 

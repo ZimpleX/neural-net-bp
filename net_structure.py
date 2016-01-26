@@ -15,6 +15,7 @@ TODO:
 """
 
 import numpy as np
+import yaml
 from node_activity import *
 from cost import *
 from data_setup import *
@@ -63,8 +64,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, layer_size_list, activ_list, cost_type, 
-            w_range=INIT_RANGE['weight'], b_range=INIT_RANGE['bias']):
+    def __init__(self, yaml_model):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -73,25 +73,41 @@ class Net_structure:
                             length of list = num of layers excluding input layer
         cost_type           the class representing the chosen cost function
         """
-        # -1 to exclude the input layer
-        self.num_layer = len(layer_size_list) - 1
-        assert len(activ_list) == self.num_layer
-        # *_list: list of 2D weight / 1D bias
-        self.w_list = [(np.random.rand(layer_size_list[i], layer_size_list[i+1]) - 0.5) * w_range
-                        for i in range(self.num_layer)]
-        self.b_list = [(np.random.rand(layer_size_list[i+1]) - 0.5) * b_range
-                        for i in range(self.num_layer)]
-        self.dw_list = [np.zeros((layer_size_list[i], layer_size_list[i+1]))
-                        for i in range(self.num_layer)]
-        self.db_list = [np.zeros(layer_size_list[i+1])
-                        for i in range(self.num_layer)]
-        self.activ_list = activ_list
-        self.cost = cost_type
+        self.num_layer = len(yaml_model['network'])    # yaml don't include input layer
+        self.w_list = [None] * self.num_layer
+        self.dw_list = [None] * self.num_layer
+        self.b_list = [None] * self.num_layer
+        self.db_list = [None] * self.num_layer
+        self.activ_list = [None] * self.num_layer
+        self.cost = cost_dict[yaml_model['cost']]
+        idx = 0
+        prev_chn = yaml_model['input_num_channels']
+        for l in yaml_model['network']:
+            init_wt = l['init_wt']
+            cur_chn = l['num_channels']
+            act_func = activation_dict[l['type']]
+            if l['type'] == 'CONVOLUTION' or l['type'] == 'MAXPOOL':
+                kern = l['kernel_size']
+                w_shape = (prev_chn, cur_chn, kern, kern)
+                act_init = (l['type']=='MAXPOOL') and [kern] or []
+                act_init += [l['stride'], l['padding']]
+                self.activ_list[idx] = act_func(*act_init)
+            else:
+                w_shape = (prev_chn, cur_chn)
+                self.activ_list[idx] = act_func
+            self.w_list[idx] = init_wt * np.random.randn(*w_shape)
+            self.b_list[idx] = np.zeros(cur_chn)
+            self.dw_list[idx] = np.zeros(w_shape)
+            self.db_list[idx] = np.zeros(cur_chn)
+            prev_chn = cur_chn
+            idx += 1
+
         # store the output of each layer
         self.y_list = [None] * (self.num_layer + 1)
         # current epoch / batch: for debugging & logging
         self.epoch = -1
         self.batch = -1
+
 
     def set_w_b(self, w_list, b_list):
         """
@@ -158,7 +174,7 @@ class Net_structure:
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
             cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n)
-            if cur_dw == None:  # skip pooling layer
+            if cur_dw is None:  # skip pooling layer
                 continue
             #-------------#
             # update bias #
@@ -172,63 +188,23 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-
 ###########################
-#        Arg Parse        #
+#        arg parse        #
 ###########################
 def parse_args():
-    """
-    accept cmd line options for specifying the ANN coefficient
-    this func is also utilized by ./test/test.py
-    """
-    parser = argparse.ArgumentParser('settings for the ANN (accepting path of delimiter \'/\')')
-    parser.add_argument('--struct', type=int, metavar='NET_STRUCT',
-            default=STRUCT, nargs='+', help='specify the structure of the ANN (num of nodes in each layer)')
-    parser.add_argument('--activation', type=str, metavar='NET_ACTIVATION',
-            default=ACTIVATION, nargs='+', help='specify the activation of each layer',
-            choices=activation_dict.keys())
-    parser.add_argument('--cost', type=str, metavar='COST', 
-            default=COST, help='specify the cost function',
-            choices=cost_dict.keys())
-    parser.add_argument('--w_range', type=int, metavar='W_RANGE', 
-            default=INIT_RANGE['weight'], help='specify the range of weight initialization\nrandomized between [-W_RANGE, W_RANGE]')
-    parser.add_argument('--b_range', type=int, metavar='B_RANGE',
-            default=INIT_RANGE['bias'], help='specify the range of bias initialization\nrandomized between [-B_RANGE, B_RANGE]')
-    parser.add_argument('-e', '--epoch', type=int, metavar='EPOCH',
-            default=EPOCH, help='max num of iterations for training')
-    parser.add_argument('-r', '--rate', type=float, metavar='RATE',
-            default=LEARN_RATE, help='weight & bias update rate')
-    parser.add_argument('--inc_rate', type=float, metavar='INC_RATE',
-            default=INC_RATE, help='learning rate increment rate')
-    parser.add_argument('--dec_rate', type=float, metavar='DEC_RATE',
-            default=DEC_RATE, help='learning rate decrement rate')
-    parser.add_argument('-m', '--momentum', type=float, metavar='MOMENTUM',
-            default=MOMENTUM, help='momentum coefficient')
-    parser.add_argument('-b', '--batch', type=int, metavar='BATCH',
-            default=BATCH_SIZE, help='size of mini-batch')
-    parser.add_argument('-dtbl', '--table_data', type=str, metavar='TABLE_DATA',
-            default=TABLE_DATA, help='table name of training data')
-    parser.add_argument('-ttbl', '--table_test', type=str, metavar='TABLE_TEST',
-            default=TABLE_TEST, help='table name of test data')
-    parser.add_argument('-szd', '--size_data', type=int, metavar='SIZE_DATA',
-            default=SIZE_DATA, help='size of the data set (2^SIZE_DATA)')
-    parser.add_argument('-szt', '--size_test', type=int, metavar='SIZE_TEST',
-            default=SIZE_TEST, help='size of the test set (2^SIZE_TEST)')
-    parser.add_argument('--profile_cost', action='store_false',
-            help='add this flag if you do NOT want to store cost profile')
+    parser = argparse.ArgumentParser('neural network model')
+    parser.add_argument('yaml_model', type=str, metavar='YAML', 
+        help='specify the yaml models to be used by this net training')
     parser.add_argument('--profile_output', action='store_true',
-            help='add this flag if you DO want to store the net output profile')
-    parser.add_argument('--log_verbose', type=int, metavar='LOG_V', 
-            default=0, help='verbosity of logging: print the net to log fileevery LOG_V batch')
+        help='add this flag if you want to store the net output thoughout epochs')
     return parser.parse_args()
-
 
 
 
 #########################
 #        NN flow        #
 #########################
-def net_train_main(args):
+def net_train_main(yaml_model, args):
     """
     define main separately to facilitate unittest
     """
@@ -239,29 +215,17 @@ def net_train_main(args):
     for f in _LOG_FILE.keys():
         _LOG_FILE[f] = _LOG_FILE[f].format(timestamp)
     
-    #----------------#
-    #  data & setup  #
-    #----------------#
-    data_set = Data(args.size_data, args.size_test, args.table_data, 
-                    args.table_test, timestamp, profile=True, prof_subdir=db_subdir)
-    if args.batch == -1:    # full batch: correct batch size
-        args.batch = data_set.data.shape[0]
-    args.struct[0] = data_set.data.shape[1]     # correct input layer shape
-    args.struct[-1] = data_set.target.shape[1]  # correct output layer shape
-
-    #--------------#
-    #  net & conf  #
-    #--------------#
-    net = Net_structure(args.struct, [activation_dict[n] for n in args.activation], 
-                        cost_dict[args.cost], args.w_range, args.b_range)
+    #---------------------#
+    #  data & net & conf  #
+    #---------------------#
+    data_set = Data(yaml_model, timestamp, profile=True)
+    net = Net_structure(yaml_model)
     print_to_file(_LOG_FILE['net'], net, type=None)
 
-    conf = Conf(args.epoch, args.rate, args.inc_rate, args.dec_rate, args.momentum, 0.001)
+    conf = Conf(yaml_model)
     print_to_file(_LOG_FILE['conf'], conf)
 
-    if (args.profile_cost): # store the conf of the ANN for this run
-        data_util.profile_net_conf(db_subdir, args, timestamp)
-
+    data_util.profile_net_conf(db_subdir, yaml_model, timestamp)
     #---------------------------#
     #  populate initial output  #
     #---------------------------#
@@ -273,7 +237,7 @@ def net_train_main(args):
     #-----------------#
     #    main loop    #
     #-----------------#
-    num_batch = data_set.data.shape[0] / args.batch
+    num_batch = data_set.data.shape[0] / conf.batch
     prev_accu_cost = sys.float_info.max
     cur_accu_cost = 0
     batch = 0
@@ -281,13 +245,11 @@ def net_train_main(args):
         net.epoch = epoch + 1
         cost_bat = 0.
         epc_stride = 10
-        for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(args.batch)):
+        for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(conf.batch)):
             batch += 1
             net.batch = batch
-            if args.log_verbose > 0 and batch % args.log_verbose == 0:
-                print_to_file(_LOG_FILE['net'], net, type=None) # logging
             cur_net_out = net.net_act_forward(bat_ipt)
-            cur_cost_bat = sum(net.cost.act_forward(cur_net_out, bat_tgt))/args.batch
+            cur_cost_bat = sum(net.cost.act_forward(cur_net_out, bat_tgt))/conf.batch
             cost_bat += cur_cost_bat
             net.back_prop(bat_tgt, conf)
             ######################
@@ -309,12 +271,12 @@ def net_train_main(args):
             ######################
 
         cost_bat /= num_batch
-        if args.profile_cost:
-            if cost_data == None:
-                cost_data = [[net.epoch, net.batch, cost_bat]]
-            else:
-                cost_data += [[net.epoch, net.batch, cost_bat]]
-        if (args.profile_output and net.epoch % epc_stride == 0) or (net.epoch == conf.num_epoch):
+        if cost_data is None:
+            cost_data = [[net.epoch, net.batch, cost_bat]]
+        else:
+            cost_data += [[net.epoch, net.batch, cost_bat]]
+        if (args.profile_output and net.epoch % epc_stride == 0) \
+            or (net.epoch == conf.num_epoch):
             net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
         printf('end of epoch {}, sum of cost over all batches: {}', net.epoch, cost_bat, type='TRAIN')
 
@@ -336,4 +298,6 @@ def net_train_main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    net_train_main(args)
+    if args.yaml_model:
+        yaml_model = yaml.load(open(args.yaml_model))
+        net_train_main(yaml_model, args)
