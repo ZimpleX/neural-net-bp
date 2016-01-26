@@ -97,7 +97,7 @@ def dataGeneratorMain(args):
             xyList = genY(xList, args.struct, args.activation, args.cost)
         else:
             xyList = genY(xList, args.output_range)
-        if dataList == None:
+        if dataList is None:
             dataList = [xyList]
         else:
             dataList += [xyList]

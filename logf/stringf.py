@@ -30,7 +30,7 @@ def stringf(string, *reflex, type='INFO', separator='default'):
         separator = (type in _STRINGF_SEPA.keys()) and _STRINGF_SEPA[type] or separator
     if reflex:
         string = string.format(*reflex)
-    if type == None or len(type) == 0:
+    if type is None or len(type) == 0:
         string = string
     else:
         string = '[{}] {}'.format(type, string)
