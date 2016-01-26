@@ -32,15 +32,15 @@ class Node_conv(Node_activity):
         ARGUMENTS:
             prev_layer:     (batch) x (channel_in) x (height) x (width)
             w:              (channel_in) x (channel_out) x (kernel) x (kernel)
-            stride:         integer specify stride of w kernel
-            padding:        append zero to periphery of prev_layer
+            b:              (channel_out)
         OUTPUT:
             (batch) x (channel_out) x (height') x (width')
             please refer to slid_win_4d_flip for height' and width'
         """
         ret = slid.slid_win_4d_flip(prev_layer, np.swapaxes(w, 0, 1), 
                 self.stride, 1, self.padding, slid.convolution())
-        return np.clip(ret+b, 0, np.finfo(np.float64).max)    # ReLU
+        b_exp = b[np.newaxis, :, np.newaxis, np.newaxis]
+        return np.clip(ret+b_exp, 0, np.finfo(np.float64).max)    # ReLU
 
     @classmethod
     def y_d_x(cls, y_n):
@@ -62,7 +62,7 @@ class Node_conv(Node_activity):
             w           (channel_n_1) x (channel_n) x (kern) x (kern)
         """
         c_d_xn = self._c_d_xn(c_d_yn, y_n)
-        c_d_b = np.sum(c_d_xn, axis=0)
+        c_d_b = np.sum(c_d_xn, axis=(0,2,3))
         ####  c_d_w  ####
         ##  y_n_1 (*) flipped(c_d_xn)
         #   patch_stride = stride
