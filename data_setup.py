@@ -19,6 +19,9 @@ class Data:
     load training / testing data for neural net
     """
     def _load_db(self, yaml_model, timestamp, profile=True):
+        """
+        load data from sqlite3 db: suitable for 1D objective function
+        """
         db_dir = conf.TRAINING_DIR
         db_name = yaml_model['data_path']
         db_table = yaml_model['data_table']
@@ -65,13 +68,31 @@ class Data:
         conn.close()
 
 
-        
+    def _load_npz(self, yaml_model):
+        """
+        load from npz
+        NOTE: this is not general loading for all kinds of data.
+            It is fitted for digit-classification (USPS) currently
+        """
+        data_path = '{}/{}'.format(conf.TRAINING_DIR, yaml_model['data_path'])
+        data = np.load(data_path)
+        self.data = data['train'].reshape(-1, yaml_model['input_num_channels'],
+            yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
+        self.target = data['train_labels']
+        self.test_d = data['test'].reshape(-1,yaml_model['input_num_channels'],
+            yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
+        self.test_t = data['test_labels']
+        self.valid_d = data['validation'].reshape(-1,yaml_model['input_num_channels'],
+            yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
+        self.valid_t = data['validation_labels']
+       
+
     def __init__(self, yaml_model, timestamp, profile=True):
         data_type = yaml_model['data_path'].split('.')[-1]
         if data_type == 'db':
             self._load_db(yaml_model, timestamp, profile=profile)
-        # else:
-        #   ...
+        elif data_type == 'npz':
+            self._load_npz(yaml_model)
 
 
     def __str__(self):

@@ -92,7 +92,9 @@ class Net_structure:
                 act_init = (l['type']=='MAXPOOL') and [kern] or []
                 act_init += [l['stride'], l['padding']]
                 self.activ_list[idx] = act_func(*act_init)
+                # TODO: let __init__ return next layer image size??
             else:
+                # TODO: prev layer is 2D image
                 w_shape = (prev_chn, cur_chn)
                 self.activ_list[idx] = act_func
             self.w_list[idx] = init_wt * np.random.randn(*w_shape)

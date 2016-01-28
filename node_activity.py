@@ -22,7 +22,7 @@ import sys
 #########################################
 class Node_activity:
     """
-    super class for all other node activity classes
+    super class for all other FC layer node activity classes
     """
     __metaclass__ = ABCMeta
     def __init__():
@@ -37,13 +37,15 @@ class Node_activity:
         part that is common to almost all types of neurons
 
         ARGUMENT:
-            prev_layer_out:     (batch) x (N_n_1)
+            prev_layer_out:     (batch) x (N_n_1) or
+                                (batch) x (N_n_1) x (height) x (width)
             w:                  weight, (N_n_1) x (N_n)
             b:                  bias, N_n
         RETURN:
             (batch) x (N_n)
         """
-        return np.dot(prev_layer_out, w) + b
+        batch = prev_layer_out.shape[0]
+        return np.dot(prev_layer_out.reshape(batch, -1), w) + b
 
     @classmethod
     @abstractmethod
@@ -79,7 +81,8 @@ class Node_activity:
         ARGUMENT:
             c_d_yn  derivative of cost w.r.t. layer n output:   (batch) x (N_n)
             y_n     y list of layer n (cur layer):              (batch) x (N_n)
-            y_n_1   y list of layer n-1 (prev layer):           (batch) x (N_n_1)
+            y_n_1   y list of layer n-1 (prev layer):           (batch) x (N_n_1) or
+                                                                (batch) x (N_n_1) x (height) x (width)
             w       weight between layer n and n-1              (N_n_1) x (N_n)
             is_c_d_yn1  flag controlling whether you want to calculate c_d_yn1
                         --> you don't want this if you have propagated to input layer
@@ -88,8 +91,9 @@ class Node_activity:
             bias derivative of shape:       (N_n)
             y_n_1 derivative of shape:      (batch) x (N_n_1)
         """
+        batch = y_n_1.shape[0]
         c_d_xn = cls._c_d_xn(c_d_yn, y_n)   # (batch) x (N_n)
-        d_chain = y_n_1                     # (batch) x (N_n_1)
+        d_chain = y_n_1.reshape(batch, -1)  # (batch) x (N_n_1)
         c_d_w = np.dot(d_chain.T, c_d_xn)   # dot product is summing over mini-batch
         c_d_b = np.sum(c_d_xn, axis=0)
         c_d_yn1 = None
