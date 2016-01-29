@@ -32,7 +32,7 @@ class Data:
         conn = sqlite3.connect(db_fullpath)
         c = conn.cursor()
         end_time = timeit.default_timer()
-        printf('time spent on db connection: {}', end_time-start_time)
+        printf('time spent on db connection: {:.3f}', end_time-start_time)
         # check table exists
         start_time = timeit.default_timer()
         if not db.util.is_table_exist(db_fullpath, db_table, c=c):
@@ -52,7 +52,7 @@ class Data:
         self.target = target_entire[0:data_size]
         self.test_t = target_entire[-test_size::]
         end_time = timeit.default_timer()
-        printf('time spent on load data: {}', end_time-start_time)
+        printf('time spent on load data: {:.3f}', end_time-start_time)
         # store raw into profile db
         prof_subdir = ''
         if profile:
@@ -64,7 +64,7 @@ class Data:
             attr_full = attr_x + attr_xothers
             data_util.profile_input_data(prof_subdir, timestamp, attr_full, self.data, xothers)
             end_time = timeit.default_timer()
-            printf('time spent on storing training data into db: {}', end_time-start_time)
+            printf('time spent on storing training data into db: {:.3f}', end_time-start_time)
         conn.close()
 
 

@@ -196,6 +196,17 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
+    def evaluate(self, batch_ipt, target):
+        cur_net_out = self.net_act_forward(batch_ipt)
+        cur_cost = sum(self.cost.act_forward(cur_net_out, target))
+        cur_correct = 0
+        if self.cost == cost_dict['CE']:
+            cur_correct = (target.argmax(axis=1)==cur_net_out.argmax(axis=1)).sum()
+        return cur_cost, cur_correct
+            
+
+
+
 ###########################
 #        arg parse        #
 ###########################
@@ -258,13 +269,14 @@ def net_train_main(yaml_model, args):
             data_set.target = data_set.target[indices]
         net.epoch = epoch + 1
         cost_bat = 0.
+        correct_bat = 0.
         epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(conf.batch)):
             batch += 1
             net.batch = batch
-            cur_net_out = net.net_act_forward(bat_ipt)
-            cur_cost_bat = sum(net.cost.act_forward(cur_net_out, bat_tgt))/conf.batch
+            cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
             cost_bat += cur_cost_bat
+            correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
             ######################
             #### Experimental ####
@@ -284,7 +296,8 @@ def net_train_main(yaml_model, args):
             ####   End Exp    ####
             ######################
 
-        cost_bat /= num_batch
+        cost_bat /= (num_batch*conf.batch)
+        correct_bat /= (num_batch*conf.batch)
         if cost_data is None:
             cost_data = [[net.epoch, net.batch, cost_bat]]
         else:
@@ -292,10 +305,10 @@ def net_train_main(yaml_model, args):
         if (args.profile_output and net.epoch % epc_stride == 0) \
             or (net.epoch == conf.num_epoch):
             net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
-        printf('end of epoch {}, sum of cost over all batches: {}', net.epoch, cost_bat, type='TRAIN')
+        printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
 
     end_time = timeit.default_timer()
-    printf('training took: {}', end_time-start_time)
+    printf('training took: {:.3f}', end_time-start_time)
     print_to_file(_LOG_FILE['net'], net, type=None)
 
     #--------------------#
@@ -305,7 +318,7 @@ def net_train_main(yaml_model, args):
     data_util.profile_output_data(db_subdir, net_data, timestamp)
     data_util.profile_cost(db_subdir, cost_data, timestamp)
     end_time = timeit.default_timer()
-    printf('populate profiling data took: {}', end_time-start_time)
+    printf('populate profiling data took: {:.3f}', end_time-start_time)
 
 
 
