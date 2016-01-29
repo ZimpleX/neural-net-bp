@@ -7,6 +7,7 @@ import conf
 import db_util as db
 import re
 import sqlite3
+import numpy as np
 import util.data_proc as data_util
 import timeit
 
@@ -54,7 +55,7 @@ class Data:
         end_time = timeit.default_timer()
         printf('time spent on load data: {:.3f}', end_time-start_time)
         # store raw into profile db
-        prof_subdir = ''
+        prof_subdir = yaml_model['obj_name']
         if profile:
             # don't store y: they will be stored when training starts
             start_time = timeit.default_timer()
@@ -76,15 +77,19 @@ class Data:
         """
         data_path = '{}/{}'.format(conf.TRAINING_DIR, yaml_model['data_path'])
         data = np.load(data_path)
-        self.data = data['train'].reshape(-1, yaml_model['input_num_channels'],
+        batch = yaml_model['batch']
+        data_size = (data['train'].shape[0]//batch)*batch
+        self.data = data['train'][0:data_size].reshape(-1, yaml_model['input_num_channels'],
             yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
-        self.target = data['train_labels']
+        self.target = data['train_labels'][0:data_size]
         self.test_d = data['test'].reshape(-1,yaml_model['input_num_channels'],
             yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
         self.test_t = data['test_labels']
         self.valid_d = data['validation'].reshape(-1,yaml_model['input_num_channels'],
             yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
         self.valid_t = data['validation_labels']
+        yaml_model['data_size'] = self.data.shape[0]
+        yaml_model['test_size'] = self.test_d.shape[0]
        
 
     def __init__(self, yaml_model, timestamp, profile=True):

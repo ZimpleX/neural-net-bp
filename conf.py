@@ -3,6 +3,7 @@ default configuration for the ANN:
     can be overwritten by cmd line arg
 """
 TRAINING_DIR = './train_data/'
+DB_DIR_PARENT = './profile_data/'
 
 
 class Conf:

@@ -85,7 +85,7 @@ class Net_structure:
         prev_chn = yaml_model['input_num_channels']
         prev_img = None
         for l in yaml_model['network']:
-            init_wt = l['init_wt']
+            init_wt = ('init_wt' in l) and l['init_wt'] or 0.0
             cur_chn = l['num_channels']
             act_func = activation_dict[l['type']]
             if l['type'] == 'CONVOLUTION' or l['type'] == 'MAXPOOL':
@@ -229,7 +229,7 @@ def net_train_main(yaml_model, args):
     """
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
-    db_subdir = ''
+    db_subdir = yaml_model['obj_name']
     timestamp = strftime('%Y.%m.%d-%H.%M.%S')
     for f in _LOG_FILE.keys():
         _LOG_FILE[f] = _LOG_FILE[f].format(timestamp)

@@ -8,6 +8,7 @@ from functools import reduce
 import pdb
 from db_util.basic import *
 from db_util.conf import *
+from conf import *
 
 
 _PROF_PERM = '0444'

@@ -8,6 +8,8 @@ from conv.conv_layer import Node_conv
 import conv.slide_win as slid
 from fractions import Fraction
 
+import pdb
+
 
 class Node_pool(Node_conv):
     """
@@ -23,12 +25,12 @@ class Node_pool(Node_conv):
         self.padding = padding
 
 
-    def act_forward(self, prev_layer):
+    def act_forward(self, prev_layer, _, __):
         """
         input and output have the same number of channels
         """
         batch, channel = prev_layer.shape[0:2]
-        pseudo_kern = np.zeros((batch, channel, self.kern, self.kern))
+        pseudo_kern = np.zeros((channel, channel, self.kern, self.kern))
         return slid.slid_win_4d_flip(prev_layer, pseudo_kern, self.stride, 1, self.padding, slid.pool_ff())
     
 
@@ -36,13 +38,13 @@ class Node_pool(Node_conv):
     def y_d_x(cls, y_n): pass
 
 
-    def c_d_w_b_yn1(self, c_d_yn, y_n, y_n_1):
+    def c_d_w_b_yn1(self, c_d_yn, y_n, y_n_1, _, is_c_d_yn1=None):
         """
         NO derivative of w and b
         """
-        batch, channel = prev_layer.shape[0:2]
-        pseudo_kern = np.zeros((batch, channel, self.kern, self.kern))
-        yn_zip = np.concatenate((y_n,c_d_yn), axis=1)    # double the channel
+        batch, channel = y_n_1.shape[0:2]
+        pseudo_kern = np.zeros((channel, channel*2, self.kern, self.kern))
+        yn_zip = np.concatenate((y_n,c_d_yn.reshape(y_n.shape)), axis=1)    # double the channel
         pd = Fraction(self.kern - self.padding - 1, self.stride)
         ps = ss = Fraction(1, self.stride)
         c_d_yn1 = slid.slid_win_4d_flip(yn_zip, pseudo_kern, ss, ps, pd, slid.pool_bp(y_n_1))
