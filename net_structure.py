@@ -249,7 +249,13 @@ def net_train_main(yaml_model, args):
     prev_accu_cost = sys.float_info.max
     cur_accu_cost = 0
     batch = 0
+    indices = np.arange(data_set.data.shape[0])
     for epoch in range(conf.num_epoch):
+        # shuffle data
+        if yaml_model['shuffle'] == True:
+            np.random.shuffle(indices)
+            data_set.data = data_set.data[indices]
+            data_set.target = data_set.target[indices]
         net.epoch = epoch + 1
         cost_bat = 0.
         epc_stride = 10

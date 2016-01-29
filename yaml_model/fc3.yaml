@@ -1,6 +1,6 @@
 obj_name: 'sine'
-epoch: 1400
-batch: 256
+epoch: 1500
+batch: 64
 alpha: 0.02
 inc_rate: 1.0
 dec_rate: 1.0
@@ -9,6 +9,7 @@ momentum: 0.9
 data_path: 'data.db'
 # data_table: optional, only when loading from a *.db file
 data_table: 'sin_is-3-os-1-ir-(-10~10)-or-(-5~5)|ann'
+shuffle: true      # shuffle in every epoch: true / false
 data_size: 256
 test_size: 16
 cost: SQR
