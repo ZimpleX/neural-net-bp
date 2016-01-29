@@ -17,6 +17,7 @@ TODO:
 import numpy as np
 import yaml
 from node_activity import *
+import conv.slide_win as slide
 from cost import *
 from data_setup import *
 from conf import *
@@ -82,19 +83,24 @@ class Net_structure:
         self.cost = cost_dict[yaml_model['cost']]
         idx = 0
         prev_chn = yaml_model['input_num_channels']
+        prev_img = None
         for l in yaml_model['network']:
             init_wt = l['init_wt']
             cur_chn = l['num_channels']
             act_func = activation_dict[l['type']]
             if l['type'] == 'CONVOLUTION' or l['type'] == 'MAXPOOL':
+                if prev_img is None:
+                    prev_img = (yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
                 kern = l['kernel_size']
                 w_shape = (prev_chn, cur_chn, kern, kern)
                 act_init = (l['type']=='MAXPOOL') and [kern] or []
                 act_init += [l['stride'], l['padding']]
                 self.activ_list[idx] = act_func(*act_init)
-                # TODO: let __init__ return next layer image size??
+                prev_img = slide.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:
-                # TODO: prev layer is 2D image
+                if prev_img is not None:
+                    prev_chn = prev_chn * prev_img[0] * prev_img[1]
+                    prev_img = None
                 w_shape = (prev_chn, cur_chn)
                 self.activ_list[idx] = act_func
             self.w_list[idx] = init_wt * np.random.randn(*w_shape)
