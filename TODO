@@ -1,6 +1,0 @@
-change this from text based to db based
----------------------------------------
---  every directory now becomes a *.db file
---  no conf file is needed: you can tell from attribute name (t0, t1, ..., x0, x1, ..., x1+x2,...)
---  no need for multiple files: single db with large enough entry will suffice
---  db name should contain input / output range
