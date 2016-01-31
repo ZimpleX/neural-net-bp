@@ -12,7 +12,6 @@ import pdb
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import util.array_proc as arr_util
 from functools import reduce
 import sys
 

@@ -21,7 +21,6 @@ import conv.slide_win as slide
 from cost import *
 from data_setup import *
 from conf import *
-import util.array_proc as arr_util
 import util.data_proc as data_util
 from logf.stringf import *
 from logf.printf import *
@@ -30,6 +29,7 @@ import argparse
 from time import strftime
 import timeit
 import sys
+import copy
 
 import pdb
 
@@ -37,6 +37,11 @@ np.random.seed(0)
 
 _LOG_FILE = {'net': '{}-net',
             'conf': '{}-conf'}
+
+# profiling the time spent on each component
+_TIME = {'checkpoint': 0.,
+        'ff': 0.,
+        'bp': 0.}
 
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
@@ -74,6 +79,8 @@ class Net_structure:
                             length of list = num of layers excluding input layer
         cost_type           the class representing the chosen cost function
         """
+        if yaml_model is None:
+            return
         self.num_layer = len(yaml_model['network'])    # yaml don't include input layer
         self.w_list = [None] * self.num_layer
         self.dw_list = [None] * self.num_layer
@@ -202,8 +209,35 @@ class Net_structure:
         cur_correct = 0
         if self.cost == cost_dict['CE']:
             cur_correct = (target.argmax(axis=1)==cur_net_out.argmax(axis=1)).sum()
-        return cur_cost, cur_correct
+        num_entry = batch_ipt.shape[0]
+        return cur_cost/num_entry, cur_correct/num_entry
             
+
+    def export_(self, path):
+        """
+        Save the checkpoint net configuration (*.npz)
+        """
+        info = {}
+        info['w_list'] = self.w_list
+        info['b_list'] = self.b_list
+        info['activ_list'] = self.activ_list
+        info['cost'] = self.cost
+        np.savez(path, **info)
+
+    
+    def import_(self, path):
+        """
+        Load the checkpointing file for playing around the trained model
+        """
+        info = np.load(path)
+        self.w_list = info['w_list']
+        self.b_list = info['b_list']
+        self.activ_list = info['activ_list']
+        self.cost = info['cost']
+        self.num_layer = len(self.w_list)
+        self.dw_list = [None] * self.num_layer
+        self.db_list = [None] * self.num_layer
+        self.y_list = [None] * (self.num_layer + 1)
 
 
 
@@ -257,10 +291,11 @@ def net_train_main(yaml_model, args):
     #    main loop    #
     #-----------------#
     num_batch = data_set.data.shape[0] / conf.batch
-    prev_accu_cost = sys.float_info.max
-    cur_accu_cost = 0
     batch = 0
     indices = np.arange(data_set.data.shape[0])
+    best_val_cost = sys.float_info.max
+    best_val_correct = 0.
+
     for epoch in range(conf.num_epoch):
         # shuffle data
         if yaml_model['shuffle'] == True:
@@ -278,26 +313,20 @@ def net_train_main(yaml_model, args):
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
-            ######################
-            #### Experimental ####
-            cur_accu_cost += cur_cost_bat
-            valid_batch = 0
-            if valid_batch and batch % valid_batch == 0:
-                if cur_accu_cost > prev_accu_cost:
-                    conf.w_rate *= .5
-                    conf.b_rate *= .5
-                    printf('learn rate is decayed by {}', 0.5)
-                else:
-                    conf.w_rate *= 2.
-                    conf.b_rate *= 2.
-                    printf('learn rate is increasing by {}', 2., type='WARN')
-                prev_accu_cost = cur_accu_cost
-                cur_accu_cost = 0
-            ####   End Exp    ####
-            ######################
 
-        cost_bat /= (num_batch*conf.batch)
-        correct_bat /= (num_batch*conf.batch)
+        cost_bat /= num_batch
+        correct_bat /= num_batch
+        # validation & checkpointing
+        _ = timeit.default_timer()
+        cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t)
+        printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
+        best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
+        if cur_val_correct > best_val_correct:
+            best_val_correct = cur_val_correct
+            net.export_(yaml_model['checkpoint'])
+        __ = timeit.default_timer()
+        _TIME['checkpoint'] += (__ - _)
+
         if cost_data is None:
             cost_data = [[net.epoch, net.batch, cost_bat]]
         else:
@@ -319,6 +348,7 @@ def net_train_main(yaml_model, args):
     data_util.profile_cost(db_subdir, cost_data, timestamp)
     end_time = timeit.default_timer()
     printf('populate profiling data took: {:.3f}', end_time-start_time)
+    printf('time of checkpointing: {}', _TIME['checkpoint'])
 
 
 
