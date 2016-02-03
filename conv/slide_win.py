@@ -44,8 +44,8 @@ def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     patch = np.zeros((batch, channel, dy, dx))
     # base mat: index setup
     stride_base  = int(max(unit, 1))
-    y_start_idx = max(ceil(y_start_base), 0)
-    x_start_idx = max(ceil(x_start_base), 0)
+    y_start_idx = max(ceil(y_start_base), int(y_start_base%unit))
+    x_start_idx = max(ceil(x_start_base), int(x_start_base%unit))
     y_end_idx = min(ceil(y_start_base + dy*unit), Y)
     x_end_idx = min(ceil(x_start_base + dx*unit), X)
     patch_fill = base_mat[..., y_start_idx:y_end_idx:stride_base, x_start_idx:x_end_idx:stride_base]

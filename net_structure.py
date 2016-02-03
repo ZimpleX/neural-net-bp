@@ -285,7 +285,7 @@ def net_train_main(yaml_model, args):
     start_time = timeit.default_timer()
     cost_data = None    # populate into db in single db connection
     net_data = [[(-1,-1), data_set.target]] \
-             + [[(0, 0), net.net_act_forward(data_set.data)]]
+             #+ [[(0, 0), net.net_act_forward(data_set.data)]]
 
     #-----------------#
     #    main loop    #
@@ -308,18 +308,20 @@ def net_train_main(yaml_model, args):
         epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(conf.batch)):
             batch += 1
+            sys.stdout.write('\rbatch {}'.format(batch))
+            sys.stdout.flush()
             net.batch = batch
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
-
+        sys.stdout.write('\r')
+        sys.stdout.flush()
         cost_bat /= num_batch
         correct_bat /= num_batch
         # validation & checkpointing
         _ = timeit.default_timer()
         cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t)
-        printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
         best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
         if cur_val_correct > best_val_correct:
             best_val_correct = cur_val_correct
@@ -335,6 +337,8 @@ def net_train_main(yaml_model, args):
             or (net.epoch == conf.num_epoch):
             net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
         printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
+        printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
+
 
     end_time = timeit.default_timer()
     printf('training took: {:.3f}', end_time-start_time)
