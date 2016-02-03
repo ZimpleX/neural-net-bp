@@ -16,35 +16,28 @@ def prepare_small_npz(path_orig, path_out, train_size, valid_size, test_size):
     ret['test'] = raw['data'][(train_size+valid_size):(train_size+valid_size+test_size)]
     np.savez(path_out, **ret)
 
-def normalize_exp_col(path_npz, num_op):
+
+def normalize_exp_col(path_npz, num_op, scale_axis=(1,2,3)):
     raw = np.load(path_npz)
     ret = {}
-    rmin = raw['train'].min()
-    rmax = raw['train'].max()
-    ret['train'] = 2.*(raw['train'] - rmin)/(rmax-rmin) - 1.    # normalize
-    rmin = raw['validation'].min()
-    rmax = raw['validation'].max()
-    ret['validation'] = 2.*(raw['validation'] - rmin)/(rmax-rmin) - 1.
-    rmin = raw['test'].min()
-    rmax = raw['test'].max()
-    ret['test'] = 2.*(raw['test'] - rmin)/(rmax-rmin) - 1.
+    for tag in ['train', 'validation', 'test']:
+        rmin = np.min(raw[tag], axis=scale_axis)
+        rmax = np.max(raw[tag], axis=scale_axis)
+        for a in range(len(scale_axis)):
+            rmin = np.expand_dims(rmin, axis=3)
+            rmax = np.expand_dims(rmax, axis=3)
+        ret[tag] = 2.*(raw[tag] - rmin)/(rmax-rmin) - 1.    # normalize
 
-    num_entry = raw['train_labels'].shape[0]
-    z = np.zeros((num_entry, num_op))
-    z[np.arange(num_entry), raw['train_labels']] = 1.
-    ret['train_labels'] = z
-    num_entry = raw['validation_labels'].shape[0]
-    z = np.zeros((num_entry, num_op))
-    z[np.arange(num_entry), raw['validation_labels']] = 1.
-    ret['validation_labels'] = z
-    num_entry = raw['test_labels'].shape[0]
-    z = np.zeros((num_entry, num_op))
-    z[np.arange(num_entry), raw['test_labels']] = 1.
-    ret['test_labels'] = z
+    for tag in ['train_labels', 'validation_labels', 'test_labels']:
+        num_entry = raw[tag].shape[0]
+        z = np.zeros((num_entry, num_op))
+        z[np.arange(num_entry), raw[tag]] = 1.
+        ret[tag] = z
+
     np.savez(path_npz, **ret)
 
 
 
 if __name__ == '__main__':
-    # prepare_small_npz('train_data/3cat_7500.npz', 'train_data/3cat_900.npz', 750, 100, 50)
-    normalize_exp_col('train_data/3cat_900.npz', 3)
+    #prepare_small_npz('train_data/3cat_7500.npz', 'train_data/3cat_900_scale.npz', 750, 100, 50)
+    normalize_exp_col('train_data/3cat_900_scale.npz', 3)

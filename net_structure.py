@@ -312,6 +312,7 @@ def net_train_main(yaml_model, args):
             sys.stdout.flush()
             net.batch = batch
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
+            printf('cur cost: {}', cur_cost_bat)
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)

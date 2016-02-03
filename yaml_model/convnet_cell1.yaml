@@ -1,7 +1,7 @@
 obj_name: 'blood_cell_classification_3cat'
 epoch: 10
-batch: 25
-data_path: 3cat_900.npz
+batch: 50
+data_path: 3cat_900_scale.npz
 checkpoint: 'yaml_model/convnet_cell1.npz'
 input_image_size_y: 256
 input_image_size_x: 256
@@ -9,7 +9,7 @@ input_num_channels: 1
 inc_rate: 1.0
 dec_rate: 1.0
 momentum: 0.9
-alpha: 0.02
+alpha: 0.002
 cost: CE
 shuffle: true
 
@@ -31,22 +31,37 @@ network:
 
   - name: conv2
     type: CONVOLUTION
-    num_channels: 32
-    kernel_size: 11     # (42 + 2*2 - 11)/5 + 1 = 8 
-    stride: 5
-    padding: 2
+    num_channels: 24
+    kernel_size: 6      # (42 + 2*1 - 6)/2 + 1 = 20
+    stride: 2
+    padding: 1
     init_wt: 0.1
 
   - name: maxpool2
     type: MAXPOOL
-    num_channels: 32    # (8 + 2*0 - 2)/2 + 1 = 4
+    num_channels: 24    # (20 + 2*0 - 2)/2 + 1 = 10
+    kernel_size: 2
+    stride: 2
+    padding: 0
+
+  - name: conv3
+    type: CONVOLUTION
+    num_channels: 48
+    kernel_size: 3      # (10 + 2*1 - 3)/1 + 1 = 10
+    stride: 1
+    padding: 1
+    init_wt: 0.1
+
+  - name: maxpool3
+    type: MAXPOOL
+    num_channels: 48    # (10 + 2*0 - 2)/2 + 1 = 5
     kernel_size: 2
     stride: 2
     padding: 0
 
   - name: fc1
     type: FC_SIG
-    num_channels: 512
+    num_channels: 1200
     init_wt: 0.02
 
   - name: output
