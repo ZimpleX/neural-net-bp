@@ -2,6 +2,7 @@ from ec2.EmbedScript import *
 from logf.printf import printf
 import re
 import ec2.conf as conf
+import os
 
 import pdb
 
@@ -18,8 +19,11 @@ _APP_INFO = {
         'submit_main': 'net_structure.py'
 }
 _CMD = {
+    'source_rc': """
+            . /root/{rc}
+    """,
     'key_id_parse': """
-            credential_f = {credential_f}
+            credential_f={credential_f}
             ACCESS_KEY_ID=$(cat $credential_f | awk 'NR==2' | awk -F ',' '{{print $(NF-1)}}')
             SECRET_ACCESS_KEY=$(cat $credential_f | awk 'NR==2' | awk -F ',' '{{print $NF}}')
             export AWS_SECRET_ACCESS_KEY=$SECRET_ACCESS_KEY
@@ -34,9 +38,18 @@ _CMD = {
             python3 -m ec2.ec2_spark_launcher --login {script} --pipe
     """,
     'hdfs_cp': """
+            echo ......
+            echo $(pwd)
             hdfs_dir={hdfs}
             $hdfs_dir/start-all.sh
             $hdfs_dir/hadoop distcp s3n://{f} hdfs://
+    """,
+    'hdfs_conf': """
+            conf_f='/root/ephemeral-hdfs/conf/core-site.xml'
+            line=$(grep -n awsAccessKeyId $conf_f | cut -d: -f1)
+            sed -i "$((line+1))s/.*/<value>{key_id}</value>/" $conf_f
+            line=$(grep -n awsSecretAccessKey $conf_f | cut -d: -f1)
+            sed -i "$((line+1))s/.*/<value>{secret}</value>/" $conf_f
     """,
     'dir_create': """
             dir={dir}
@@ -66,13 +79,17 @@ def conf_AWS_CLI(credential_f, region):
     try:
         scriptGetKey = _CMD['key_id_parse'].format(credential_f=credential_f)
         stdout, stderr = runScript(scriptGetKey, output_opt='pipe')
-        key_id, secret_key = stdout.decode('utf-8').split('\n')[:-1]
+        key_id, secret_key= stdout.decode('utf-8').split('\n')[:-1]
+        os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
+        os.environ['AWS_ACCESS_KEY_ID'] = key_id
         stdout, stderr = runScript('aws configure', output_opt='display',
             input_opt='pipe', input_pipe=[key_id, secret_key, region, _OUTPUT_FORMAT])
         print()
         printf('AWS-CLI conf done')
+        return key_id, secret_key
     except ScriptException as se:
         printf(se, type='ERROR')
+        exit()
 
 
 def get_master_DNS(cluster_name):
@@ -88,7 +105,7 @@ def get_master_DNS(cluster_name):
         if not master_id:
             printf('failed to get master-id:\n        check your cluster name / region ...', type='ERROR')
             exit()
-        master_id = master_id.group().split('master-')[-1][:-2]
+        master_id = master_id.group().split('master-')[-1][:-1]
         stdout, stderr = runScript('aws ec2 describe-instances --instance-ids {}'.format(master_id), output_opt='pipe')
         master_dns_regex = '"{}": "{}",'.format('PublicDnsName', '\S*')
         master_dns = re.search(master_dns_regex, stdout.decode('utf-8'))\
@@ -97,9 +114,10 @@ def get_master_DNS(cluster_name):
         return master_dns
     except ScriptException as se:
         printf(se, type='ERROR')
+        exit()
 
 
-def prepare(id_f, master_dns, credential_f):
+def prepare(id_f, master_dns, credential_f, key_id, secret_key):
     try:
         for f in [credential_f, 'ec2/ec2.bashrc']:
             # TODO: ec2.bashrc is not sourced
@@ -108,10 +126,12 @@ def prepare(id_f, master_dns, credential_f):
 
         app_root = _APP_INFO['repo_url'].split('/')[-1].split('.git')[0]
         combineCmd  = []
+        combineCmd += [_CMD['source_rc'].format(rc='ec2.bashrc')]
         combineCmd += [_CMD['key_id_parse'].format(credential_f=credential_f)]
         # TODO: hdfs set up aws credential for cp from S3
         combineCmd += [_CMD['hdfs_cp'].format(hdfs=_AWS_DIR_INFO['hdfs'], f=_AWS_DIR_INFO['data'])]
-        combineCmd += [_CMD['dir_mk'].format(dir='/tmp/spark-events/')]
+        combineCmd += [_CMD['hdfs_conf'].format(key_id=key_id, secret=secret_key)]
+        combineCmd += [_CMD['dir_create'].format(dir='/tmp/spark-events/')]
         combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
         combineCmd += [_CMD['py3_check']]
         combineCmd = '\n'.join(combineCmd)
@@ -120,6 +140,7 @@ def prepare(id_f, master_dns, credential_f):
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='display')
     except ScriptException as se:
         printf(se, type='ERROR')
+        exit()
 
 
 def submit_application(master_dns):
@@ -133,6 +154,7 @@ def submit_application(master_dns):
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='display')
     except ScriptException as se:
         printf(se, type='ERROR')
+        exit()
         
 
 def parse_cluster_performance():
@@ -147,7 +169,7 @@ def parse_cnn_result():
 ############################################################
 if __name__ == '__main__':
     args = conf.parse_args()
-    conf_AWS_CLI(args.credential_file, args.region)
+    key_id, secret_key = conf_AWS_CLI(args.credential_file, args.region)
     master_dns = get_master_DNS(args.cluster_name)
-    prepare(args.identity_file, master_dns, args.credential_file)
-    submit_application(master_dns)
+    prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key)
+    #submit_application(master_dns)
