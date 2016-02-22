@@ -81,7 +81,7 @@ def login(wrap_script, wrap_args, name, input_opt):
                     input_pipe += [new_ip]
                 else:
                     break
-       stdout, stderr = runScript(_CMD['login'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name),
+        stdout, stderr = runScript(_CMD['login'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name),
                 [], output_opt='display', input_opt=input_opt, input_pipe=input_pipe) 
         printf('finish interaction with master node.')
     except ScriptException as se:
@@ -103,6 +103,16 @@ def destroy(wrap_script, wrap_args, name):
 
 if __name__=='__main__':
     args = conf.parse_args()
+    wrap_script = '{}/ec2/spark-ec2'.format(args.spark_dir)
+
+    if args.spark_ec2_help:
+        try:
+            printf('\nhelp msg from spark-ec2 script:\n')
+            stdout, stderr = runScript('{} -h'.format(wrap_script), [], output_opt='display')
+        except ScriptException as se:
+            printf(se, type='ERROR')
+        exit()
+
     if args.launch: 
         mode_keys=_DEF_LAUNCH_ARGS
     elif args.login: 
@@ -117,7 +127,6 @@ if __name__=='__main__':
     spark_ec2_flag = setup_spark_ec2_flag(args)
     aws_access_key_id, aws_secret_access_key = setup_env(args.credential_file)
 
-    wrap_script = '{}/ec2/spark-ec2'.format(args.spark_dir)
     if args.launch:
         launch(wrap_script, spark_ec2_flag, args.cluster_name)
     elif args.login:
