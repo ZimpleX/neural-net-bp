@@ -120,8 +120,8 @@ class Net_structure:
         # store the output of each layer
         self.y_list = [None] * (self.num_layer + 1)
         # current epoch / batch: for debugging & logging
-        self.epoch = -1
-        self.batch = -1
+        self.epoch = 0
+        self.batch = 0
 
 
     def set_w_b(self, w_list, b_list):
@@ -222,6 +222,8 @@ class Net_structure:
         info['b_list'] = self.b_list
         info['activ_list'] = self.activ_list
         info['cost'] = self.cost
+        info['epoch'] = self.epoch
+        info['batch'] = self.batch
         np.savez(path, **info)
 
     
@@ -237,7 +239,12 @@ class Net_structure:
         self.num_layer = len(self.w_list)
         self.dw_list = [None] * self.num_layer
         self.db_list = [None] * self.num_layer
+        for i in range(self.num_layer):
+            self.dw_list[i] = np.zeros(self.w_list[i].shape)
+            self.db_list[i] = np.zeros(self.b_list[i].shape)
         self.y_list = [None] * (self.num_layer + 1)
+        self.epoch = info['epoch']
+        self.batch = info['batch']
 
 
 
@@ -248,6 +255,8 @@ def parse_args():
     parser = argparse.ArgumentParser('neural network model')
     parser.add_argument('yaml_model', type=str, metavar='YAML', 
         help='specify the yaml models to be used by this net training')
+    parser.add_argument('-p', '--partial_trained', type=str, default=None,
+        help='use the partially trained model')
     parser.add_argument('--profile_output', action='store_true',
         help='add this flag if you want to store the net output thoughout epochs')
     return parser.parse_args()
@@ -273,6 +282,8 @@ def net_train_main(yaml_model, args):
     #---------------------#
     data_set = Data(yaml_model, timestamp, profile=True)
     net = Net_structure(yaml_model)
+    if args.partial_trained is not None:
+        net.import_(args.partial_trained)
     print_to_file(_LOG_FILE['net'], net, type=None)
 
     conf = Conf(yaml_model)
@@ -302,7 +313,7 @@ def net_train_main(yaml_model, args):
             np.random.shuffle(indices)
             data_set.data = data_set.data[indices]
             data_set.target = data_set.target[indices]
-        net.epoch = epoch + 1
+        net.epoch += 1
         cost_bat = 0.
         correct_bat = 0.
         epc_stride = 10
@@ -310,7 +321,7 @@ def net_train_main(yaml_model, args):
             batch += 1
             sys.stdout.write('\rbatch {}'.format(batch))
             sys.stdout.flush()
-            net.batch = batch
+            net.batch += 1
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
             printf('cur cost: {}', cur_cost_bat)
             cost_bat += cur_cost_bat
