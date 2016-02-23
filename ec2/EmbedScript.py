@@ -48,6 +48,10 @@ class ScriptException(Exception):
         self.stdout = stdout
         self.script = script
     def __str__(self):
+        if self.stderr is not None:
+            self.stderr = self.stderr.decode('utf-8')
+        if self.stdout is not None:
+            self.stdout = self.stdout.decode('utf-8')
         return ("EXCEPTION IN SCRIPT: \n"
                 "ERR MSG: \n"
                 "--------\n{}\n"
@@ -56,8 +60,8 @@ class ScriptException(Exception):
                 "RET CODE: {}\n"
                 "ORIGINAL SCRIPT: \n"
                 "----------------\n{}").format(\
-                    self.stderr.decode('utf-8'), 
-                    self.stdout.decode('utf-8'), 
+                    self.stderr, 
+                    self.stdout, 
                     self.returncode, 
                     self.script)
 
