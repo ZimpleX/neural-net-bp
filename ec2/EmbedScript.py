@@ -36,7 +36,6 @@ def runScript(script, stdin=[], output_opt='pipe', input_opt='pipe', input_pipe=
     if proc.returncode:
         raise ScriptException(proc.returncode, stdout, stderr, script)
 
-    print()     # somehow i need to print a \n to avoid some error
     return stdout, stderr
 
 
@@ -49,8 +48,16 @@ class ScriptException(Exception):
         self.stdout = stdout
         self.script = script
     def __str__(self):
-        return "EXCEPTION IN SCRIPT: \nerr msg: " + str(self.stderr) \
-            + "\nstdout: " + str(self.stdout) \
-            + "\nreturn code: " + str(self.returncode) \
-            + "\noriginal script: \n****\n" + str(self.script)
+        return ("EXCEPTION IN SCRIPT: \n"
+                "ERR MSG: \n"
+                "--------\n{}\n"
+                "STDOUT: \n"
+                "-------\n{}\n"
+                "RET CODE: {}\n"
+                "ORIGINAL SCRIPT: \n"
+                "----------------\n{}").format(\
+                    self.stderr.decode('utf-8'), 
+                    self.stdout.decode('utf-8'), 
+                    self.returncode, 
+                    self.script)
 

@@ -102,10 +102,13 @@ def get_master_DNS(cluster_name):
         printf('instance info got, target: {}-master', cluster_name)
         master_id_regex = '{}-master-{}'.format(cluster_name, '\S*')
         master_id = re.search(master_id_regex, stdout.decode('utf-8'))
+        printf(master_id, type='WARN')
         if not master_id:
             printf('failed to get master-id:\n        check your cluster name / region ...', type='ERROR')
             exit()
+
         master_id = master_id.group().split('master-')[-1][:-1]
+        master_id = master_id.split('"')[0]
         stdout, stderr = runScript('aws ec2 describe-instances --instance-ids {}'.format(master_id), output_opt='pipe')
         master_dns_regex = '"{}": "{}",'.format('PublicDnsName', '\S*')
         master_dns = re.search(master_dns_regex, stdout.decode('utf-8'))\
