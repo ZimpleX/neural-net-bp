@@ -102,7 +102,6 @@ def get_master_DNS(cluster_name):
         printf('instance info got, target: {}-master', cluster_name)
         master_id_regex = '{}-master-{}'.format(cluster_name, '\S*')
         master_id = re.search(master_id_regex, stdout.decode('utf-8'))
-        printf(master_id, type='WARN')
         if not master_id:
             printf('failed to get master-id:\n        check your cluster name / region ...', type='ERROR')
             exit()
