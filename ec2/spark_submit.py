@@ -35,7 +35,7 @@ _CMD = {
             scp -i {id} {f} root@{dns}:/root/
     """,
     'pipe_remote': """
-            python3 -m ec2.ec2_spark_launcher --login {script} --pipe
+            python3 -m ec2.ec2_spark_launcher --login "{script}" --pipe
     """,
     'hdfs_cp': """
             echo ......
