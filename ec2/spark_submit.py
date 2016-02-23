@@ -21,6 +21,8 @@ _APP_INFO = {
 _CMD = {
     'source_rc': """
             . /root/{rc}
+            echo ================
+            echo $(which python3)
     """,
     'key_id_parse': """
             credential_f={credential_f}
@@ -31,25 +33,27 @@ _CMD = {
             echo $ACCESS_KEY_ID
             echo $SECRET_ACCESS_KEY
     """,
+    'key_id_export': """
+            export AWS_SECRET_ACCESS_KEY={secret_key}
+            export AWS_ACCESS_KEY_ID={key_id}
+    """,
     'scp': """
             scp -i {id} {f} root@{dns}:/root/
     """,
     'pipe_remote': """
-            python3 -m ec2.ec2_spark_launcher --login "{script}" --pipe
+            python3 -m ec2.spark_launcher --login --pipe
     """,
     'hdfs_cp': """
-            echo ......
-            echo $(pwd)
-            hdfs_dir={hdfs}
-            $hdfs_dir/start-all.sh
             $hdfs_dir/hadoop distcp s3n://{f} hdfs://
     """,
     'hdfs_conf': """
+            hdfs_dir={hdfs}
+            $hdfs_dir/start-all.sh
             conf_f='/root/ephemeral-hdfs/conf/core-site.xml'
             line=$(grep -n awsAccessKeyId $conf_f | cut -d: -f1)
-            sed -i "$((line+1))s/.*/<value>{key_id}</value>/" $conf_f
+            sed -i "$((line+1))s/.*/<value>{key_id}<\/value>/" $conf_f
             line=$(grep -n awsSecretAccessKey $conf_f | cut -d: -f1)
-            sed -i "$((line+1))s/.*/<value>{secret}</value>/" $conf_f
+            sed -i "$((line+1))s/.*/<value>{secret}<\/value>/" $conf_f
     """,
     'dir_create': """
             dir={dir}
@@ -61,7 +65,6 @@ _CMD = {
             git clone {dir_git}
     """,
     'py3_check': """
-            . .bashrc   # set env var
             py3_path=$(which python3)
             if [[ -z $py3_path ]] || [[ $py3_path =~ '/which:' ]]
             then
@@ -129,17 +132,19 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key):
         app_root = _APP_INFO['repo_url'].split('/')[-1].split('.git')[0]
         combineCmd  = []
         combineCmd += [_CMD['source_rc'].format(rc='ec2.bashrc')]
-        combineCmd += [_CMD['key_id_parse'].format(credential_f=credential_f)]
+        combineCmd += [_CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
         # TODO: hdfs set up aws credential for cp from S3
-        combineCmd += [_CMD['hdfs_cp'].format(hdfs=_AWS_DIR_INFO['hdfs'], f=_AWS_DIR_INFO['data'])]
-        combineCmd += [_CMD['hdfs_conf'].format(key_id=key_id, secret=secret_key)]
+        combineCmd += [_CMD['hdfs_conf']\
+            .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
+        combineCmd += [_CMD['hdfs_cp'].format(f=_AWS_DIR_INFO['data'])]
         combineCmd += [_CMD['dir_create'].format(dir='/tmp/spark-events/')]
         combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
         combineCmd += [_CMD['py3_check']]
         combineCmd = '\n'.join(combineCmd)
-        remoteScript = _CMD['pipe_remote'].format(script=combineCmd)
+        remoteScript = _CMD['pipe_remote']
+        printf(remoteScript)
         
-        stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='display')
+        stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[combineCmd, '.quit'])
     except ScriptException as se:
         printf(se, type='ERROR')
         exit()
@@ -152,8 +157,8 @@ def submit_application(master_dns):
         spark_dir = _AWS_DIR_INFO['spark']
         shot = '/root/{name}/ec2/fire_and_leave {dns} {main} {args}'\
                 .format(name=_APP_INFO['name'], dns=master_dns, main=_APP_INFO['submit_main'], args='')
-        remoteScript = _CMD['pipe_remote'].format(script=shot)
-        stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='display')
+        remoteScript = _CMD['pipe_remote']
+        stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[shot, '.quit'])
     except ScriptException as se:
         printf(se, type='ERROR')
         exit()
