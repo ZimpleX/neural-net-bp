@@ -87,6 +87,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     ret_mat = np.zeros((A, E, int(m), int(n)))
     func_obj.pre_proc(base_mat, kern_mat)
     y = -padding - sliding_stride
+    # double for loop is a map function
     for i in range(int(m)):
         y += sliding_stride
         x = -padding - sliding_stride

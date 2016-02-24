@@ -75,7 +75,10 @@ class Data:
         NOTE: this is not general loading for all kinds of data.
             It is fitted for digit-classification (USPS) currently
         """
-        data_path = '{}/{}'.format(conf.TRAINING_DIR, yaml_model['data_path'])
+        if yaml_model['data_path'][0] == '/':
+            data_path = yaml_model['data_path']
+        else:
+            data_path = '{}/{}'.format(conf.TRAINING_DIR, yaml_model['data_path'])
         data = np.load(data_path)
         batch = yaml_model['batch']
         data_size = (data['train'].shape[0]//batch)*batch
