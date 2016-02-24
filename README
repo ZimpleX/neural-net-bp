@@ -1,6 +1,7 @@
 ABOUT
 -----
 
+This branch is for the ImageNet to run under Spark
 --  Aim to build a general neural net supporting FC-layer and Convolutional layer
 --  Training is using back-propagation, mini-batch and momentum.
     supporting python3, no warrant for python2
