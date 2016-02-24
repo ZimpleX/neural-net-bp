@@ -72,10 +72,10 @@ _CMD = {
     """,
     'submit': """
             master_dns={dns}
-            submit_main={main}
+            submit_main=/root/{name}/{main}
             args={args}
             PYSPARK_PYTHON=$(which python3) \
-            ./bin/spark-submit --master spark://$master_dns:7077 \
+            /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
                 --conf spark.eventLog.enabled=true $submit_main -f $args
     """
 }
@@ -153,16 +153,17 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         printf(remoteScript)
         
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[combineCmd, '.quit'])
+        return app_root
     except ScriptException as se:
         printf(se, type='ERROR')
         exit()
 
 
-def submit_application(master_dns):
+def submit_application(name, master_dns):
     printf('ENTER application submission', type='WARN')
     try:
         app_args = 'convnet_usps1'
-        shot = [_CMD['submit'].format(dns=master_dns, main=_APP_INFO['submit_main'], args=app_args)]
+        shot = [_CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)]
         shot += ['exit\n']
         shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']
@@ -186,6 +187,6 @@ if __name__ == '__main__':
     args = conf.parse_args()
     key_id, secret_key = conf_AWS_CLI(args.credential_file, args.region)
     master_dns = get_master_DNS(args.cluster_name)
-    prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
+    name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
         is_hdfs=(not args.no_hdfs), is_clone=(not args.no_clone), is_scp=(not args.no_scp))
-    submit_application(master_dns)
+    submit_application(name, master_dns)
