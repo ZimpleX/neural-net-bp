@@ -77,10 +77,10 @@ _CMD = {
             cd $app_home
             submit_main=$app_home/{main}
             args={args}
-            #PYSPARK_PYTHON=$(which python3) \
+            PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
                 --conf spark.eventLog.enabled=true $submit_main $args
-            /root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
+            #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
     """
 }
 
