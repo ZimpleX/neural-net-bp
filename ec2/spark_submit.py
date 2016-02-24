@@ -77,7 +77,7 @@ _CMD = {
             args={args}
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
-                --conf spark.eventLog.enabled=true $submit_main -f $args
+                --conf spark.eventLog.enabled=true $submit_main $args
     """
 }
 
