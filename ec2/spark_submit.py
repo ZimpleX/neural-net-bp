@@ -125,7 +125,6 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key):
     try:
         for f in [credential_f, 'ec2/ec2.bashrc']:
-            # TODO: ec2.bashrc is not sourced
             scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns)
             stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
 
@@ -133,7 +132,6 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key):
         combineCmd  = []
         combineCmd += [_CMD['source_rc'].format(rc='ec2.bashrc')]
         combineCmd += [_CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
-        # TODO: hdfs set up aws credential for cp from S3
         combineCmd += [_CMD['hdfs_conf']\
             .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
         combineCmd += [_CMD['hdfs_cp'].format(f=_AWS_DIR_INFO['data'])]
