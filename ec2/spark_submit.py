@@ -7,6 +7,7 @@ import os
 import pdb
 
 _OUTPUT_FORMAT = 'json'
+_CUS_BASHRC = 'ec2.bashrc'
 _AWS_DIR_INFO = {
         'spark': '/root/spark/',
         'hdfs': '/root/ephemeral-hdfs/bin/',
@@ -131,13 +132,13 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True):
     try:
         if is_scp:
-            for f in [credential_f, 'ec2/ec2.bashrc']:
+            for f in [credential_f, _CUS_BASHRC]:
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns)
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
 
         app_root = _APP_INFO['repo_url'].split('/')[-1].split('.git')[0]
         combineCmd  = []
-        combineCmd += [_CMD['source_rc'].format(rc='ec2.bashrc')]
+        combineCmd += [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
         combineCmd += [_CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
         if is_hdfs:
             combineCmd += [_CMD['hdfs_conf']\
@@ -163,7 +164,8 @@ def submit_application(name, master_dns):
     printf('ENTER application submission', type='WARN')
     try:
         app_args = 'convnet_usps1'
-        shot = [_CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)]
+        shot = [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
+        shot += [_CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)]
         shot += ['exit\n']
         shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']
