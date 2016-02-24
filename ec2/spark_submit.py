@@ -155,7 +155,7 @@ def submit_application(master_dns):
         log_dir = _AWS_DIR_INFO['log'].format(train_name=_APP_INFO['name'])
         spark_dir = _AWS_DIR_INFO['spark']
         shot = '/root/{name}/ec2/fire_and_leave {dns} {main} {args}'\
-                .format(name=_APP_INFO['name'], dns=master_dns, main=_APP_INFO['submit_main'], args='')
+                .format(name=_APP_INFO['name'], dns=master_dns, main=_APP_INFO['submit_main'], args='convnet_usps1')
         remoteScript = _CMD['pipe_remote']
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[shot, '.quit'])
     except ScriptException as se:
@@ -179,4 +179,4 @@ if __name__ == '__main__':
     master_dns = get_master_DNS(args.cluster_name)
     prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
         is_hdfs=(not args.no_hdfs), is_clone=(not args.no_clone), is_scp=(not args.no_scp))
-    #submit_application(master_dns)
+    submit_application(master_dns)
