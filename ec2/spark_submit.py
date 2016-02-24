@@ -163,7 +163,7 @@ def submit_application(master_dns):
     try:
         app_args = 'convnet_usps1'
         shot = [_CMD['submit'].format(dns=master_dns, main=_APP_INFO['submit_main'], args=app_args)]
-        shot = ['exit\n']
+        shot += ['exit\n']
         shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[shot, '.quit'])
