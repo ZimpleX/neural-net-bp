@@ -21,8 +21,6 @@ _APP_INFO = {
 _CMD = {
     'source_rc': """
             . /root/{rc}
-            echo ================
-            echo $(which python3)
     """,
     'key_id_parse': """
             credential_f={credential_f}
@@ -62,7 +60,7 @@ _CMD = {
     'dir_clone': """
             dir={dir}
             if [ -d $dir ]; then rm -rf $dir; fi
-            git clone {dir_git}
+            git clone -b ec2_spark {dir_git}
     """,
     'py3_check': """
             py3_path=$(which python3)
