@@ -139,6 +139,7 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         if is_clone:
             combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
         combineCmd += [_CMD['py3_check']]
+        combineCmd += ['exit']
         combineCmd = '\n'.join(combineCmd)
         remoteScript = _CMD['pipe_remote']
         printf(remoteScript)
