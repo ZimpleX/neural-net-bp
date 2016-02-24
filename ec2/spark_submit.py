@@ -69,6 +69,14 @@ _CMD = {
                 echo 'python3 is not installed! quit.'
                 exit
             fi    
+    """,
+    'submit': """
+            master_dns={dns}
+            submit_main={main}
+            args={args}
+            PYSPARK_PYTHON=$(which python3) \
+            ./bin/spark-submit --master spark://$master_dns:7077 \
+                --conf spark.eventLog.enabled=true $submit_main -f $args
     """
 }
 
@@ -139,7 +147,7 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         if is_clone:
             combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
         combineCmd += [_CMD['py3_check']]
-        combineCmd += ['exit']
+        combineCmd += ['exit\n']
         combineCmd = '\n'.join(combineCmd)
         remoteScript = _CMD['pipe_remote']
         printf(remoteScript)
@@ -151,12 +159,12 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
 
 
 def submit_application(master_dns):
+    printf('ENTER application submission', type='WARN')
     try:
-        submit_main = '/root/{}/{}'.format(_APP_INFO['name'], _APP_INFO['submit_main'])
-        log_dir = _AWS_DIR_INFO['log'].format(train_name=_APP_INFO['name'])
-        spark_dir = _AWS_DIR_INFO['spark']
-        shot = '/root/{name}/ec2/fire_and_leave {dns} {main} {args}'\
-                .format(name=_APP_INFO['name'], dns=master_dns, main=_APP_INFO['submit_main'], args='convnet_usps1')
+        app_args = 'convnet_usps1'
+        shot = [_CMD['submit'].format(dns=master_dns, main=_APP_INFO['submit_main'], args=app_args)]
+        shot = ['exit\n']
+        shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[shot, '.quit'])
     except ScriptException as se:
