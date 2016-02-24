@@ -77,9 +77,10 @@ _CMD = {
             cd $app_home
             submit_main=$app_home/{main}
             args={args}
-            PYSPARK_PYTHON=$(which python3) \
+            #PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
                 --conf spark.eventLog.enabled=true $submit_main $args
+            /root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
     """
 }
 
@@ -117,13 +118,14 @@ def get_master_DNS(cluster_name):
         if not master_id:
             printf('failed to get master-id:\n        check your cluster name / region ...', type='ERROR')
             exit()
-
         master_id = master_id.group().split('master-')[-1][:-1]
         master_id = master_id.split('"')[0]
         stdout, stderr = runScript('aws ec2 describe-instances --instance-ids {}'.format(master_id), output_opt='pipe')
         master_dns_regex = '"{}": "{}",'.format('PublicDnsName', '\S*')
         master_dns = re.search(master_dns_regex, stdout.decode('utf-8'))\
                         .group().split("\"")[-2]
+        if not master_dns:
+            printf('You probably have multiple masters of the same cluster name: \nRENAME the obsolete one to avoid confusion', type='ERROR')
         printf("Get {}-master public DNS:\n       {}", cluster_name, master_dns)
         return master_dns
     except ScriptException as se:
@@ -134,9 +136,10 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True):
     try:
         if is_scp:
-            for f in [credential_f, _CUS_BASHRC]:
+            for f in [credential_f, 'ec2/'+_CUS_BASHRC]:
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns)
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
+                printf(scpScript, type='WARN')
 
         app_root = _APP_INFO['repo_url'].split('/')[-1].split('.git')[0]
         combineCmd  = []
