@@ -120,21 +120,24 @@ def get_master_DNS(cluster_name):
         exit()
 
 
-def prepare(id_f, master_dns, credential_f, key_id, secret_key):
+def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True):
     try:
-        for f in [credential_f, 'ec2/ec2.bashrc']:
-            scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns)
-            stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
+        if is_scp:
+            for f in [credential_f, 'ec2/ec2.bashrc']:
+                scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns)
+                stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
 
         app_root = _APP_INFO['repo_url'].split('/')[-1].split('.git')[0]
         combineCmd  = []
         combineCmd += [_CMD['source_rc'].format(rc='ec2.bashrc')]
         combineCmd += [_CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
-        combineCmd += [_CMD['hdfs_conf']\
-            .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
-        combineCmd += [_CMD['hdfs_cp'].format(f=_AWS_DIR_INFO['data'])]
+        if is_hdfs:
+            combineCmd += [_CMD['hdfs_conf']\
+                .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
+            combineCmd += [_CMD['hdfs_cp'].format(f=_AWS_DIR_INFO['data'])]
         combineCmd += [_CMD['dir_create'].format(dir='/tmp/spark-events/')]
-        combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
+        if is_clone:
+            combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
         combineCmd += [_CMD['py3_check']]
         combineCmd = '\n'.join(combineCmd)
         remoteScript = _CMD['pipe_remote']
@@ -174,5 +177,6 @@ if __name__ == '__main__':
     args = conf.parse_args()
     key_id, secret_key = conf_AWS_CLI(args.credential_file, args.region)
     master_dns = get_master_DNS(args.cluster_name)
-    prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key)
+    prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
+        is_hdfs=(not args.no_hdfs), is_clone=(not args.no_clone), is_scp=(not args.no_scp))
     #submit_application(master_dns)

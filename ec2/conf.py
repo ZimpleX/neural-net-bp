@@ -37,6 +37,9 @@ def parse_args():
             default=DEFAULT_EC2_ARGS['--region'], help='region where clusters located in')
     parser.add_argument('-n', '--cluster_name', type=str, metavar='CLUSTER_NAME', 
             default=DEFAULT_NAME, help='name of the ec2 cluster')
+    parser.add_argument('--no_hdfs', action='store_true', help='[FOR SUBMIT]: add this flag if no copying from S3')
+    parser.add_argument('--no_clone', action='store_true', help='[FOR SUBMIT]: add this flag if no clone from git')
+    parser.add_argument('--no_scp', action='store_true', help='[FOR SUBMIT]: add this flag if no scp of credentials/rc')
 
     
     return parser.parse_args()
