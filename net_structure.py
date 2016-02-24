@@ -372,5 +372,6 @@ def net_train_main(yaml_model, args):
 if __name__ == '__main__':
     args = parse_args()
     if args.yaml_model:
-        yaml_model = yaml.load(open(args.yaml_model))
+        yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
+        yaml_model = yaml.load(open(yaml_model_full))
         net_train_main(yaml_model, args)
