@@ -370,6 +370,9 @@ def net_train_main(yaml_model, args):
 
 
 if __name__ == '__main__':
+    # DUMMY 
+    from pyspark import SparkContext
+    sc = SparkContext(appName='ImageNet-dummy')
     args = parse_args()
     if args.yaml_model:
         yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
