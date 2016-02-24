@@ -367,9 +367,10 @@ def net_train_main(yaml_model, args):
     #printf('time of checkpointing: {}', _TIME['checkpoint'])
 
 
-
+printf('testing 0')
 
 if __name__ == '__main__':
+    printf('testing 1: should appear before spark is started')
     # DUMMY 
     from pyspark import SparkContext
     sc = SparkContext(appName='ImageNet-dummy')
