@@ -73,7 +73,9 @@ _CMD = {
     """,
     'submit': """
             master_dns={dns}
-            submit_main=/root/{name}/{main}
+            app_home=/root/{name}/
+            cd $app_home
+            submit_main=$app_home/{main}
             args={args}
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
