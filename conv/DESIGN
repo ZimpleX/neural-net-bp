@@ -1,0 +1,52 @@
+Goal:
+-----
+    to express the convolution nested loop in the MapReduce form.
+
+Observation:
+------------
+    [Map] in conv:
+        for PERMUTATION(i,j,k):
+            ret[i][j][k] = k*input[i][j][k]
+    [Reduce] in conv:
+        for PERMUTATION(i,j,k):
+            ret += input[i][j][k]
+
+Design Flow:
+------------
+    [Original] expression of conv:
+        for PERMUTATION(chan_n, row_n, col_n, chan_n1, kern_x, kern_y):
+            temp = w[chan_n][chan_n1][kern_x][kern_y] * pixal_n1[chan_n1][S*row_n+kern_x][S*col_n+kern_y]
+            pixal_n[chan_n][row_n][col_n] += temp
+
+    [UCLA design]:
+        'indenpendent' / 'irrelevant' dimensions: chan_n, chan_n1
+        --> parallel 2 dimensions only. Not good.
+        
+    [Improvement]:
+        At the expense of Additional memory, decouple the row_n, kern_x dimensions for pixal_n1
+        --> pixal_n1_expanded[chan_n1][row_n][kern_x][col_n][kern_y]
+
+        for PERMUTATION(chan_n, row_n, col_n, chan_n1, kern_x, kern_y):
+            temp = w[chan_n][chan_n1][kern_x][kern_y] * pixal_n1_expanded[chan_n1][row_n][kern_x][col_n][kern_y]
+            pixal_n[chan_n][row_n][col_n] += temp
+       
+        [Simplify]: extract chan_n dimension
+        for chan_n:
+            for PERMUTATION(chan_n, row_n, col_n, chan_n1, kern_x, kern_y):
+                temp = w_chan_n[chan_n1][kern_x][kern_y] * pixal_n1_expanded[chan_n1][row_n][kern_x][col_n][kern_y]
+                pixal_n_chan_n[row_n][col_n] += temp
+
+        [MapReduce]:
+        for chan_n:
+            for PERMUTATION(chan_n, row_n, col_n, chan_n1, kern_x, kern_y):
+                temp = map()
+                    # temp: as a 5 dim array
+                pixal_n_chan_n = reduce()
+                    # pixal_n_chan_n: reduce from 5 dim to 3 dim
+ 
+        [MAP]:
+        pixal_n1_expanded: transform from 5D to 2D: (row_n, col_n) x (chan_n1, kern_x, kern_y)
+        w_chan_n: flatten into 1D: (chan_n1, kern_x, kern_y)
+        RDD_pixal_n1_expanded.map(lambda x: dot(x, w_chan_n))
+            # NOTE: itr of RDD and w_chan_n are both of type np.ndarray
+        

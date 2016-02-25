@@ -5,6 +5,7 @@ default configuration for the ANN:
 TRAINING_DIR = './train_data/'
 DB_DIR_PARENT = './profile_data/'
 
+STAT = {'conv_time': 0.}
 
 class Conf:
     """

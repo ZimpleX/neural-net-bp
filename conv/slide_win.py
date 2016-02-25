@@ -5,6 +5,9 @@ abstract out the convolution operation from the conv_layer.
 import numpy as np
 from math import ceil, floor
 from abc import ABCMeta, abstractmethod
+import timeit
+from conf import STAT
+
 import pdb
 
 
@@ -88,6 +91,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     func_obj.pre_proc(base_mat, kern_mat)
     y = -padding - sliding_stride
     # double for loop is a map function
+    start_time = timeit.default_timer()
     for i in range(int(m)):
         y += sliding_stride
         x = -padding - sliding_stride
@@ -95,6 +99,8 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
             x += sliding_stride
             patch = get_patch(base_mat, y, x, f, g, patch_stride)
             ret_mat[:,:,i,j] = func_obj.patch_func(patch,i,j)
+    end_time = timeit.default_timer()
+    STAT['conv_time'] += end_time - start_time
     return ret_mat
 
 
