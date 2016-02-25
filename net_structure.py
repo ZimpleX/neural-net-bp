@@ -370,8 +370,8 @@ def net_train_main(yaml_model, args):
 printf('testing 0')
 
 if __name__ == '__main__':
-    from conf import STAT
-    STAT['conv_time'] = 0.
+    from stat_cnn.time import TIME
+    TIME['conv_time'] = 0.
     printf('testing 1: should appear before spark is started')
     # DUMMY 
     from pyspark import SparkContext
@@ -381,4 +381,4 @@ if __name__ == '__main__':
         yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
         yaml_model = yaml.load(open(yaml_model_full))
         net_train_main(yaml_model, args)
-        printf('convolution totally takes {}s', STAT['conv_time'], type='WARN')
+        printf('convolution totally takes {}s', TIME['conv_time'], type='WARN')

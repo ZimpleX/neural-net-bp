@@ -175,6 +175,7 @@ def submit_application(name, master_dns):
         shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[shot, '.quit'])
+        printf('submit: {}', shot, type='WARN')
     except ScriptException as se:
         printf(se, type='ERROR')
         exit()

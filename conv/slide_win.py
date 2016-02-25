@@ -6,7 +6,7 @@ import numpy as np
 from math import ceil, floor
 from abc import ABCMeta, abstractmethod
 import timeit
-from conf import STAT
+from stat_cnn.time import TIME
 
 import pdb
 
@@ -100,7 +100,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
             patch = get_patch(base_mat, y, x, f, g, patch_stride)
             ret_mat[:,:,i,j] = func_obj.patch_func(patch,i,j)
     end_time = timeit.default_timer()
-    STAT['conv_time'] += end_time - start_time
+    TIME['conv_time'] += end_time - start_time
     return ret_mat
 
 
