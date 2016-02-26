@@ -97,8 +97,13 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         x = -padding - sliding_stride
         for j in range(int(n)):
             x += sliding_stride
+            t1 = timeit.default_timer()
             patch = get_patch(base_mat, y, x, f, g, patch_stride)
+            t2 = timeit.default_timer()
             ret_mat[:,:,i,j] = func_obj.patch_func(patch,i,j)
+            t3 = timeit.default_timer()
+            RUNTIME['get_path_time'] = t2 - t1
+            RUNTIME['dot_time'] = t3 - t2
     end_time = timeit.default_timer()
     RUNTIME['conv_time'] += end_time - start_time
     return ret_mat

@@ -365,20 +365,20 @@ def net_train_main(yaml_model, args):
     #end_time = timeit.default_timer()
     #printf('populate profiling data took: {:.3f}', end_time-start_time)
     #printf('time of checkpointing: {}', _TIME['checkpoint'])
+    return end_time - start_time
 
 
-printf('testing 0')
 
 if __name__ == '__main__':
-    from stat_cnn.time import RUNTIME
-    RUNTIME['conv_time'] = 0.
-    printf('testing 1: should appear before spark is started')
-    # DUMMY 
     from pyspark import SparkContext
+    from ec2.sc_glob import sc
     sc = SparkContext(appName='ImageNet-dummy')
     args = parse_args()
+    from stat_cnn.time import RUNTIME
     if args.yaml_model:
         yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
         yaml_model = yaml.load(open(yaml_model_full))
-        net_train_main(yaml_model, args)
-        printf('convolution totally takes {}s', RUNTIME['conv_time'], type='WARN')
+        tot_time = net_train_main(yaml_model, args)
+        printf('convolution totally takes {:.3f}%', 100*RUNTIME['conv_time']/tot_time, type='WARN')
+        printf('get patch takes {:.3f}%', 100*RUNTIME['get_path_time']/tot_time, type='WARN')
+        printf('dot takes {:.3f}%', 100*RUNTIME['dot_time']/tot_time, type='WARN')
