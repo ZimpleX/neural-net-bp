@@ -5,7 +5,8 @@ the efficiency may depend on the image size and net struct
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from node_activity import Node_activity
-import conv.slide_win as slid
+#import conv.slide_win as slid
+import conv.slide_win_spark as slid
 import pdb
 
 from fractions import Fraction

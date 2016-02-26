@@ -379,6 +379,5 @@ if __name__ == '__main__':
         yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
         yaml_model = yaml.load(open(yaml_model_full))
         tot_time = net_train_main(yaml_model, args)
-        printf('convolution totally takes {:.3f}%', 100*RUNTIME['conv_time']/tot_time, type='WARN')
-        printf('get patch takes {:.3f}%', 100*RUNTIME['get_path_time']/tot_time, type='WARN')
-        printf('dot takes {:.3f}%', 100*RUNTIME['dot_time']/tot_time, type='WARN')
+        for k in RUNTIME.keys():
+            printf('{} takes {:.3f}%', 100*RUNTIME[k]/tot_time, type='WARN')

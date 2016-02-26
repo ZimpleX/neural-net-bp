@@ -5,7 +5,8 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from node_activity import Node_activity
 from conv.conv_layer import Node_conv
-import conv.slide_win as slid
+#import conv.slide_win as slid
+import conv.slide_win_spark as slid
 from fractions import Fraction
 
 import pdb
