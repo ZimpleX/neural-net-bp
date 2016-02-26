@@ -97,9 +97,9 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     func_obj.pre_proc(base_mat, kern_mat)
     y = -padding - sliding_stride
     # double for loop is a map function
-    from ec2.sc_glob import sc
+    import ec2.sc_glob as spark
     t4 = timeit.default_timer()
-    rdd_base_exp = sc.parallelize(repeat).map(lambda x: base_mat)
+    rdd_base_exp = spark.sc.parallelize(repeat).map(lambda x: base_mat)
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
     start_time = timeit.default_timer()

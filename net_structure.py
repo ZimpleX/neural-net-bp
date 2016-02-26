@@ -371,8 +371,8 @@ def net_train_main(yaml_model, args):
 
 if __name__ == '__main__':
     from pyspark import SparkContext
-    from ec2.sc_glob import sc
-    sc = SparkContext(appName='ImageNet-dummy')
+    import ec2.sc_glob as spark
+    spark.sc = SparkContext(appName='ImageNet-dummy')
     args = parse_args()
     from stat_cnn.time import RUNTIME
     if args.yaml_model:
