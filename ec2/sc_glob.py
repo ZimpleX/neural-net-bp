@@ -2,4 +2,4 @@
 The shared SparkContext global variable
 """
 
-sc = None
+global sc = None
