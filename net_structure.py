@@ -380,4 +380,4 @@ if __name__ == '__main__':
         yaml_model = yaml.load(open(yaml_model_full))
         tot_time = net_train_main(yaml_model, args)
         for k in RUNTIME.keys():
-            printf('{} takes {:.3f}%', 100*RUNTIME[k]/tot_time, type='WARN')
+            printf('{} takes {:.3f}%', k, 100*RUNTIME[k]/tot_time, type='WARN')
