@@ -17,7 +17,7 @@ TODO:
 import numpy as np
 import yaml
 from node_activity import *
-import conv.slide_win as slide
+import conv.util
 from cost import *
 from data_setup import *
 from conf import *
@@ -70,7 +70,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, yaml_model):
+    def __init__(self, yaml_model, slide_method):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -102,8 +102,9 @@ class Net_structure:
                 w_shape = (prev_chn, cur_chn, kern, kern)
                 act_init = (l['type']=='MAXPOOL') and [kern] or []
                 act_init += [l['stride'], l['padding']]
+                act_init += [slide_method]
                 self.activ_list[idx] = act_func(*act_init)
-                prev_img = slide.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
+                prev_img = conv.util.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:
                 if prev_img is not None:
                     prev_chn = prev_chn * prev_img[0] * prev_img[1]
@@ -259,6 +260,8 @@ def parse_args():
         help='use the partially trained model')
     parser.add_argument('--profile_output', action='store_true',
         help='add this flag if you want to store the net output thoughout epochs')
+    parser.add_argument('--slide_method', type=str, choices=['slide_serial', 'slide_spark'],
+        help='how would you like to do the sliding window? naive serial version or parallelize with spark?')
     return parser.parse_args()
 
 
@@ -281,7 +284,7 @@ def net_train_main(yaml_model, args):
     #  data & net & conf  #
     #---------------------#
     data_set = Data(yaml_model, timestamp, profile=True)
-    net = Net_structure(yaml_model)
+    net = Net_structure(yaml_model, args.slide_method)
     if args.partial_trained is not None:
         net.import_(args.partial_trained)
     print_to_file(_LOG_FILE['net'], net, type=None)

@@ -61,7 +61,7 @@ _CMD = {
     'dir_clone': """
             dir={dir}
             if [ -d $dir ]; then rm -rf $dir; fi
-            git clone -b ec2_spark {dir_git}
+            git clone --depth=1 -b ec2_spark {dir_git}
     """,
     'py3_check': """
             py3_path=$(which python3)
@@ -165,10 +165,10 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         exit()
 
 
-def submit_application(name, master_dns):
+def submit_application(name, master_dns, slide_method):
     printf('ENTER application submission', type='WARN')
     try:
-        app_args = 'convnet_usps1'
+        app_args = 'convnet_usps1 --slide_method {}'.format(slide_method)
         shot = [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
         shot += [_CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)]
         shot += ['exit\n']
@@ -197,4 +197,4 @@ if __name__ == '__main__':
     master_dns = get_master_DNS(args.cluster_name)
     name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
         is_hdfs=(not args.no_hdfs), is_clone=(not args.no_clone), is_scp=(not args.no_scp))
-    submit_application(name, master_dns)
+    submit_application(name, master_dns, args.cnn_slide_method)

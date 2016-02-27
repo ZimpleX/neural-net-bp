@@ -40,6 +40,7 @@ def parse_args():
     parser.add_argument('--no_hdfs', action='store_true', help='[FOR SUBMIT]: add this flag if no copying from S3')
     parser.add_argument('--no_clone', action='store_true', help='[FOR SUBMIT]: add this flag if no clone from git')
     parser.add_argument('--no_scp', action='store_true', help='[FOR SUBMIT]: add this flag if no scp of credentials/rc')
+    parser.add_argument('--cnn_slide_method',  type=str, choices=['slide_serial', 'slide_spark'], help='how would you like to perform the sliding window operation for your CNN?')
 
     
     return parser.parse_args()
