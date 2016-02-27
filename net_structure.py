@@ -340,7 +340,7 @@ def net_train_main(yaml_model, args):
         best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
         if cur_val_correct > best_val_correct:
             best_val_correct = cur_val_correct
-            net.export_(yaml_model['checkpoint'])
+            #net.export_(yaml_model['checkpoint'])
         __ = timeit.default_timer()
         _TIME['checkpoint'] += (__ - _)
 
@@ -376,6 +376,7 @@ if __name__ == '__main__':
     from pyspark import SparkContext
     import ec2.sc_glob as spark
     spark.sc = SparkContext(appName='ImageNet-dummy')
+    spark.rdd_count =spark.sc.accumulator(0)
     args = parse_args()
     from stat_cnn.time import RUNTIME
     if args.yaml_model:
@@ -384,3 +385,4 @@ if __name__ == '__main__':
         tot_time = net_train_main(yaml_model, args)
         for k in RUNTIME.keys():
             printf('{} takes {:.3f}%', k, 100*RUNTIME[k]/tot_time, type='WARN')
+        printf('parallelization is performed {} times', spark.rdd_count.value)
