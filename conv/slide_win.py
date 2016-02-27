@@ -7,6 +7,7 @@ from math import ceil, floor
 from abc import ABCMeta, abstractmethod
 import timeit
 from stat_cnn.time import RUNTIME
+from logf.printf import printf
 
 import pdb
 
