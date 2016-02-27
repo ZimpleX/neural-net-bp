@@ -100,6 +100,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         for jj in range(s):
                 itr += [np.array((ii,jj))]
     rdd_base_exp = spark.sc.parallelize(itr).map(lambda x: (x,base_mat, spark.rdd_count.add(1)))
+    printf(spark.rdd_count.value)
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
     mn = np.array((int(m), int(n)))
