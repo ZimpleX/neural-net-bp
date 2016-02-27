@@ -18,7 +18,7 @@ import pdb
 
 
 
-def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
+def _get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     """
     return a patch of the base matrix
     [NOTE]: y_start_base, x_start_base can be fractional number; dx, dy is counted in `unit`
@@ -55,6 +55,16 @@ def get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     return patch
 
 
+def _get_patch_wrapper(padding, sliding_stride, unit, unroll_idx, tile_idx, max_idx, base_mat, dy, dx):
+    """
+    wrapper of _get_patch: set up the index
+    """
+    ret_idx = np.minimum(max_idx, tile_idx+unroll_idx)
+    yx = -padding + sliding_stride*ret_idx
+    return ret_idx, _get_patch(base_mat, *yx, dy, dx, unit)
+
+    
+
 def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj):
     """
     Method ONLY for 4d numpy array
@@ -85,25 +95,35 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     import ec2.sc_glob as spark
     t4 = timeit.default_timer()
     s = 2
-    rdd_base_exp = spark.sc.parallelize([None]*s*s).map(lambda x: base_mat)
+    itr = []
+    for ii in range(s):
+        for jj in range(s):
+                itr += [np.array((ii,jj))]
+    rdd_base_exp = spark.sc.parallelize(itr).map(lambda x: (x,base_mat))
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
-    mm = int(m)
-    nn = int(n)
-    for i in range(0, mm, s):
-        for j in range(0, nn, s):
+    mn = np.array((int(m), int(n)))
+    pss = (padding, sliding_stride, patch_stride)
+    for i in range(0, mn[0], s):
+        for j in range(0, mn[1], s):
             # MapReduce here
+            ij = np.array((i,j))
+            t6 = timeit.default_timer()
+            patch_rdd = rdd_base_exp.map(lambda r: \
+                _get_patch_wrapper(*pss, r._1, ij, mn, r._2, f, g))
+            t7 = timeit.default_timer()
+            RUNTIME['get_patch_time_spark'] += t7 - t6
             for ii in range(i, min(i+s,mm)):
                 for jj in range(j , min(j+s,nn)):
                     y = -padding + ii*sliding_stride
                     x = -padding + jj*sliding_stride
                     t1 = timeit.default_timer()
-                    patch = get_patch(base_mat, y, x, f, g, patch_stride)
+                    patch = _get_patch(base_mat, y, x, f, g, patch_stride)
                     t2 = timeit.default_timer()
                     ret_mat[:,:,ii,jj] = func_obj.patch_func(patch,ii,jj)
                     t3 = timeit.default_timer()
-                    RUNTIME['get_path_time'] += t2 - t1
-                    RUNTIME['dot_time'] += t3 - t2
+                    RUNTIME['get_patch_time_serial'] += t2 - t1
+                    RUNTIME['dot_time_serial'] += t3 - t2
     end_time = timeit.default_timer()
     RUNTIME['conv_time'] += end_time - start_time
     return ret_mat
