@@ -97,24 +97,29 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     func_obj.pre_proc(base_mat, kern_mat)
     y = -padding - sliding_stride
     # double for loop is a map function
+    start_time = timeit.default_timer()
     import ec2.sc_glob as spark
     t4 = timeit.default_timer()
-    rdd_base_exp = spark.sc.parallelize([None]*4).map(lambda x: base_mat)
+    s = 2
+    rdd_base_exp = spark.sc.parallelize([None]*s*s).map(lambda x: base_mat)
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
-    start_time = timeit.default_timer()
-    for i in range(int(m)):
-        y += sliding_stride
-        x = -padding - sliding_stride
-        for j in range(int(n)):
-            x += sliding_stride
-            t1 = timeit.default_timer()
-            patch = get_patch(base_mat, y, x, f, g, patch_stride)
-            t2 = timeit.default_timer()
-            ret_mat[:,:,i,j] = func_obj.patch_func(patch,i,j)
-            t3 = timeit.default_timer()
-            RUNTIME['get_path_time'] += t2 - t1
-            RUNTIME['dot_time'] += t3 - t2
+    mm = int(m)
+    nn = int(n)
+    for i in range(0, mm, s):
+        for j in range(0, nn, s):
+            # MapReduce here
+            for ii in range(i, min(i+s,mm)):
+                for jj in range(j , min(j+s,nn)):
+                    y = -padding + ii*sliding_stride
+                    x = -padding + jj*sliding_stride
+                    t1 = timeit.default_timer()
+                    patch = get_patch(base_mat, y, x, f, g, patch_stride)
+                    t2 = timeit.default_timer()
+                    ret_mat[:,:,i,j] = func_obj.patch_func(patch,i,j)
+                    t3 = timeit.default_timer()
+                    RUNTIME['get_path_time'] += t2 - t1
+                    RUNTIME['dot_time'] += t3 - t2
     end_time = timeit.default_timer()
     RUNTIME['conv_time'] += end_time - start_time
     return ret_mat
