@@ -113,8 +113,8 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
                 _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
             t7 = timeit.default_timer()
             RUNTIME['get_patch_time_spark'] += t7 - t6
-            for ii in range(i, min(i+s,mn)):
-                for jj in range(j , min(j+s,mn)):
+            for ii in range(i, min(i+s,mn[0])):
+                for jj in range(j , min(j+s,mn[1])):
                     y = -padding + ii*sliding_stride
                     x = -padding + jj*sliding_stride
                     t1 = timeit.default_timer()
