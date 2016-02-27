@@ -60,8 +60,8 @@ def _get_patch_wrapper(padding, sliding_stride, unit, unroll_idx, tile_idx, max_
     wrapper of _get_patch: set up the index
     """
     ret_idx = np.minimum(max_idx, tile_idx+unroll_idx)
-    yx = -padding + sliding_stride*ret_idx
-    return ret_idx, _get_patch(base_mat, *yx, dy, dx, unit)
+    y, x = -padding + sliding_stride*ret_idx
+    return ret_idx, _get_patch(base_mat, y, x, dy, dx, unit)
 
     
 
