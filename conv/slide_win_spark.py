@@ -55,7 +55,7 @@ def _get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     return patch
 
 
-def _get_patch_wrapper(padding, sliding_stride, unit, unroll_idx, tile_idx, max_idx, base_mat, dy, dx):
+def _get_patch_wrapper(unroll_idx, tile_idx, max_idx, base_mat, dy, dx, padding, sliding_stride, unit):
     """
     wrapper of _get_patch: set up the index
     """
@@ -110,7 +110,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
             ij = np.array((i,j))
             t6 = timeit.default_timer()
             patch_rdd = rdd_base_exp.map(lambda r: \
-                _get_patch_wrapper(*pss, r._1, ij, mn, r._2, f, g))
+                _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
             t7 = timeit.default_timer()
             RUNTIME['get_patch_time_spark'] += t7 - t6
             for ii in range(i, min(i+s,mm)):
