@@ -147,7 +147,7 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True):
     try:
         if is_scp:
-            for f in [credential_f, 'ec2/'+_CUS_BASHRC]:
+            for f in [credential_f, 'ec2/'+_CUS_BASHRC, 'train_data/usps.npz']:
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns, to_dir='')
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
                 printf(scpScript, type='WARN')
