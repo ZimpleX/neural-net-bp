@@ -20,6 +20,13 @@ _APP_INFO = {
         'submit_main': 'net_structure.py'
 }
 _CMD = {
+    'tar_z': """
+            tar -zcf temp.ignore/temp.tar.gz ../neural-net-bp/ --exclude='.git' --exclude='*ignore*' \
+                --exclude='__pycache__' --exclude='*.db' --exclude='*.pyc' --exclude='*.npz'
+    """,
+    'tar_x': """
+            tar -xzf temp.tar.gz
+    """,
     'source_rc': """
             . /root/{rc}
     """,
@@ -62,6 +69,10 @@ _CMD = {
             dir={dir}
             if [ -d $dir ]; then rm -rf $dir; fi
             git clone --depth=1 -b ec2_spark {dir_git}
+    """,
+    'dir_clear': """
+            dir=/root/{dir}
+            if [ -d $dir ]; then rm -rf $dir; fi
     """,
     'py3_check': """
             py3_path=$(which python3)
@@ -140,10 +151,14 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns, to_dir='')
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
                 printf(scpScript, type='WARN')
+        if is_clone:
+            cmd  = [_CMD['tar_z']]
+            cmd += [_CMD['scp'].format(id=id_f, f='temp.ignore/temp.tar.gz', dns=master_dns, to_dir='')]
+            cmd  = '\n'.join(cmd)
+            stdout, stderr = runScript(cmd, output_opt='display', input_opt='display')
 
         app_root = _APP_INFO['repo_url'].split('/')[-1].split('.git')[0]
         combineCmd  = []
-        combineCmd += [_CMD['dir_create'].format(dir='neural-net-bp')]
         combineCmd += [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
         combineCmd += [_CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
         if is_hdfs:
@@ -153,6 +168,8 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         combineCmd += [_CMD['dir_create'].format(dir='/tmp/spark-events/')]
         #if is_clone:
         #   combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
+        if is_clone:
+            combineCmd += [_CMD['tar_x']]
         combineCmd += [_CMD['py3_check']]
         combineCmd += ['exit\n']
         combineCmd = '\n'.join(combineCmd)
@@ -160,9 +177,9 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         printf(remoteScript)
         
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[combineCmd, '.quit'])
-        if is_clone:
-            cloneScript = _CMD['scp'].format(id=id_f, f='$(git ls-files)', dns=master_dns, to_dir='neural-net-bp')
-            stdout, stderr = runScript(cloneScript, output_opt='display', input_opt='display')
+        #if is_clone:
+        #    cloneScript = _CMD['scp'].format(id=id_f, f='$(git ls-files)', dns=master_dns, to_dir='neural-net-bp')
+        #    stdout, stderr = runScript(cloneScript, output_opt='display', input_opt='display')
 
         return app_root
     except ScriptException as se:
