@@ -377,6 +377,8 @@ if __name__ == '__main__':
     import ec2.sc_glob as spark
     spark.sc = SparkContext(appName='ImageNet-dummy')
     spark.rdd_count =spark.sc.accumulator(0)
+    spark.rdd_count.add(1)
+    printf(spark.rdd_count.value, type="WARN")
     args = parse_args()
     from stat_cnn.time import RUNTIME
     if args.yaml_model:

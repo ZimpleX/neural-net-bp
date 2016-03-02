@@ -87,11 +87,15 @@ _CMD = {
             app_home=/root/{name}/
             cd $app_home
             submit_main=$app_home/{main}
-            args='{args}'
+            args="{args}"
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
                 --conf spark.eventLog.enabled=true $submit_main $args
             #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
+    """,
+    'record_submit_cmd': """
+            echo '{cmd}' > debug_submit.sh
+            chmod 777 debug_submit.sh
     """
 }
 
@@ -192,7 +196,9 @@ def submit_application(name, master_dns, slide_method):
     try:
         app_args = 'convnet_usps1 --slide_method {}'.format(slide_method)
         shot = [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
-        shot += [_CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)]
+        submit_cmd = _CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)
+        shot += [_CMD['record_submit_cmd'].format(cmd=';'.join(submit_cmd.split('\n')[1:]))]
+        shot += [submit_cmd]
         shot += ['exit\n']
         shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']

@@ -81,7 +81,9 @@ def login(wrap_script, wrap_args, name, input_opt):
                     input_pipe += [new_ip]
                 else:
                     break
-        stdout, stderr = runScript(_CMD['login'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name),
+        login_scpt = _CMD['login'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name)
+        printf(login_scpt, type='WARN')
+        stdout, stderr = runScript(login_scpt,
                 output_opt='display', input_opt=input_opt, input_pipe=input_pipe) 
         printf('finish interaction with master node.')
     except ScriptException as se:
