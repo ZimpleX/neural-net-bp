@@ -20,10 +20,10 @@ Design Flow:
 
     [UCLA design]:
         'indenpendent' / 'irrelevant' dimensions: chan_n, chan_n1
-        --> parallel 2 dimensions only. Not good.
+        --> parallel 2 dimensions only. Each MapReduce compute only (chan_n x chan_n1) operations
         
     [Improvement]:
-        At the expense of Additional memory, decouple the row_n, kern_x dimensions for pixal_n1
+        At the expense of memory replication, decouple the row_n, kern_x dimensions for pixal_n1
         --> pixal_n1_expanded[chan_n1][row_n][kern_x][col_n][kern_y]
 
         for PERMUTATION(chan_n, row_n, col_n, chan_n1, kern_x, kern_y):
