@@ -17,7 +17,7 @@ _AWS_DIR_INFO = {
 _APP_INFO = {
         'repo_url': 'https://github.com/ZimpleX/neural-net-bp',
         'name': 'blood_cell_classification_3cat',
-        'submit_main': 'net_structure.py'
+        'submit_main': 'main.py'
 }
 _CMD = {
     'tar_z': """

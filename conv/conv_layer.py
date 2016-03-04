@@ -4,7 +4,7 @@ the efficiency may depend on the image size and net struct
 """
 from abc import ABCMeta, abstractmethod
 import numpy as np
-from node_activity import Node_activity
+from net.node_activity import Node_activity
 import conv.slide_win as slide_serial
 import conv.slide_win_spark as slide_spark
 import pdb

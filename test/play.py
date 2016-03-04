@@ -2,7 +2,7 @@
 This script is to manually test if a trained model feels good.
 """
 
-from net_structure import Net_structure
+from net.structure import Net_structure
 import argparse
 import numpy as np
 import util.convert_ndarr_img as img_cvt

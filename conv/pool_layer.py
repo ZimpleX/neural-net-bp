@@ -3,7 +3,7 @@ pooling layer to be operated together with conv layer.
 """
 from abc import ABCMeta, abstractmethod
 import numpy as np
-from node_activity import Node_activity
+from net.node_activity import Node_activity
 from conv.conv_layer import Node_conv
 import conv.slide_win as slide_serial
 import conv.slide_win_spark as slide_spark

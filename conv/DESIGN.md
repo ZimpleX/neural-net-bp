@@ -79,3 +79,29 @@ for col_n stride by C:
 ```
 
 Most intuitive: simply reduce the number of iterations. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Details:**
+
+only parallelize when convolution starts. 
+
+RDD is not good at `ndarray` operations (??).
+
+is the `collect()` method too often (??)

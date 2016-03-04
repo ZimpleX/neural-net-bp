@@ -16,16 +16,15 @@ TODO:
 
 import numpy as np
 import yaml
-from node_activity import *
+from net.node_activity import *
 import conv.util
-from cost import *
-from data_setup import *
-from conf import *
+from net.cost import *
+from net.data_setup import *
+from net.conf import *
 import util.data_proc as data_util
 from logf.stringf import *
 from logf.printf import *
 from logf.filef import *
-import argparse
 from time import strftime
 import timeit
 import sys
@@ -249,21 +248,6 @@ class Net_structure:
 
 
 
-###########################
-#        arg parse        #
-###########################
-def parse_args():
-    parser = argparse.ArgumentParser('neural network model')
-    parser.add_argument('yaml_model', type=str, metavar='YAML', 
-        help='specify the yaml models to be used by this net training')
-    parser.add_argument('-p', '--partial_trained', type=str, default=None,
-        help='use the partially trained model')
-    parser.add_argument('--profile_output', action='store_true',
-        help='add this flag if you want to store the net output thoughout epochs')
-    parser.add_argument('--slide_method', type=str, choices=['slide_serial', 'slide_spark'],
-        help='how would you like to do the sliding window? naive serial version or parallelize with spark?')
-    return parser.parse_args()
-
 
 
 #########################
@@ -371,20 +355,3 @@ def net_train_main(yaml_model, args):
     return end_time - start_time
 
 
-
-if __name__ == '__main__':
-    from pyspark import SparkContext
-    import ec2.sc_glob as spark
-    spark.sc = SparkContext(appName='ImageNet-dummy')
-    spark.rdd_count =spark.sc.accumulator(0)
-    spark.rdd_count.add(1)
-    printf(spark.rdd_count.value, type="WARN")
-    args = parse_args()
-    from stat_cnn.time import RUNTIME
-    if args.yaml_model:
-        yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
-        yaml_model = yaml.load(open(yaml_model_full))
-        tot_time = net_train_main(yaml_model, args)
-        for k in RUNTIME.keys():
-            printf('{} takes {:.3f}%', k, 100*RUNTIME[k]/tot_time, type='WARN')
-        printf('parallelization is performed {} times', spark.rdd_count.value)

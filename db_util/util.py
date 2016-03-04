@@ -6,7 +6,7 @@ import numpy as np
 import timeit
 from logf.printf import *
 from db_util.conf import *
-from conf import *
+from net.conf import *
 import re
 
 import pdb

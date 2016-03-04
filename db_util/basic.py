@@ -13,7 +13,7 @@ import os
 import sqlite3
 from time import strftime
 from db_util.conf import *
-from conf import *
+from net.conf import *
 from db_util.util import *
 import logf.filef as filef
 from logf.printf import *

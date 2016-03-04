@@ -1,10 +1,10 @@
 """
-sweep script to run net_structure, and collect profile data
+sweep script to run structure, and collect profile data
 """
 
-import net_structure as ns
+import net.structure as ns
 import argparse
-from conf import *
+from net.conf import *
 import re
 import sys
 

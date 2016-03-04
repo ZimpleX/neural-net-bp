@@ -5,9 +5,9 @@ from util.training_data_func import trainingFunc
 import sqlite3
 from logf.printf import *
 import db_util as db
-import conf
-from conf import activation_dict
-from cost import cost_dict
+import net.conf as conf
+from net.conf import activation_dict
+from net.cost import cost_dict
 import argparse
 from random import uniform
 import os

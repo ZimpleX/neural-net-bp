@@ -3,7 +3,7 @@ set up data (training / testing) for training the ANN
 """
 from logf.printf import *
 from logf.stringf import *
-import conf
+import net.conf as conf
 import db_util as db
 import re
 import sqlite3
@@ -75,7 +75,7 @@ class Data:
         NOTE: this is not general loading for all kinds of data.
             It is fitted for digit-classification (USPS) currently
         """
-        if yaml_model['data_path'][0] == '/':
+        if yaml_model['data_path'][0] in ['/', '.']:
             data_path = yaml_model['data_path']
         else:
             data_path = '{}/{}'.format(conf.TRAINING_DIR, yaml_model['data_path'])

@@ -4,11 +4,11 @@ NOTE:
 """
 from logf.printf import *
 from logf.filef import *
-from cost import *
-from net_structure import *
-from node_activity import *
-from conf import *
-from data_setup import *
+from net.cost import *
+from net.structure import *
+from net.node_activity import *
+from net.conf import *
+from net.data_setup import *
 import unittest as ut
 from numpy import *
 from numpy.testing import *
@@ -139,7 +139,7 @@ class Test_conv(ut.TestCase):
 
 
 if __name__ == "__main__":
-    # accept args the same way as the main in net_structure.py
+    # accept args the same way as the main in net.structure.py
     args = parse_args()
     # ut.main()
     #suite = ut.TestLoader().loadTestsFromTestCase(Test_deriv)

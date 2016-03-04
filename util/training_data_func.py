@@ -4,9 +4,9 @@ All training function will produce a target value between 0 and 1
 """
 from math import exp, sin
 from random import uniform
-from net_structure import Net_structure
-from cost import cost_dict
-from conf import activation_dict
+from net.structure import Net_structure
+from net.cost import cost_dict
+from net.conf import activation_dict
 from numpy import *
 from functools import reduce
 from logf.printf import *
