@@ -20,11 +20,12 @@ class Node_pool(Node_conv):
     Pooling layer doesn't have anything to learn.
     """
     __metaclass__ = ABCMeta
-    def __init__(self, kern, stride, padding, slid_method):
+    def __init__(self, kern, stride, padding, slid_method, sc):
         self.kern = kern
         self.stride = stride
         self.padding = padding
         self.slid = eval(slid_method)
+        self.sc = sc
 
 
     def act_forward(self, prev_layer, _, __):
@@ -33,7 +34,7 @@ class Node_pool(Node_conv):
         """
         batch, channel = prev_layer.shape[0:2]
         pseudo_kern = np.zeros((channel, channel, self.kern, self.kern))
-        return self.slid.slid_win_4d_flip(prev_layer, pseudo_kern, self.stride, 1, self.padding, self.slid.pool_ff())
+        return self.slid.slid_win_4d_flip(prev_layer, pseudo_kern, self.stride, 1, self.padding, self.slid.pool_ff(), self.sc)
     
 
     @classmethod
@@ -49,5 +50,5 @@ class Node_pool(Node_conv):
         yn_zip = np.concatenate((y_n,c_d_yn.reshape(y_n.shape)), axis=1)    # double the channel
         pd = Fraction(self.kern - self.padding - 1, self.stride)
         ps = ss = Fraction(1, self.stride)
-        c_d_yn1 = self.slid.slid_win_4d_flip(yn_zip, pseudo_kern, ss, ps, pd, self.slid.pool_bp(y_n_1))
+        c_d_yn1 = self.slid.slid_win_4d_flip(yn_zip, pseudo_kern, ss, ps, pd, self.slid.pool_bp(y_n_1), self.sc)
         return None, None, c_d_yn1

@@ -20,10 +20,11 @@ class Node_conv(Node_activity):
     make sure that the kernel width is equal to kernel height!!
     """
     __metaclass__ = ABCMeta
-    def __init__(self, stride, padding, slid_method):
+    def __init__(self, stride, padding, slid_method, sc):
         self.stride = stride
         self.padding = padding
         self.slid = eval(slid_method)
+        self.sc = sc
 
 
     def act_forward(self, prev_layer, w, b):
@@ -40,7 +41,7 @@ class Node_conv(Node_activity):
             please refer to slid_win_4d_flip for height' and width'
         """
         ret = self.slid.slid_win_4d_flip(prev_layer, np.swapaxes(w, 0, 1), 
-                self.stride, 1, self.padding, self.slid.convolution())
+                self.stride, 1, self.padding, self.slid.convolution(), self.sc)
         b_exp = b[np.newaxis, :, np.newaxis, np.newaxis]
         return np.clip(ret+b_exp, 0, np.finfo(np.float64).max)    # ReLU
 
@@ -71,7 +72,7 @@ class Node_conv(Node_activity):
         #   padding = padding
         #   slide_stride = 1
         c_d_w = self.slid.slid_win_4d_flip(np.swapaxes(y_n_1,0,1), np.swapaxes(c_d_xn,0,1), 
-                1, self.stride, self.padding, self.slid.convolution())
+                1, self.stride, self.padding, self.slid.convolution(), self.sc)
         assert c_d_w.shape == w.shape
         ####  c_d_yn1  ####
         ##  c_d_xn (*) w ##
@@ -80,6 +81,6 @@ class Node_conv(Node_activity):
         #   slide_stride = 1/stride
         pad2 = Fraction(w.shape[-1] - self.padding - 1, self.stride)
         c_d_yn1 = self.slid.slid_win_4d_flip(c_d_xn, w[:,:,::-1,::-1], Fraction(1, self.stride), 
-                Fraction(1, self.stride), pad2, self.slid.convolution())
+                Fraction(1, self.stride), pad2, self.slid.convolution(), self.sc)
         assert c_d_yn1.shape == y_n_1.shape
         return c_d_w, c_d_b, c_d_yn1

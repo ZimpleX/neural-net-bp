@@ -69,7 +69,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, yaml_model, slide_method):
+    def __init__(self, yaml_model, slide_method, sc):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -102,6 +102,7 @@ class Net_structure:
                 act_init = (l['type']=='MAXPOOL') and [kern] or []
                 act_init += [l['stride'], l['padding']]
                 act_init += [slide_method]
+                act_init += [sc]
                 self.activ_list[idx] = act_func(*act_init)
                 prev_img = conv.util.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:
@@ -253,7 +254,7 @@ class Net_structure:
 #########################
 #        NN flow        #
 #########################
-def net_train_main(yaml_model, args):
+def net_train_main(yaml_model, args, sc):
     """
     define main separately to facilitate unittest
     """
@@ -268,7 +269,7 @@ def net_train_main(yaml_model, args):
     #  data & net & conf  #
     #---------------------#
     data_set = Data(yaml_model, timestamp, profile=True)
-    net = Net_structure(yaml_model, args.slide_method)
+    net = Net_structure(yaml_model, args.slide_method, sc)
     if args.partial_trained is not None:
         net.import_(args.partial_trained)
     print_to_file(_LOG_FILE['net'], net, type=None)
@@ -311,6 +312,7 @@ def net_train_main(yaml_model, args):
             net.batch += 1
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
             printf('cur cost: {}', cur_cost_bat)
+            printf('epoch {}, batch {}', epoch, batch, type="WARN")
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
@@ -320,11 +322,14 @@ def net_train_main(yaml_model, args):
         correct_bat /= num_batch
         # validation & checkpointing
         _ = timeit.default_timer()
-        cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t)
-        best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
-        if cur_val_correct > best_val_correct:
-            best_val_correct = cur_val_correct
-            #net.export_(yaml_model['checkpoint'])
+        #try:
+        #    cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t)
+        #except Exception as e:
+        #    printf('EVALUATION of net FAILED: {}', e, type="WARN")
+        #best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
+        #if cur_val_correct > best_val_correct:
+        #    best_val_correct = cur_val_correct
+        #   net.export_(yaml_model['checkpoint'])
         __ = timeit.default_timer()
         _TIME['checkpoint'] += (__ - _)
 
@@ -336,7 +341,7 @@ def net_train_main(yaml_model, args):
         #    or (net.epoch == conf.num_epoch):
         #    net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
         printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
-        printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
+        #printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
 
 
     end_time = timeit.default_timer()

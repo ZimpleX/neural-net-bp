@@ -66,7 +66,7 @@ def _get_patch_wrapper(unroll_idx, tile_idx, max_idx, base_mat, dy, dx, padding,
 
     
 
-def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj):
+def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, sc):
     """
     Method ONLY for 4d numpy array
     Operation: slide kern_mat through base_mat, according to stride and padding.
@@ -93,15 +93,19 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     y = -padding - sliding_stride
     # double for loop is a map function
     start_time = timeit.default_timer()
-    import ec2.sc_glob as spark
     t4 = timeit.default_timer()
     s = 2
     itr = []
     for ii in range(s):
         for jj in range(s):
                 itr += [np.array((ii,jj))]
-    rdd_base_exp = spark.sc.parallelize(itr).map(lambda x: (x,base_mat, spark.rdd_count.add(1))).collect()
-    #printf(spark.rdd_count.value)
+    try:
+        # base_mat typical shape: 100 x 1 x 256 x 256
+        rdd_base_exp = sc.parallelize(itr).map(lambda x: (x,base_mat))
+        rdd_base_exp.collect()
+        printf('AFTER COLLECT', type="WARN")
+    except Exception:
+        printf("rdd_base_exp", type="ERROR")
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
     mn = np.array((int(m), int(n)))
@@ -111,8 +115,11 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
             # MapReduce here
             ij = np.array((i,j))
             t6 = timeit.default_timer()
-            patch_rdd = rdd_base_exp.map(lambda r: \
-                _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
+            try:
+                patch_rdd = rdd_base_exp.map(lambda r: \
+                    _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
+            except Exception:
+                printf("rdd_base_exp map", type="ERROR")
             t7 = timeit.default_timer()
             RUNTIME['get_patch_time_spark'] += t7 - t6
             for ii in range(i, min(i+s,mn[0])):

@@ -92,7 +92,11 @@ Most intuitive: simply reduce the number of iterations.
 
 
 
+### current thought
 
+- normal data set: best to parallelize `batch  x chan_n x chan_n1`
+- blood cell: possibility exists that training is best when using very small batch size (or even online). --> parallelizing on `row_n` and `col_n` is best in this case. --> since `batch` is small, replicating data should also be fast. 
+- I should try both. 
 
 
 

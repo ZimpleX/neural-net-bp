@@ -27,6 +27,9 @@ _CMD = {
     'tar_x': """
             tar -xzf temp.tar.gz
     """,
+    'zip': """
+            zip -r packed_module.zip . --exclude="*.npz" --exclude="*.git*" --exclude="*.db" --exclude="*.pyc" --exclude="*__pycache__*" --exclude="*ignore*"
+    """,
     'source_rc': """
             . /root/{rc}
     """,
@@ -90,7 +93,7 @@ _CMD = {
             args="{args}"
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
-                --conf spark.eventLog.enabled=true $submit_main $args
+                --conf spark.eventLog.enabled=true --py-files packed_module.zip $submit_main $args
             #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
     """,
     'record_submit_cmd': """
@@ -156,7 +159,8 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
                 printf(scpScript, type='WARN')
         if is_clone:
-            cmd  = [_CMD['tar_z']]
+            cmd  = [_CMD['zip']]
+            cmd += [_CMD['tar_z']]
             cmd += [_CMD['scp'].format(id=id_f, f='temp.ignore/temp.tar.gz', dns=master_dns, to_dir='')]
             cmd  = '\n'.join(cmd)
             stdout, stderr = runScript(cmd, output_opt='display', input_opt='display')
