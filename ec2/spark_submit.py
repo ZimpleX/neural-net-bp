@@ -17,7 +17,7 @@ _AWS_DIR_INFO = {
 _APP_INFO = {
         'repo_url': 'https://github.com/ZimpleX/neural-net-bp',
         'name': 'blood_cell_classification_3cat',
-        'submit_main': 'main.py'
+        'submit_main': 'conv_unittest.py'   #'main.py'
 }
 _CMD = {
     'tar_z': """
@@ -28,7 +28,7 @@ _CMD = {
             tar -xzf temp.tar.gz
     """,
     'zip': """
-            zip -r packed_module.zip . --exclude="*.npz" --exclude="*.git*" --exclude="*.db" --exclude="*.pyc" --exclude="*__pycache__*" --exclude="*ignore*"
+            zip -R packed_module.zip "*.py" #--exclude="*.npz" --exclude="*.git*" --exclude="*.db" --exclude="*.pyc" --exclude="*__pycache__*" --exclude="*ignore*"
     """,
     'source_rc': """
             . /root/{rc}
@@ -198,7 +198,7 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
 def submit_application(name, master_dns, slide_method):
     printf('ENTER application submission', type='WARN')
     try:
-        app_args = 'convnet_usps1 --slide_method {}'.format(slide_method)
+        app_args = ''#'convnet_usps1 --slide_method {}'.format(slide_method)
         shot = [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
         submit_cmd = _CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)
         shot += [_CMD['record_submit_cmd'].format(cmd=';'.join(submit_cmd.split('\n')[1:]))]
@@ -228,5 +228,5 @@ if __name__ == '__main__':
     key_id, secret_key = conf_AWS_CLI(args.credential_file, args.region)
     master_dns = get_master_DNS(args.cluster_name)
     name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
-        is_hdfs=(not args.no_hdfs), is_clone=(not args.no_clone), is_scp=(not args.no_scp))
+        is_hdfs=(args.hdfs), is_clone=(args.clone), is_scp=(args.scp))
     submit_application(name, master_dns, args.cnn_slide_method)

@@ -53,11 +53,11 @@ def parse_args():
             default=DEFAULT_NAME, help='name of the ec2 cluster')
 
     if submit_script in caller:
-        parser.add_argument('--no_hdfs', action='store_true', help='[FOR SUBMIT]: add this flag if no copying from S3')
-        parser.add_argument('--no_clone', action='store_true', help='[FOR SUBMIT]: add this flag if no clone from git')
-        parser.add_argument('--no_scp', action='store_true', help='[FOR SUBMIT]: add this flag if no scp of credentials/rc')
+        parser.add_argument('--hdfs', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if no copying from S3')
+        parser.add_argument('--clone', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if no clone from git')
+        parser.add_argument('--scp', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if no scp of credentials/rc')
         parser.add_argument('--cnn_slide_method',  type=str, choices=['slide_serial', 'slide_spark'], 
-            required=True, help='how would you like to perform the sliding window operation for your CNN?')
+            default='slide_spark', help='how would you like to perform the sliding window operation for your CNN?')
     
     return parser.parse_args()
 
