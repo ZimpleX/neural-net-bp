@@ -7,13 +7,14 @@ For example:
 import numpy as np
 from logf.printf import printf
 import argparse
+import timeit
 
 import pdb
 
 
 def parse_args():
     parser = argparse.ArgumentParser('unit test for convolution profiling')
-    parser.add_argument('--base_mat', type=int, nargs=4, default=[100,3,256,256], help='[batch, chan_0, row_n, col_n]')
+    parser.add_argument('--base_mat', type=int, nargs=4, default=[800,3,128,128], help='[batch, chan_0, row_n, col_n]')
     parser.add_argument('--kern_mat', type=int, nargs=4, default=[5,3,11,11], help='[chan_n1, chan_0, kern, kern]')
     return parser.parse_args()
 
@@ -44,13 +45,19 @@ if __name__ == '__main__':
         printf('No Spark: run SERIAL version of conv', type='WARN')
 
     if spark_ok:
-        from conv.slide_win_spark import slid_win_4d_flip
+        import conv.slide_win_spark as c
+        slid_win_4d_flip = c.test2
+        #from conv.slide_win import slid_win_4d_flip
         from conv.slide_win_spark import convolution
     else:
         from conv.slide_win import slid_win_4d_flip
         from conv.slide_win import convolution
- 
-    slid_win_4d_flip(data['input'], data['kern'], 1, 1, args.kern_mat[-1]-1, convolution(), sc)
+    t0 = timeit.default_timer()
+    ret = slid_win_4d_flip(data['input'], data['kern'], 1, 1, args.kern_mat[-1]-1, convolution(), sc)
+    t1 = timeit.default_timer()
+    printf('sliding takes a total of {:.3f}s', t1-t0, type='WARN')
+    printf('ret max shape: {}', ret.shape)
+    #printf('return mat[0,0]: {}', ret[0,0,:])
     from stat_cnn.time import RUNTIME
     for k in RUNTIME.keys():
         if RUNTIME[k] != 0.:

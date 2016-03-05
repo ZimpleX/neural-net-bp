@@ -64,7 +64,8 @@ def _get_patch_wrapper(unroll_idx, tile_idx, max_idx, base_mat, dy, dx, padding,
     y, x = -padding + sliding_stride*ret_idx
     return ret_idx, _get_patch(base_mat, y, x, dy, dx, unit)
 
-    
+   
+
 
 def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, sc):
     """
@@ -99,6 +100,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     for ii in range(s):
         for jj in range(s):
                 itr += [np.array((ii,jj))]
+    """
     try:
         # base_mat typical shape: 100 x 1 x 256 x 256
         rdd_base_exp = sc.parallelize(itr).map(lambda x: (x,base_mat))
@@ -106,6 +108,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         printf('AFTER COLLECT', type="WARN")
     except Exception:
         printf("rdd_base_exp", type="ERROR")
+    """
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
     mn = np.array((int(m), int(n)))
@@ -115,11 +118,13 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
             # MapReduce here
             ij = np.array((i,j))
             t6 = timeit.default_timer()
+            """
             try:
                 patch_rdd = rdd_base_exp.map(lambda r: \
                     _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
             except Exception:
                 printf("rdd_base_exp map", type="ERROR")
+            """
             t7 = timeit.default_timer()
             RUNTIME['get_patch_time_spark'] += t7 - t6
             for ii in range(i, min(i+s,mn[0])):
@@ -202,3 +207,57 @@ class pool_bp(slide_operation):
         c_d_yn_patch = patch[:,self.channel::,:,:]
         y_n1_flt = self.y_n_1[:,:,i,j,np.newaxis,np.newaxis]
         return np.sum((y_n1_flt == y_n_patch) * c_d_yn_patch, axis=(-1,-2))
+
+
+
+
+def test1(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, sc):
+    """
+    testing: 
+        parallelizing the batch dimension.
+        most straight forward, and should not be too bad
+    """
+    l_base = [base_mat[0:25],base_mat[25:50],base_mat[50:75],base_mat[75:100]]
+    base_rdd = sc.parallelize(l_base)
+    #printf("base collect shape: {}", base_rdd.collect()[0].shape, type='WARN')
+    import conv.slide_win
+    f = conv.slide_win.slid_win_4d_flip
+    import timeit
+    t0 = timeit.default_timer()
+    ret = base_rdd.map(lambda _: f(_, kern_mat, sliding_stride, patch_stride, padding, func_obj, None)).collect()
+    t1 = timeit.default_timer()
+    printf('map, collect takes: {:.3f}s', t1-t0, type='WARN')
+    printf('ret len: {}', len(ret))
+    printf('ret[0] shape: {}', ret[0].shape)
+    __ = np.zeros((100,5,266,266))
+    __[0:25] = ret[0]
+    __[25:50] = ret[1]
+    __[50:75] = ret[2]
+    __[75:100] = ret[3]
+    return __
+
+
+
+def test2(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, sc):
+    """
+    testing: 
+        parallelizing the batch dimension.
+        most straight forward, and should not be too bad
+    """
+    l_base = [base_mat[0:100],base_mat[100:200],base_mat[200:300],base_mat[300:400],base_mat[400:500],base_mat[500:600],base_mat[600:700],base_mat[700:800]]
+    base_rdd = sc.parallelize(l_base, 8)
+    import conv.slide_win
+    f = conv.slide_win.slid_win_4d_flip
+    import timeit
+    t0 = timeit.default_timer()
+    ret = base_rdd.map(lambda _: f(_, kern_mat, sliding_stride, patch_stride, padding, func_obj, None))
+    ret = ret.collect()
+    t1 = timeit.default_timer()
+    printf('map, collect takes: {:.3f}s', t1-t0, type='WARN')
+    printf('ret len: {}', len(ret))
+    printf('ret[0] shape: {}', ret[0].shape)
+    __ = np.zeros((200,5,138,138))
+    __[0:25] = ret[0]
+    #__[50:100] = ret[1]
+    return __
+ 
