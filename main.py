@@ -41,8 +41,7 @@ if __name__ == '__main__':
         args.slide_method = 'slide_serial'
     from stat_cnn.time import RUNTIME
     if args.yaml_model:
-        yaml_model_full = 'yaml_model/{}.yaml'.format(args.yaml_model)
-        yaml_model = yaml.load(open(yaml_model_full))
+        yaml_model = yaml.load(open(args.yaml_model))
         tot_time = net_train_main(yaml_model, args, sc)
         for k in RUNTIME.keys():
             printf('{} takes {:.3f}%', k, 100*RUNTIME[k]/tot_time, type='WARN')

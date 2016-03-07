@@ -353,7 +353,7 @@ def net_train_main(yaml_model, args, sc):
     #--------------------#
     #start_time = timeit.default_timer()
     #data_util.profile_output_data(db_subdir, net_data, timestamp)
-    #data_util.profile_cost(db_subdir, cost_data, timestamp)
+    data_util.profile_cost(db_subdir, cost_data, timestamp)
     #end_time = timeit.default_timer()
     #printf('populate profiling data took: {:.3f}', end_time-start_time)
     #printf('time of checkpointing: {}', _TIME['checkpoint'])

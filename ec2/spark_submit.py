@@ -17,7 +17,7 @@ _AWS_DIR_INFO = {
 _APP_INFO = {
         'repo_url': 'https://github.com/ZimpleX/neural-net-bp',
         'name': 'blood_cell_classification_3cat',
-        'submit_main': 'conv_unittest.py'   #'main.py'
+        'submit_main': ['conv_unittest.py','main.py','sweep.py']
 }
 _CMD = {
     'tar_z': """
@@ -85,7 +85,7 @@ _CMD = {
                 exit
             fi    
     """,
-    'submit': """
+    'submit_spark': """
             master_dns={dns}
             app_home=/root/{name}/
             cd $app_home
@@ -95,6 +95,11 @@ _CMD = {
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
                 --conf spark.eventLog.enabled=true --py-files packed_module.zip $submit_main $args
             #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
+    """,
+    'submit_normal': """
+            app_home=/root/{name}/
+            cd $app_home
+            python3 {main} {args}
     """,
     'record_submit_cmd': """
             echo '{cmd}' > debug_submit.sh
@@ -154,7 +159,7 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True):
     try:
         if is_scp:
-            for f in [credential_f, 'ec2/'+_CUS_BASHRC, 'train_data/usps.npz']:
+            for f in [credential_f, 'ec2/'+_CUS_BASHRC, 'train_data/usps.npz', 'train_data/3cat_900_scale.npz']:
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns, to_dir='')
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
                 printf(scpScript, type='WARN')
@@ -195,19 +200,21 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         exit()
 
 
-def submit_application(name, master_dns, slide_method):
+def submit_application(name, master_dns, main, args_main):
     printf('ENTER application submission', type='WARN')
     try:
-        app_args = ''#'convnet_usps1 --slide_method {}'.format(slide_method)
         shot = [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
-        submit_cmd = _CMD['submit'].format(dns=master_dns, name=name, main=_APP_INFO['submit_main'], args=app_args)
+        if main in ['main.py', 'conv_unittest.py']:
+            submit_cmd = _CMD['submit_spark'].format(dns=master_dns, name=name, main=main, args=args_main)
+        elif main in ['sweep.py']:
+            submit_cmd = _CMD['submit_normal'].format(name=name, main=main, args=args_main)
         shot += [_CMD['record_submit_cmd'].format(cmd=';'.join(submit_cmd.split('\n')[1:]))]
         shot += [submit_cmd]
         shot += ['exit\n']
         shot = '\n'.join(shot)
         remoteScript = _CMD['pipe_remote']
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[shot, '.quit'])
-        printf('submit: {}', shot, type='WARN')
+        printf('submit to spark: {}', shot, type='WARN')
     except ScriptException as se:
         printf(se, type='ERROR')
         exit()
@@ -225,8 +232,15 @@ def parse_cnn_result():
 ############################################################
 if __name__ == '__main__':
     args = conf.parse_args()
+    assert args.main in _APP_INFO['submit_main']
+    if args.main_h:
+        try:
+            stdout, stderr = runScript('python3 {} -h'.format(args.main), output_opt='display') 
+        except ScriptException as se:
+            printf(se, type='ERROR')
+        exit()
     key_id, secret_key = conf_AWS_CLI(args.credential_file, args.region)
     master_dns = get_master_DNS(args.cluster_name)
     name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
         is_hdfs=(args.hdfs), is_clone=(args.clone), is_scp=(args.scp))
-    submit_application(name, master_dns, args.cnn_slide_method)
+    submit_application(name, master_dns, args.main, args.args_main)

@@ -56,8 +56,11 @@ def parse_args():
         parser.add_argument('--hdfs', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if no copying from S3')
         parser.add_argument('--clone', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if no clone from git')
         parser.add_argument('--scp', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if no scp of credentials/rc')
-        parser.add_argument('--cnn_slide_method',  type=str, choices=['slide_serial', 'slide_spark'], 
-            default='slide_spark', help='how would you like to perform the sliding window operation for your CNN?')
+        # parser.add_argument('--cnn_slide_method',  type=str, choices=['slide_serial', 'slide_spark'], 
+        # default='slide_spark', help='how would you like to perform the sliding window operation for your CNN?')
+        parser.add_argument('--main', required=True, type=str, help='py file of main function')
+        parser.add_argument('--args_main', type=str, help='args passed to main')
+        parser.add_argument('--main_h', action='store_true', help='display help msg for the selected main python file')
     
     return parser.parse_args()
 
