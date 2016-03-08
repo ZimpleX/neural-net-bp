@@ -239,7 +239,7 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         exit()
 
 
-def submit_application(name, master_dns, main, args_main, pipe_args=''):
+def submit_application(name, master_dns, main, args_main, key_id='', secret_key='', pipe_args=''):
     printf('ENTER application submission', type='WARN')
     try:
         shot = [_CMD['source_rc'].format(rc=_CUS_BASHRC)]
@@ -247,6 +247,7 @@ def submit_application(name, master_dns, main, args_main, pipe_args=''):
             submit_cmd = _CMD['submit_spark'].format(dns=master_dns, name=name, main=main, args=args_main)
         elif main in ['sweep.py', 'main.py']:
             submit_cmd = _CMD['submit_normal'].format(name=name, main=main, args=args_main)
+        shot += [_CMD['key_id_export'].format(key_id=key_id,secret_key=secret_key)]
         shot += [_CMD['record_submit_cmd'].format(cmd=';'.join(submit_cmd.split('\n')[1:]))]
         shot += [submit_cmd]
         shot += ['exit\n']
@@ -288,4 +289,5 @@ if __name__ == '__main__':
         pipe_args += ' --via_cli'
     name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
         is_hdfs=(args.hdfs), is_clone=(args.clone), is_scp=(args.scp), pipe_args=pipe_args)
-    submit_application(name, master_dns, args.main, args.args_main, pipe_args=pipe_args)
+    submit_application(name, master_dns, args.main, args.args_main, 
+        key_id=key_id, secret_key=secret_key, pipe_args=pipe_args)
