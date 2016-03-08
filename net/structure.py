@@ -29,6 +29,8 @@ from time import strftime
 import timeit
 import sys
 import copy
+import os
+from stat_cnn.mem_usage import *
 
 import pdb
 
@@ -316,6 +318,11 @@ def net_train_main(yaml_model, args, sc):
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
+            if batch <= 5:
+                cur_mem_usage()
+            else:
+                exit()
+            
         sys.stdout.write('\r')
         sys.stdout.flush()
         cost_bat /= num_batch
