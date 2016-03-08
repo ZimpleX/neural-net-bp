@@ -1,5 +1,5 @@
 obj_name: 'blood_cell_classification_3cat'
-epoch: 1
+epoch: 10
 batch: 50
 data_path: /root/3cat_900_scale.npz
 checkpoint: 'yaml_model/convnet_cell2.npz'
