@@ -28,12 +28,50 @@ _CMD = {
     """, 
     'destroy': """
         {wrap_script} {wrap_args} destroy {name}
+    """,
+    'cli-launch': """
+        id=$(aws ec2 run-instances {args} | grep 'InstanceId' | cut -d '"' -f 4)
+        aws ec2 create-tags --resources $id --tags Key=Name,Value={ins_name}
+        echo $id
+    """,
+    'cli-login': """
+        name='"{name}"'
+        id=$(aws ec2 describe-instances | grep 'InstanceId' | awk '{{print $2}}')
+        for i in $id
+        do
+            i=$(echo $i | cut -d'"' -f2)
+            echo "searching: ----$i----"
+            k=$(aws ec2 describe-instances --instance-ids $i | grep $name)
+            if [ "$k" != '' ]
+            then
+                dns=$(aws ec2 describe-instances --instance-ids $i | grep 'PublicDnsName' | awk 'NR==1' | cut -d'"' -f4)
+                echo $dns
+                ssh -t -t -i {cred_f} root@$dns
+                exit
+            fi
+        done
+    """,
+    'cli-destroy': """
+        name='"{name}"'
+        id=$(aws ec2 describe-instances | grep 'InstanceId' | awk '{{print $2}}')
+        for i in $id
+        do 
+            i=$(echo $i | cut -d'"' -f2)
+            echo "searching: ----$i----"
+            k=$(aws ec2 describe-instances --instance-ids $i | grep $name)
+            if [ "$k" != '' ]
+            then
+                aws ec2 terminate-instances --instance-ids $i
+                exit
+            fi
+        done
+        echo 'NO INSTANCE MATCHING THE NAME'
     """
 }
 
 
 def setup_spark_ec2_flag(args):
-    second_lvl_arg_dict = {k:conf.DEFAULT_EC2_ARGS[k] for k in mode_keys}
+    second_lvl_arg_dict = {k:conf.DEFAULT_EC2_SPARK_ARGS[k] for k in mode_keys}
     second_lvl_arg_list = map(lambda i: '{} {}'.format(list(second_lvl_arg_dict.keys())[i], 
                         list(second_lvl_arg_dict.values())[i]), range(len(second_lvl_arg_dict)))
     # NOTE: don't use '+=', cuz if the same arg is overwritten in cmd line, 
@@ -43,6 +81,14 @@ def setup_spark_ec2_flag(args):
         .format(args.identity_file, args.identity_file.split('.pem')[0].split('/')[-1])
     printf('args to spark-ec2 script: \n\t{}',spark_ec2_flag)
     return spark_ec2_flag
+
+
+def setup_cli_ec2_flag():
+    second_lvl_arg_dict = conf.DEFAULT_EC2_CLI_ARGS
+    second_lvl_arg_list = map(lambda i: '{} {}'.format(list(second_lvl_arg_dict.keys())[i], 
+                        list(second_lvl_arg_dict.values())[i]), range(len(second_lvl_arg_dict)))
+    return ' '.join(second_lvl_arg_list)
+    
 
 
 def setup_env(cred_f): 
@@ -60,10 +106,25 @@ def setup_env(cred_f):
 
 def launch(wrap_script, wrap_args, name):
     try:
+        pdb.set_trace()
         stdout, stderr = runScript(_CMD['launch'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name), output_opt='display')
         printf('cluster successfully launched.')
     except ScriptException as se:
         printf(se, type='ERROR')
+
+
+def _get_input_pipe(input_opt):
+    input_pipe = []
+    if input_opt == 'pipe':
+        printf('enter cmds you want to send to ec2 cluster. type \'.quit\' to finish up.')
+        while True:
+            new_ip = input('>> ')
+            print(new_ip)
+            if new_ip != '.quit':
+                input_pipe += [new_ip]
+            else:
+                break
+    return input_pipe
 
 
 def login(wrap_script, wrap_args, name, input_opt):
@@ -71,16 +132,7 @@ def login(wrap_script, wrap_args, name, input_opt):
     input_opt should be either 'pipe' or 'cmd'.
     """
     try:
-        input_pipe = []
-        if input_opt == 'pipe':
-            printf('enter cmds you want to send to ec2 cluster. type \'.quit\' to finish up.')
-            while True:
-                new_ip = input('>> ')
-                print(new_ip)
-                if new_ip != '.quit':
-                    input_pipe += [new_ip]
-                else:
-                    break
+        input_pipe = _get_input_pipe(input_opt)
         login_scpt = _CMD['login'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name)
         printf(login_scpt, type='WARN')
         stdout, stderr = runScript(login_scpt,
@@ -100,6 +152,43 @@ def destroy(wrap_script, wrap_args, name):
 
 
 
+def cli_launch(name):
+    """
+    launch instances with aws-cli:
+    i.e.: 
+        don't start spark after launching 
+    """
+    try:
+        fmt_args = setup_cli_ec2_flag()
+        stdout, stderr = runScript(_CMD['cli-launch'].format(ins_name=name, args=fmt_args), output_opt='display')
+        printf('instance(s) successfully launched.')
+        return stdout   # should be instance id: i-xxxxxx
+    except ScriptException as se:
+        printf(se, type='ERROR')
+
+
+def cli_login(name, cred_f, input_opt):
+    try:
+        input_pipe = _get_input_pipe(input_opt)
+        stdout, stderr = runScript(_CMD['cli-login'].format(name=name, cred_f=cred_f), 
+            output_opt='display', input_opt=input_opt, input_pipe=input_pipe)
+        printf('finish interaction with instance.')
+    except ScriptException as se:
+        printf(se, type='ERROR')
+
+
+def cli_destroy(name):
+    """
+    destroy the instance with the name
+    """
+    try:
+        stdout, stderr = runScript(_CMD['cli-destroy'].format(name=name), output_opt='display')
+        printf('instance successfully destroyed.')
+    except ScriptException as se:
+        printf(se, type='ERROR')
+
+
+
 
 
 if __name__=='__main__':
@@ -114,6 +203,7 @@ if __name__=='__main__':
             printf(se, type='ERROR')
         exit()
 
+    # mode_keys are for launching with Spark ONLY
     if args.launch: 
         mode_keys=_DEF_LAUNCH_ARGS
     elif args.login: 
@@ -129,9 +219,18 @@ if __name__=='__main__':
     aws_access_key_id, aws_secret_access_key = setup_env(args.credential_file)
 
     if args.launch:
-        launch(wrap_script, spark_ec2_flag, args.cluster_name)
+        if args.via_cli:
+            cli_launch(args.cluster_name)
+        else:
+            launch(wrap_script, spark_ec2_flag, args.cluster_name)
     elif args.login:
         ip_opt = args.pipe and 'pipe' or 'cmd'
-        login(wrap_script, spark_ec2_flag, args.cluster_name, ip_opt)
+        if args.via_cli:
+            cli_login(args.cluster_name, args.identity_file, ip_opt)
+        else:
+            login(wrap_script, spark_ec2_flag, args.cluster_name, ip_opt)
     elif args.destroy:
-        destroy(wrap_script, spark_ec2_flag, args.cluster_name)
+        if args.via_cli:
+            cli_destroy(args.cluster_name)
+        else:
+            destroy(wrap_script, spark_ec2_flag, args.cluster_name)

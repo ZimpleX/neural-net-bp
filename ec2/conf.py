@@ -5,9 +5,12 @@ DEFAULT_SPARK = '../spark-1.6.0-bin-hadoop2.6/'
 
 DEFAULT_NAME = 'unnamed_cluster'
 
-DEFAULT_EC2_ARGS = {'--instance-type': 't2.micro',
+DEFAULT_EC2_SPARK_ARGS = {'--instance-type': 't2.micro',
                     '--region': 'ap-southeast-1',
                     '--ami': 'ami-12a66771'}
+DEFAULT_EC2_CLI_ARGS = {'--image-id': 'ami-12a66771',
+                    '--count': '1',
+                    '--instance-type': 't2.medium'}
 
 import argparse
 
@@ -46,9 +49,10 @@ def parse_args():
         parser.add_argument('--pipe', action='store_true', 
                 help='[FOR LOGIN ONLY]: do you want to pipe the input to ec2 master node terminal? \
                         \nwill prompt out an interactive shell to record all cmds to be piped to ec2 shell')
+    parser.add_argument('--via_cli', action='store_true', help='add this if you want to launch/spark instances WITHOUT Spark')
 
     parser.add_argument('-r', '--region', type=str, metavar='REGION', 
-            default=DEFAULT_EC2_ARGS['--region'], help='region where clusters located in')
+            default=DEFAULT_EC2_SPARK_ARGS['--region'], help='region where clusters located in')
     parser.add_argument('-n', '--cluster_name', type=str, metavar='CLUSTER_NAME', 
             default=DEFAULT_NAME, help='name of the ec2 cluster')
 
