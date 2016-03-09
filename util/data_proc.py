@@ -66,8 +66,8 @@ def profile_cost(data_dir_name, cost_data, timestamp, db_path=DB_DIR_PARENT):
 
     cost_bat is the sum of cost over some batches
     """
-    prof_attr = ['epoch_num', 'batch_num', 'cost_sum']
-    prof_attr_type = ['INTEGER', 'INTEGER', 'REAL']
+    prof_attr = ['epoch_num', 'batch_num', 'cost_batch', 'correct_batch', 'cost_val', 'correct_val']
+    prof_attr_type = ['INTEGER', 'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
     populate_db(prof_attr, prof_attr_type, cost_data,
         db_path=db_path+data_dir_name, table_name='profile_cost|ann', 
         usr_time=timestamp, perm=_PROF_PERM, silent=True)

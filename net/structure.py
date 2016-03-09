@@ -206,38 +206,52 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-    def evaluate(self, batch_ipt, target):
-        cur_net_out = self.net_act_forward(batch_ipt)
-        cur_cost = sum(self.cost.act_forward(cur_net_out, target))
-        cur_correct = 0
-        if self.cost == cost_dict['CE']:
-            cur_correct = (target.argmax(axis=1)==cur_net_out.argmax(axis=1)).sum()
+    def evaluate(self, batch_ipt, target, mini_batch=0):
+        """
+        mini_batch:     if the evaluation set is large, then evaluate all at a time may cause out of memory error,
+                        especially when the DCNN has many layers.
+                        in case of that, evaluate batch by batch.
+                        mini_batch=0 by default --> evaluate all at once.
+        """
         num_entry = batch_ipt.shape[0]
+        cur_cost = 0.
+        mini_batch = (mini_batch == 0) and num_entry or mini_batch
+        cur_correct = 0.
+        for k in range(0, num_entry, mini_batch):
+            cur_batch = batch_ipt[k:(k+mini_batch)]
+            cur_target = target[k:(k+mini_batch)]
+            cur_net_out = self.net_act_forward(cur_batch)
+            cur_cost += sum(self.cost.act_forward(cur_net_out, cur_target))
+            if self.cost == cost_dict['CE']:
+                cur_correct += (cur_target.argmax(axis=1)==cur_net_out.argmax(axis=1)).sum()
         return cur_cost/num_entry, cur_correct/num_entry
             
 
-    def export_(self, path):
+    def export_(self, yaml_model):
         """
         Save the checkpoint net configuration (*.npz)
         """
+        path = yaml_model['checkpoint']
         info = {}
         info['w_list'] = self.w_list
         info['b_list'] = self.b_list
-        info['activ_list'] = self.activ_list
+        info['yaml_model'] = yaml_model
         info['cost'] = self.cost
         info['epoch'] = self.epoch
         info['batch'] = self.batch
+        # pdb.set_trace()
         np.savez(path, **info)
 
     
-    def import_(self, path):
+    def import_(self, path, slide_method='slide_serial', sc=None):
         """
         Load the checkpointing file for playing around the trained model
         """
         info = np.load(path)
+        yaml_model = info['yaml_model']
+        self.__init__(yaml_model, slide_method, sc)
         self.w_list = info['w_list']
         self.b_list = info['b_list']
-        self.activ_list = info['activ_list']
         self.cost = info['cost']
         self.num_layer = len(self.w_list)
         self.dw_list = [None] * self.num_layer
@@ -326,25 +340,25 @@ def net_train_main(yaml_model, args, sc):
         # validation & checkpointing
         _ = timeit.default_timer()
         #try:
-        #    cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t)
+        cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t, mini_batch=50)
+        best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
+        if cur_val_correct > best_val_correct:
+            best_val_correct = cur_val_correct
+            net.export_(yaml_model)
         #except Exception as e:
         #    printf('EVALUATION of net FAILED: {}', e, type="WARN")
-        #best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
-        #if cur_val_correct > best_val_correct:
-        #    best_val_correct = cur_val_correct
-        #   net.export_(yaml_model['checkpoint'])
         __ = timeit.default_timer()
         _TIME['checkpoint'] += (__ - _)
 
         if cost_data is None:
-            cost_data = [[net.epoch, net.batch, cost_bat]]
+            cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
         else:
-            cost_data += [[net.epoch, net.batch, cost_bat]]
+            cost_data += [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
         #if (args.profile_output and net.epoch % epc_stride == 0) \
         #    or (net.epoch == conf.num_epoch):
         #    net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
         printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
-        #printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
+        printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
 
 
     end_time = timeit.default_timer()
@@ -354,11 +368,8 @@ def net_train_main(yaml_model, args, sc):
     #--------------------#
     #  populate into db  #
     #--------------------#
-    #start_time = timeit.default_timer()
     #data_util.profile_output_data(db_subdir, net_data, timestamp)
     data_util.profile_cost(db_subdir, cost_data, timestamp)
-    #end_time = timeit.default_timer()
-    #printf('populate profiling data took: {:.3f}', end_time-start_time)
     #printf('time of checkpointing: {}', _TIME['checkpoint'])
     return end_time - start_time
 

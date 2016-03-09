@@ -39,5 +39,7 @@ def normalize_exp_col(path_npz, num_op, scale_axis=(1,2,3)):
 
 
 if __name__ == '__main__':
-    #prepare_small_npz('train_data/3cat_7500.npz', 'train_data/3cat_900_scale.npz', 750, 100, 50)
-    normalize_exp_col('train_data/3cat_900_scale.npz', 3)
+    output_data = 'train_data/3cat_1000_scale.npz'
+    input_data = 'train_data/3cat_7500.npz'
+    prepare_small_npz(input_data, output_data, 750, 250, 0)
+    normalize_exp_col(output_data, 3)
