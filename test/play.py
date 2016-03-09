@@ -18,7 +18,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    net = Net_structure(None)
+    net = Net_structure(None, None, None)
     net.import_(args.checkpoint)
     ip_arr = img_cvt.img_to_array(args.test_img)
     op = net.net_act_forward(ip_arr)

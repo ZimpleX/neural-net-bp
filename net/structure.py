@@ -248,7 +248,8 @@ class Net_structure:
         Load the checkpointing file for playing around the trained model
         """
         info = np.load(path)
-        yaml_model = info['yaml_model']
+        yaml_model = info['yaml_model'].reshape(1)[0]
+        # pdb.set_trace()
         self.__init__(yaml_model, slide_method, sc)
         self.w_list = info['w_list']
         self.b_list = info['b_list']
