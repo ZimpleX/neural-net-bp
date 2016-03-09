@@ -115,7 +115,7 @@ _CMD = {
     'submit_normal': """
             app_home=/root/{name}/
             cd $app_home
-            python3 {main} {args}
+            screen -d -m python3 {main} {args}
     """,
     'record_submit_cmd': """
             echo '{cmd}' > debug_submit.sh
@@ -197,7 +197,7 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True, pipe_args=''):
     try:
         if is_scp:
-            for f in [credential_f, 'ec2/'+_CUS_BASHRC, 'train_data/usps.npz', 'train_data/3cat_900_scale.npz']:
+            for f in [credential_f, 'ec2/'+_CUS_BASHRC, 'train_data/usps.npz', 'train_data/3cat_1000_scale.npz']:
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns, to_dir='')
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
                 printf(scpScript, type='WARN')

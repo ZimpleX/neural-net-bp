@@ -34,14 +34,23 @@ if __name__ == '__main__':
         yaml_file = '{}/{}'.format(args.yaml_dir, f)
         yaml_model = yaml.load(open(yaml_file))
         net_train_main(yaml_model, args, None)
+        ec2_chkpt = yaml_model['checkpoint']
         try:
             s3_dir = args.yaml_dir.strip('/').split('/')[-1]
             s3_file = f.split('.yaml')[0]
-            s3_file = '{}.db'.format(s3_file)
+            s3_db = '{}.db'.format(s3_file)
+            s3_chkpt = '{}.chkpt.npz'.format(s3_file)
             # submit script should already cd to main dir (/root/neural-net-bp)
-            cmd = ( "train_name=$(ls -t ./profile_data/ | awk 'NR==1')\n"
-                    "aws s3 cp ./profile_data/$train_name/ann.db s3://spark-ec2-log/$train_name/{s3_dir}/{s3_file}\n")\
-                .format(s3_dir=s3_dir, s3_file=s3_file)
+            cmd = ( "s3_dir={s3_dir}\n"
+                    "s3_db={s3_db}\n"
+                    "train_name=$(ls -t ./profile_data/ | awk 'NR==1')\n"
+                    "aws s3 cp ./profile_data/$train_name/ann.db s3://spark-ec2-log/$train_name/$s3_dir/$s3_db\n"
+                    "ec2_chkpt={ec2_chkpt}\n"
+                    "s3_chkpt={s3_chkpt}\n"
+                    "aws s3 cp $ec2_chkpt s3://spark-ec2-log/$train_name/$s3_dir/$s3_chkpt\n"
+                    "\n"
+                    "rm $ec2_chkpt\n")\
+                .format(s3_dir=s3_dir, s3_db=s3_db, ec2_chkpt=ec2_chkpt, s3_chkpt=s3_chkpt)
             stdout, stderr = runScript(cmd)
         except ScriptException as se:
             printf(se, type='ERROR')
