@@ -253,7 +253,7 @@ class Net_structure:
         self.__init__(yaml_model, slide_method, sc)
         self.w_list = info['w_list']
         self.b_list = info['b_list']
-        self.cost = info['cost']
+        self.cost = info['cost'].reshape(1)[0]
         self.num_layer = len(self.w_list)
         self.dw_list = [None] * self.num_layer
         self.db_list = [None] * self.num_layer

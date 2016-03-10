@@ -25,3 +25,20 @@ This is a self-implemented version of ImageNet (DCNN). The net includes `fully-c
 - `conv`: ...
 - ...
 
+## ImageNet Model Design
+
+current performance:
+
+- `./yaml_model/checkpoint/cell_cnn1.npz`
+  - epoch: 20
+  - batch: 1500
+
+|           | avg cost | avg accuracy (%) |
+| --------- | -------- | ---------------- |
+| 0-1500    | 0.371    | 87.133           |
+| 1500-3000 | 0.581    | 79.267           |
+| 3000-4500 | 0.711    | 76.200           |
+| 4500-6000 | 0.626    | 77.067           |
+| 6000-7500 | 0.651    | 77.733           |
+| Total     | 0.588    | 79.480           |
+
