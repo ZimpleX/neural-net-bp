@@ -109,7 +109,7 @@ _CMD = {
             args="{args}"
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
-                --conf spark.eventLog.enabled=true --py-files packed_module.zip $submit_main $args
+                --conf spark.eventLog.enabled=true --conf spark.executor.memory=2g --conf spark.driver.memory=2g --py-files packed_module.zip $submit_main $args
             #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
     """,
     'submit_normal': """
@@ -129,8 +129,18 @@ _CMD = {
             sudo /sbin/mkswap /var/swap.1
             sudo swapon /var/swap.1
         fi
+    """,
+    '_': """
+        #aws s3 cp s3://bloodcell/3cat_7500.npz /root/raw_bloodcell.npz
+        cd neural-net-bp
+        python3 -m util.npz_prepare
+        #aws s3 cp /root/raw_bloodcell_part*.npz s3://bloodcell/3cat_7500_scaled.npz
+    """,
+    '__': """
+        cd neural-net-bp
+        python3 -m test.batch_eval /root/maybegood.npz /root/test_batch_dir/
     """
-}
+}   # _ & __ are temporary commands: for net training on non-spark env
 
 
 def conf_AWS_CLI(credential_f, region):
@@ -197,7 +207,8 @@ def get_master_DNS(cluster_name):
 def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True, pipe_args=''):
     try:
         if is_scp:
-            for f in [credential_f, 'ec2/'+_CUS_BASHRC, 'train_data/usps.npz', 'train_data/3cat_1000_scale.npz']:
+            # ____
+            for f in [credential_f, 'ec2/'+_CUS_BASHRC]:#, 'train_data/usps.npz', 'train_data/3cat_1000_scale.npz']:
                 scpScript = _CMD['scp'].format(id=id_f, f=f, dns=master_dns, to_dir='')
                 stdout, stderr = runScript(scpScript, output_opt='display', input_opt='display')
                 printf(scpScript, type='WARN')
@@ -217,8 +228,6 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
                 .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
             combineCmd += [_CMD['hdfs_cp'].format(f=_AWS_DIR_INFO['data'])]
         combineCmd += [_CMD['dir_create'].format(dir='/tmp/spark-events/')]
-        #if is_clone:
-        #   combineCmd += [_CMD['dir_clone'].format(dir=app_root, dir_git=_APP_INFO['repo_url'])]
         if is_clone:
             combineCmd += [_CMD['tar_x']]
         combineCmd += [_CMD['py3_check']]
@@ -229,10 +238,6 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         printf(remoteScript)
         
         stdout, stderr = runScript(remoteScript, output_opt='display', input_opt='pipe', input_pipe=[combineCmd, '.quit'])
-        #if is_clone:
-        #    cloneScript = _CMD['scp'].format(id=id_f, f='$(git ls-files)', dns=master_dns, to_dir='neural-net-bp')
-        #    stdout, stderr = runScript(cloneScript, output_opt='display', input_opt='display')
-
         return app_root
     except ScriptException as se:
         printf(se, type='ERROR')

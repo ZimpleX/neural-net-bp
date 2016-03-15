@@ -251,9 +251,9 @@ class Net_structure:
         yaml_model = info['yaml_model'].reshape(1)[0]
         # pdb.set_trace()
         self.__init__(yaml_model, slide_method, sc)
-        self.w_list = info['w_list']
+        self.w_list = info['w_list']    # probably need to convert to list
         self.b_list = info['b_list']
-        self.cost = info['cost'].reshape(1)[0]
+        self.cost = info['cost'].reshape(1)[0]  # probably no need for this
         self.num_layer = len(self.w_list)
         self.dw_list = [None] * self.num_layer
         self.db_list = [None] * self.num_layer
@@ -288,7 +288,7 @@ def net_train_main(yaml_model, args, sc):
     data_set = Data(yaml_model, timestamp, profile=True)
     net = Net_structure(yaml_model, args.slide_method, sc)
     if args.partial_trained is not None:
-        net.import_(args.partial_trained)
+        net.import_(args.partial_trained, args.slide_method, sc)
     print_to_file(_LOG_FILE['net'], net, type=None)
 
     conf = Conf(yaml_model)
@@ -321,7 +321,6 @@ def net_train_main(yaml_model, args, sc):
         net.epoch += 1
         cost_bat = 0.
         correct_bat = 0.
-        epc_stride = 10
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(conf.batch)):
             batch += 1
             sys.stdout.write('\rbatch {}'.format(batch))
@@ -346,15 +345,12 @@ def net_train_main(yaml_model, args, sc):
         if cur_val_correct > best_val_correct:
             best_val_correct = cur_val_correct
             net.export_(yaml_model)
-        #except Exception as e:
-        #    printf('EVALUATION of net FAILED: {}', e, type="WARN")
         __ = timeit.default_timer()
         _TIME['checkpoint'] += (__ - _)
 
-        if cost_data is None:
-            cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
-        else:
-            cost_data += [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
+        cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
+        data_util.profile_cost(db_subdir, cost_data, timestamp)
+   
         #if (args.profile_output and net.epoch % epc_stride == 0) \
         #    or (net.epoch == conf.num_epoch):
         #    net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
@@ -366,12 +362,6 @@ def net_train_main(yaml_model, args, sc):
     printf('training took: {:.3f}', end_time-start_time)
     print_to_file(_LOG_FILE['net'], net, type=None)
 
-    #--------------------#
-    #  populate into db  #
-    #--------------------#
-    #data_util.profile_output_data(db_subdir, net_data, timestamp)
-    data_util.profile_cost(db_subdir, cost_data, timestamp)
-    #printf('time of checkpointing: {}', _TIME['checkpoint'])
     return end_time - start_time
 
 

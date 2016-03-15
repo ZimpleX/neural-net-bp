@@ -96,11 +96,40 @@ class Data:
        
 
     def __init__(self, yaml_model, timestamp, profile=True):
-        data_type = yaml_model['data_path'].split('.')[-1]
-        if data_type == 'db':
-            self._load_db(yaml_model, timestamp, profile=profile)
-        elif data_type == 'npz':
-            self._load_npz(yaml_model)
+        # 'data_path' means npz contains 'data' / 'validation' / 'test' labels
+        if 'data_path' in yaml_model.keys():
+            data_type = yaml_model['data_path'].split('.')[-1]
+            if data_type == 'db':
+                self._load_db(yaml_model, timestamp, profile=profile)
+            elif data_type == 'npz':
+                self._load_npz(yaml_model)
+        else:   # TODO: this is temporary work-around
+            assert 'raw_train_dir' in yaml_model.keys()
+            assert 'raw_validation_path' in yaml_model.keys()
+            import os
+            d_tup = ()
+            t_tup = ()
+            for f in os.listdir(yaml_model['raw_train_dir']):
+                # NOTE: no append parent dir
+                # NOTE: assume that data is normalized and target is in the right format
+                train_raw = np.load('{}/{}'.format(yaml_model['raw_train_dir'],f))
+                d_i = train_raw['data'].reshape(-1, yaml_model['input_num_channels'],
+                    yaml_model['input_image_size_x'], yaml_model['input_image_size_y'])
+                t_i = train_raw['target']
+                d_tup += (d_i,)
+                t_tup += (t_i,)
+            self.data = np.concatenate(d_tup)
+            self.target = np.concatenate(t_tup)
+            valid_raw = np.load(yaml_model['raw_validation_path'])
+            self.valid_d = valid_raw['data'].reshape(-1, yaml_model['input_num_channels'],
+                yaml_model['input_image_size_x'], yaml_model['input_image_size_y'])
+            self.valid_t = valid_raw['target']
+            self.test_d = None
+            self.test_t = None
+            yaml_model['data_size'] = self.data.shape[0]
+            yaml_model['test_size'] = 0
+            printf('training data shape: {}', self.data.shape)
+            
 
 
     def __str__(self):

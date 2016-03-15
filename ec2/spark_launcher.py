@@ -106,7 +106,6 @@ def setup_env(cred_f):
 
 def launch(wrap_script, wrap_args, name):
     try:
-        pdb.set_trace()
         stdout, stderr = runScript(_CMD['launch'].format(wrap_script=wrap_script, wrap_args=wrap_args, name=name), output_opt='display')
         printf('cluster successfully launched.')
     except ScriptException as se:
