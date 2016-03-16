@@ -42,28 +42,65 @@ def time_conv(timeStr):
         return val
 
 
+class job_profile:
+    def __init__(self, job_html_entry, dns_parent):
+        td_list = job_html_entry.find_all('td')
+        self.jID = int(td_list[0].get_text())
+        self.description = { 'name': td_list[1].get_text().replace('\n', ' ').strip(),
+                            'href': 'http://{}:8080{}'.format(dns_parent,td_list[1].a['href'])}
+        self.duration = time_conv(td_list[3].get_text())
+        self.stages = {'success': int(td_list[4].get_text().split('/')[0]),
+                        'total':  int(td_list[4].get_text().split('/')[1])}
+
+    def __str__(self):
+        return ("id:           {id}\n"
+                "description:  {desc}\n"
+                "duration:     {dur} s\n"
+                "stages:       {stg}")\
+                    .format(id=self.jID, desc=self.description['name'].split(' ')[0],
+                        dur=self.duration, stg='{}/{}'.format(self.stages['success'], self.stages['total']))
+
 
 class app_profile:
-    def __init__(self, app_html_entry):
-        self.id = app_html_entry.find_all('td')[0].a.get_text()
-        self.name = app_html_entry.find_all('td')[1].a.get_text()
-        self.cores = int(app_html_entry.find_all('td')[2].get_text())
-        self.mem_per_node = app_html_entry.find_all('td')[3]['sorttable_customkey']     # measured in terms of Mega bytes
-        self.submitted_time = app_html_entry.find_all('td')[4].get_text()
-        self.state = app_html_entry.find_all('td')[6].get_text()
-        self.duration = time_conv(app_html_entry.find_all('td')[7].get_text())
+    def __init__(self, app_html_entry, dns_parent):
+        td_list = app_html_entry.find_all('td')
+        self.dns_parent = dns_parent
+        self.id = { 'name': td_list[0].a.get_text(),
+                    'href': 'http://{}:8080{}'.format(dns_parent,td_list[0].a['href'])}
+        self.name = {'name': app_html_entry.find_all('td')[1].a.get_text(),
+                    'href': 'http://{}:8080{}'.format(dns_parent,td_list[1].a['href'])}
+        self.cores = int(td_list[2].get_text())
+        self.mem_per_node = td_list[3]['sorttable_customkey']     # measured in terms of Mega bytes
+        self.submitted_time = td_list[4].get_text()
+        self.state = td_list[6].get_text()
+        self.duration = time_conv(td_list[7].get_text())
+        self.job_list = []
 
     def __str__(self):
         return ("appID:       {id}\n"
                 "appName:     {name}\n"
                 "numCores:    {cores}\n"
-                "memPerNode:  {mem}\n"
+                "memPerNode:  {mem} MB\n"
                 "submitTime:  {time}\n"
                 "state:       {state}\n"
-                "duration:    {dur}")\
-                    .format(id=self.id, name=self.name, cores=self.cores,
+                "duration:    {dur} s\n"
+                "jobs:\n"
+                "* {j}")\
+                    .format(id=self.id['name'], name=self.name['name'], cores=self.cores,
                         mem=self.mem_per_node, time=self.submitted_time,
-                        state=self.state, dur=self.duration)
+                        state=self.state, dur=self.duration,
+                        j='\n* '.join(map(lambda _: '\n  '.join(str(_).split('\n')), self.job_list)))
+
+    def set_jobs(self):
+        printf(self.name['href'])
+        r_pub = urlreq.urlopen(self.name['href'])
+        job_soup = BeautifulSoup(r_pub, 'html.parser')
+        job_table = job_soup.find_all('tbody')[0]
+        self.job_list = []
+        for j in job_table.find_all('tr'):
+            self.job_list += [job_profile(j, self.dns_parent)]
+
+
 
 class clt_profile:
     def __init__(self, cluster_name):
@@ -120,7 +157,9 @@ class clt_profile:
         self.app_list = []
         for app in app_table.find_all('tr'):
             if count >= start_idx:
-                self.app_list += [app_profile(app)]
+                a = app_profile(app, self.basic['dns'])
+                a.set_jobs()
+                self.app_list += [a]
             if count > end_idx:
                 break
             count += 1
