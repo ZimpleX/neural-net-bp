@@ -41,13 +41,16 @@ def time_conv(timeStr):
     else:
         return val
 
+_URL_FMT = 'http://{}:8080{}'
+
+
 
 class job_profile:
     def __init__(self, job_html_entry, dns_parent):
         td_list = job_html_entry.find_all('td')
         self.jID = int(td_list[0].get_text())
-        self.description = { 'name': td_list[1].get_text().replace('\n', ' ').strip(),
-                            'href': 'http://{}:8080{}'.format(dns_parent,td_list[1].a['href'])}
+        self.description = {'name': td_list[1].get_text().replace('\n', ' ').strip(),
+                            'href': _URL_FMT.format(dns_parent,td_list[1].a['href'])}
         self.duration = time_conv(td_list[3].get_text())
         self.stages = {'success': int(td_list[4].get_text().split('/')[0]),
                         'total':  int(td_list[4].get_text().split('/')[1])}
@@ -61,20 +64,37 @@ class job_profile:
                         dur=self.duration, stg='{}/{}'.format(self.stages['success'], self.stages['total']))
 
 
+
+class stage_profile:
+    def __init__(self, stage_html_entry, dns_parent):
+        td_list = stage_html_entry.find_all('td')
+        self.sID = int(td_list[0].get_text())
+        self.description = {'name': td_list[1].a.get_text().replace('\n', ' ').strip(),
+                            'href': _URL_FMT.format(dns_parent,td_list[1].a['href'])}
+        self.duration = time_conv(td_list[3].get_text())
+    
+    def __str__(self):
+        return ("id:           {id}\n"
+                "description:  {desc}\n"
+                "duration:     {dur} s")\
+                    .format(id=self.sID, desc=self.description['name'].split(' ')[0], dur=self.duration)
+
+
 class app_profile:
     def __init__(self, app_html_entry, dns_parent):
         td_list = app_html_entry.find_all('td')
         self.dns_parent = dns_parent
         self.id = { 'name': td_list[0].a.get_text(),
-                    'href': 'http://{}:8080{}'.format(dns_parent,td_list[0].a['href'])}
+                    'href': _URL_FMT.format(dns_parent,td_list[0].a['href'])}
         self.name = {'name': app_html_entry.find_all('td')[1].a.get_text(),
-                    'href': 'http://{}:8080{}'.format(dns_parent,td_list[1].a['href'])}
+                    'href': _URL_FMT.format(dns_parent,td_list[1].a['href'])}
         self.cores = int(td_list[2].get_text())
         self.mem_per_node = td_list[3]['sorttable_customkey']     # measured in terms of Mega bytes
         self.submitted_time = td_list[4].get_text()
         self.state = td_list[6].get_text()
         self.duration = time_conv(td_list[7].get_text())
         self.job_list = []
+        self.stage_list = []
 
     def __str__(self):
         return ("appID:       {id}\n"
@@ -85,20 +105,36 @@ class app_profile:
                 "state:       {state}\n"
                 "duration:    {dur} s\n"
                 "jobs:\n"
-                "* {j}")\
+                "* {j}\n"
+                "stages:\n"
+                "* {s}")\
                     .format(id=self.id['name'], name=self.name['name'], cores=self.cores,
                         mem=self.mem_per_node, time=self.submitted_time,
                         state=self.state, dur=self.duration,
-                        j='\n* '.join(map(lambda _: '\n  '.join(str(_).split('\n')), self.job_list)))
+                        j='\n* '.join(map(lambda _: '\n  '.join(str(_).split('\n')), self.job_list)),
+                        s='\n* '.join(map(lambda _: '\n  '.join(str(_).split('\n')), self.stage_list)))
 
     def set_jobs(self):
-        printf(self.name['href'])
+        printf('cur job: {}'.format(self.name['href']))
         r_pub = urlreq.urlopen(self.name['href'])
         job_soup = BeautifulSoup(r_pub, 'html.parser')
         job_table = job_soup.find_all('tbody')[0]
         self.job_list = []
         for j in job_table.find_all('tr'):
             self.job_list += [job_profile(j, self.dns_parent)]
+    
+    def set_stages(self):
+        r_pub = urlreq.urlopen(self.name['href'])
+        job_soup = BeautifulSoup(r_pub, 'html.parser')
+        jump = job_soup.find_all('li')[1].a['href']
+        job_url = _URL_FMT.format(self.dns_parent, jump)
+        r_pub = urlreq.urlopen(job_url)
+        stage_soup = BeautifulSoup(r_pub, 'html.parser')
+        stage_table = stage_soup.find_all('tbody')[0]
+        self.stage_list = []
+        for s in stage_table.find_all('tr'):
+            self.stage_list += [stage_profile(s, self.dns_parent)]
+        
 
 
 
@@ -125,7 +161,7 @@ class clt_profile:
             printf(se, type='ERROR')
             exit()
         self.basic['instance_type'] = stdout.decode('utf-8').split('\n')[0]
-        master_web_UI = 'http://{}:8080'.format(self.basic['dns'])
+        master_web_UI = _URL_FMT.format(self.basic['dns'],'')
         r_pub = urlreq.urlopen(master_web_UI)
         self.master_soup = BeautifulSoup(r_pub, 'html.parser')
         t_worker = self.master_soup.find_all('tbody')[0]
@@ -159,6 +195,7 @@ class clt_profile:
             if count >= start_idx:
                 a = app_profile(app, self.basic['dns'])
                 a.set_jobs()
+                a.set_stages()
                 self.app_list += [a]
             if count > end_idx:
                 break
