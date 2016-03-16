@@ -15,6 +15,22 @@ CMD = {
             done
 
     """,
+    'get_instance_type': """
+            name='"{name}"'
+            id=$(aws ec2 describe-instances | grep 'InstanceId' | awk '{{print $2}}')
+            for i in $id
+            do
+                i=$(echo $i | cut -d'"' -f2)
+                k=$(aws ec2 describe-instances --instance-ids $i | grep $name)
+                if [ "$k" != '' ]
+                then
+                    dns=$(aws ec2 describe-instances --instance-ids $i | grep 'InstanceType' | awk 'NR==1' | cut -d'"' -f4)
+                    echo $dns
+                    exit
+                fi
+            done
+
+    """,
     'tar_z': """
             tar -zcf temp.ignore/temp.tar.gz ../neural-net-bp/ --exclude='.git' --exclude='*ignore*' \
                 --exclude='__pycache__' --exclude='*.db' --exclude='*.pyc' --exclude='*.npz'
