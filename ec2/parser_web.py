@@ -8,6 +8,8 @@ In this case, CLI will have already been configured.
 import argparse
 from bs4 import BeautifulSoup
 import urllib.request as urlreq
+import numpy as np
+import db_util.basic as db
 
 from ec2.cmd import CMD
 from logf.printf import printf
@@ -28,20 +30,53 @@ def parse_args():
 def time_conv(timeStr):
     """
     format time to be 'second':
-        recognize 'ms' / 'mS' / 'min' / 'Min'
+        recognize 'ms' / 'mS' / 'min' / 'Min' / 'h'
     """
     unit = timeStr.split()[-1]
     val = float(timeStr.split()[0])
-    if unit == 'ms' or unit == 'mS':
+    if unit in ['ms', 'mS']:
         return val*0.001
-    elif unit == 'min' or unit == 'Min':
+    elif unit in ['min', 'Min']:
         return val*60.
-    elif unit == 'h':
+    elif unit in ['h']:
         return val*3600.
-    else:
+    elif unit in ['s', 'S']:
         return val
+    else:
+        return timeStr
+
+def unit_conv(unit_str):
+    ret = time_conv(unit_str)
+    if type(ret) == type(''):
+        unit = ret.split()[-1]
+        val = float(ret.split()[0])
+        if unit[0] in ['k', 'K']:
+            ret = 1000*val
+        elif unit[0] in ['m']:
+            ret = 0.001*val
+        elif unit[0] in ['M']:
+            ret = 1000000*val
+        elif unit[0] in ['g', 'G']:
+            ret = 1000000000*val
+        else:
+            ret = val
+    return ret
+    
+
 
 _URL_FMT = 'http://{}:8080{}'
+METRIC_NAME = [ 'Duration',         # computing time
+                'Scheduler Delay',   # IO delay ??
+                'Task Deserialization Time',
+                'GC Time',
+                'Result Serialization Time',
+                'Getting Result Time',
+                'Peak Execution Memory',
+                'Input Size',
+                'Shuffle Read Size',
+                'Shuffle Read Blocked Time',
+                'Shuffle Remote Reads']        # NOTE: i am not considering Record metric currently
+
 
 
 
@@ -95,6 +130,8 @@ class app_profile:
         self.duration = time_conv(td_list[7].get_text())
         self.job_list = []
         self.stage_list = []
+        # dic value is an numpy array --> index is the stage id
+        self.data = {k: None for k in METRIC_NAME}
 
     def __str__(self):
         return ("appID:       {id}\n"
@@ -134,7 +171,24 @@ class app_profile:
         self.stage_list = []
         for s in stage_table.find_all('tr'):
             self.stage_list += [stage_profile(s, self.dns_parent)]
+        s_len = len(self.stage_list)
+        self.data = {k:np.zeros(s_len) for k in self.data.keys()}
         
+    def parse_stages(self):
+        idx = 0
+        for s in self.stage_list:
+            r_pub = urlreq.urlopen(s.description['href'])
+            s_soup = BeautifulSoup(r_pub, 'html.parser')
+            d_table = s_soup.find_all('tbody')[0]
+            for t in d_table.find_all('tr'):
+                k = t.find_all('td')[0].get_text().strip()
+                v = t.find_all('td')[3].get_text()
+                self.data[k][idx] = unit_conv(v)
+            idx += 1
+
+    def print_data(self):
+        for k in self.data.keys():
+            printf('{}\n{}',k,self.data[k],type='',separator='-')
 
 
 
@@ -196,11 +250,31 @@ class clt_profile:
                 a = app_profile(app, self.basic['dns'])
                 a.set_jobs()
                 a.set_stages()
+                a.parse_stages()
                 self.app_list += [a]
             if count > end_idx:
                 break
             count += 1
 
+    def data_to_db(self, db_name='clt_profiling.db'):
+        attr_name = ['clt_size', 'node_type', 'num_cores', 'mem_per_node', 
+                'app_id', 'app_name', 'tot_dur', 'stage_id', 'descp'] + METRIC_NAME
+        attr_type = ['INTEGER', 'TEXT', 'INTEGER', 'REAL', 
+                'INTEGER', 'TEXT', 'REAL', 'INTEGER', 'TEXT'] + ['REAL']*len(METRIC_NAME)
+        clt_data = [self.basic['num_workers'], self.basic['instance_type']]
+        for a in self.app_list:
+            app_data = [a.cores, a.mem_per_node, a.id['name'], a.name['name'], a.duration]
+            stage_data = None
+            for k in METRIC_NAME:
+                assert a.data[k] is not None
+                data_T = a.data[k].reshape(-1,1)
+                # pdb.set_trace()
+                stage_data = ((stage_data is None) and [data_T] \
+                        or [np.concatenate((stage_data,data_T), axis=1)])[0]
+            desp_data = np.array([s.description['name'] for s in a.stage_list]).reshape(-1,1)
+            sID_data = np.arange(desp_data.shape[0]).reshape(-1,1)
+            db.populate_db(attr_name, attr_type, clt_data, app_data, sID_data, desp_data, stage_data, db_name=db_name)
+                
 
 
 
@@ -208,4 +282,5 @@ if __name__ == '__main__':
     args = parse_args()
     cluster = clt_profile(args.cluster_name)
     cluster.set_app_list(0,1)
-    printf(str(cluster), type='', separator='-')
+    # printf(str(cluster), type='', separator='-')
+    cluster.data_to_db()
