@@ -22,7 +22,8 @@ import pdb
 def parse_args():
     parser = argparse.ArgumentParser('parse from web UI')
     parser.add_argument('-n', '--cluster_name', type=str, required=True, help='name of the spark cluster')
-    # parser.add_argument('')
+    parser.add_argument('-s', '--start_idx', type=int, default=0, help='start from which app')
+    parser.add_argument('-e', '--end_idx', type=int, default=-1, help='end to which app (-1 means that you want to parse to the end)')
     return parser.parse_args()
 
 
@@ -246,29 +247,33 @@ class clt_profile:
         count = 0
         self.app_list = []
         for app in app_table.find_all('tr'):
+            if count > end_idx:
+                break
             if count >= start_idx:
                 a = app_profile(app, self.basic['dns'])
                 a.set_jobs()
                 a.set_stages()
                 a.parse_stages()
                 self.app_list += [a]
-            if count > end_idx:
-                break
             count += 1
 
     def data_to_db(self, db_name='clt_profiling.db'):
         attr_name = ['clt_size', 'node_type', 'num_cores', 'mem_per_node', 
-                'app_id', 'app_name', 'tot_dur', 'stage_id', 'descp'] + METRIC_NAME
+                'app_id', 'app_name', 'data_size', 'num_partition', 'itr', 'tot_dur', 'stage_id', 'descp'] + METRIC_NAME
         attr_type = ['INTEGER', 'TEXT', 'INTEGER', 'REAL', 
-                'INTEGER', 'TEXT', 'REAL', 'INTEGER', 'TEXT'] + ['REAL']*len(METRIC_NAME)
+                'INTEGER', 'TEXT', 'INTEGER', 'INTEGER', 'INTEGER', 'REAL', 'INTEGER', 'TEXT'] + ['REAL']*len(METRIC_NAME)
         clt_data = [self.basic['num_workers'], self.basic['instance_type']]
         for a in self.app_list:
-            app_data = [a.cores, a.mem_per_node, a.id['name'], a.name['name'], a.duration]
+            name_decompose = a.name['name'].split('-')
+            a_name = name_decompose[0]
+            a_dsize = int(name_decompose[1].split('_')[1])
+            a_partition = int(name_decompose[2].split('_')[1])
+            a_itr = int(name_decompose[3].split('_')[1])
+            app_data = [a.cores, a.mem_per_node, a.id['name'], a_name, a_dsize, a_partition, a_itr, a.duration]
             stage_data = None
             for k in METRIC_NAME:
                 assert a.data[k] is not None
                 data_T = a.data[k].reshape(-1,1)
-                # pdb.set_trace()
                 stage_data = ((stage_data is None) and [data_T] \
                         or [np.concatenate((stage_data,data_T), axis=1)])[0]
             desp_data = np.array([s.description['name'] for s in a.stage_list]).reshape(-1,1)
@@ -281,6 +286,6 @@ class clt_profile:
 if __name__ == '__main__':
     args = parse_args()
     cluster = clt_profile(args.cluster_name)
-    cluster.set_app_list(0,1)
+    cluster.set_app_list(args.start_idx, args.end_idx)
     # printf(str(cluster), type='', separator='-')
     cluster.data_to_db()

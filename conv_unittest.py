@@ -36,7 +36,7 @@ def data_gen(args):
     
 
 def get_app_name(args):
-    template = 'conv_unit-size_{}-partition_{}-itr_{}'
+    template = 'conv_unit-dsize_{}-partition_{}-itr_{}'
     size = reduce(lambda _1,_2: _1*_2, args.base_mat)
     partition = args.partition
     itr = args.itr
