@@ -16,8 +16,8 @@ np.random.seed(0)
 
 def parse_args():
     parser = argparse.ArgumentParser('unit test for convolution profiling')
-    parser.add_argument('--base_mat', type=int, nargs=4, default=[400,3,128,128], help='[batch, chan_0, row_n, col_n]')
-    parser.add_argument('--kern_mat', type=int, nargs=4, default=[3,3,11,11], help='[chan_n1, chan_0, kern, kern]')
+    parser.add_argument('--base_mat', type=int, nargs=4, default=[400,32,128,128], help='[batch, chan_0, row_n, col_n]')
+    parser.add_argument('--kern_mat', type=int, nargs=4, default=[32,32,11,11], help='[chan_n1, chan_0, kern, kern]')
     parser.add_argument('-p', '--partition', type=int, default=8, help='num of partitions for base mat')
     parser.add_argument('-i', '--itr', type=int, default=1, help='number of times the kern mat is convolved with base mat')
     parser.add_argument('-b', '--batch', type=int, default=None, help='specifically set batch size (overwrite args.base_mat[0])')
@@ -37,11 +37,12 @@ def data_gen(args):
     
 
 def get_app_name(args):
-    template = 'conv_unit-dsize_{}-partition_{}-itr_{}'
-    size = reduce(lambda _1,_2: _1*_2, args.base_mat)
+    template = 'conv_unit-CPUload_{}-partition_{}-itr_{}'
+    CPUload = reduce(lambda _1,_2: _1*_2, args.base_mat+args.kern_mat)
+    CPUload /= args.kern_mat[1]
     partition = args.partition
     itr = args.itr
-    return template.format(size, partition, itr)
+    return template.format(CPUload, partition, itr)
 
 
 def prepare_conf(base_mat, kern_mat, sliding_stride):
@@ -66,8 +67,9 @@ def prepare_conf(base_mat, kern_mat, sliding_stride):
 
 def do(base_mat, kern_mat, ss, ps, padding, f, f_conv, partition, itr, sc):
     tot_batch = base_mat.shape[0]
-    assert tot_batch%partition == 0
-    unit_batch = int(tot_batch / partition)
+    # assert tot_batch%partition == 0
+    from math import ceil
+    unit_batch = int(ceil(tot_batch / partition))
     l_base = []
     for p in range(0,tot_batch,unit_batch):
         l_base += [base_mat[p:(p+unit_batch)]]
