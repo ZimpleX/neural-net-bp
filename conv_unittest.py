@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('--kern_mat', type=int, nargs=4, default=[3,3,11,11], help='[chan_n1, chan_0, kern, kern]')
     parser.add_argument('-p', '--partition', type=int, default=8, help='num of partitions for base mat')
     parser.add_argument('-i', '--itr', type=int, default=1, help='number of times the kern mat is convolved with base mat')
+    parser.add_argument('-b', '--batch', type=int, default=None, help='specifically set batch size (overwrite args.base_mat[0])')
     return parser.parse_args()
 
 
@@ -83,6 +84,8 @@ def do(base_mat, kern_mat, ss, ps, padding, f, f_conv, partition, itr, sc):
 
 if __name__ == '__main__':
     args = parse_args()
+    if args.batch is not None:
+        args.base_mat[0] = args.batch
     data = data_gen(args)
     try:
         from pyspark import SparkContext
