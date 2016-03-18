@@ -40,6 +40,7 @@ def get_app_name(args):
     template = 'conv_unit-CPUload_{}-partition_{}-itr_{}'
     CPUload = reduce(lambda _1,_2: _1*_2, args.base_mat+args.kern_mat)
     CPUload /= args.kern_mat[1]
+    CPUload = CPUload // 1000000    # in terms of Million
     partition = args.partition
     itr = args.itr
     return template.format(CPUload, partition, itr)
