@@ -266,7 +266,7 @@ class clt_profile:
         for a in self.app_list:
             name_decompose = a.name['name'].split('-')
             a_name = name_decompose[0]
-            a_dsize = int(name_decompose[1].split('_')[1])
+            a_dsize = int(name_decompose[1].split('_')[1].split('.')[0])
             a_partition = int(name_decompose[2].split('_')[1])
             a_itr = int(name_decompose[3].split('_')[1])
             app_data = [a.cores, a.mem_per_node, a.id['name'], a_name, a_dsize, a_partition, a_itr, a.duration]

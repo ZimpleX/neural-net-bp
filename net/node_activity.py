@@ -28,7 +28,7 @@ class Node_activity:
         pass
     @classmethod
     @abstractmethod
-    def act_forward(cls, prev_layer_out, w, b):
+    def act_forward(cls, prev_layer_out, w, b, sc=None):
         """
         NOTE: overwrite with classmethod
 
@@ -71,7 +71,7 @@ class Node_activity:
         return c_d_yn * cls.y_d_x(y_n)
 
     @classmethod
-    def c_d_w_b_yn1(cls, c_d_yn, y_n, y_n_1, w, is_c_d_yn1=1):
+    def c_d_w_b_yn1(cls, c_d_yn, y_n, y_n_1, w, is_c_d_yn1=1, sc=None):
         """
         NOTE: DON'T overwrite this function when creating subclass
 
@@ -110,7 +110,7 @@ class Node_linear(Node_activity):
     linear neuron
     """
     @classmethod
-    def act_forward(cls, prev_layer_out, w, b):
+    def act_forward(cls, prev_layer_out, w, b, sc=None):
         """
         feed forward linear neuron
         """
@@ -129,7 +129,7 @@ class Node_sigmoid(Node_activity):
     sigmoid (logistic) neuron
     """
     @classmethod
-    def act_forward(cls, prev_layer_out, w, b):
+    def act_forward(cls, prev_layer_out, w, b, sc=None):
         """
         feed forward sigmoid neuron
         """
@@ -153,7 +153,7 @@ class Node_softmax(Node_activity):
         y = exp(x) / [E + exp(x)]
     """
     @classmethod
-    def act_forward(cls, prev_layer_out, w, b):
+    def act_forward(cls, prev_layer_out, w, b, sc=None):
         """
         feed forward softmax
         """

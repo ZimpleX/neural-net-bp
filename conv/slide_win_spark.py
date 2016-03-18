@@ -84,6 +84,8 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         *   dimension m = (c + 2*padding - 1 - (f-1)*patch_stride) / sliding_stride + 1
         *   dimension n = (d + 2*padding - 1 - (g-1)*patch_stride) / sliding_stride + 1
     """
+    # parallelize on batch dimension
+    """
     assert base_mat.shape[1] == kern_mat.shape[1]
     A, b, c, d = base_mat.shape
     E, b, f, g = kern_mat.shape
@@ -101,6 +103,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         for jj in range(s):
                 itr += [np.array((ii,jj))]
     """
+    """
     try:
         # base_mat typical shape: 100 x 1 x 256 x 256
         rdd_base_exp = sc.parallelize(itr).map(lambda x: (x,base_mat))
@@ -108,6 +111,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         printf('AFTER COLLECT', type="WARN")
     except Exception:
         printf("rdd_base_exp", type="ERROR")
+    """
     """
     t5 = timeit.default_timer()
     RUNTIME['repeat_base_mat'] += t5 - t4
@@ -118,13 +122,11 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
             # MapReduce here
             ij = np.array((i,j))
             t6 = timeit.default_timer()
-            """
-            try:
-                patch_rdd = rdd_base_exp.map(lambda r: \
-                    _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
-            except Exception:
-                printf("rdd_base_exp map", type="ERROR")
-            """
+            # try:
+            #    patch_rdd = rdd_base_exp.map(lambda r: \
+            #        _get_patch_wrapper(r._1, ij, mn, r._2, f, g, *pss))
+            #except Exception:
+            #    printf("rdd_base_exp map", type="ERROR")
             t7 = timeit.default_timer()
             RUNTIME['get_patch_time_spark'] += t7 - t6
             for ii in range(i, min(i+s,mn[0])):
@@ -141,6 +143,7 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
     end_time = timeit.default_timer()
     RUNTIME['conv_time'] += end_time - start_time
     return ret_mat
+    """
 
 
 ###########################

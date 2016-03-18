@@ -71,7 +71,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, yaml_model, slide_method, sc):
+    def __init__(self, yaml_model, slide_method):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -104,7 +104,6 @@ class Net_structure:
                 act_init = (l['type']=='MAXPOOL') and [kern] or []
                 act_init += [l['stride'], l['padding']]
                 act_init += [slide_method]
-                act_init += [sc]
                 self.activ_list[idx] = act_func(*act_init)
                 prev_img = conv.util.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:
@@ -156,7 +155,7 @@ class Net_structure:
                             self.w_list[i], self.b_list[i], self.dw_list[i], self.db_list[i])
         return '{}\n{}\n'.format(net_stat, stringf(layer_str, 0, self.w_list[0].shape[0], type=None, separator='-'))
 
-    def net_act_forward(self, data):
+    def net_act_forward(self, data, sc):
         """
         action: 
             data = activity((data dot weight) + bias)
@@ -172,11 +171,11 @@ class Net_structure:
         layer_out = data
         for i in range(self.num_layer):
             layer_out = self.activ_list[i] \
-                .act_forward(layer_out, self.w_list[i], self.b_list[i])
+                .act_forward(layer_out, self.w_list[i], self.b_list[i], sc=sc)
             self.y_list[i+1] = layer_out
         return layer_out
 
-    def back_prop(self, target, conf):
+    def back_prop(self, target, conf, sc):
         """
         do the actual back-propagation
         (refer to "Glossary" for notation & abbreviation)
@@ -191,7 +190,7 @@ class Net_structure:
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
-            cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n)
+            cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n, sc=sc)
             if cur_dw is None:  # skip pooling layer
                 continue
             #-------------#
@@ -206,7 +205,7 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-    def evaluate(self, batch_ipt, target, mini_batch=0):
+    def evaluate(self, batch_ipt, target, mini_batch=0, sc=None):
         """
         mini_batch:     if the evaluation set is large, then evaluate all at a time may cause out of memory error,
                         especially when the DCNN has many layers.
@@ -220,7 +219,7 @@ class Net_structure:
         for k in range(0, num_entry, mini_batch):
             cur_batch = batch_ipt[k:(k+mini_batch)]
             cur_target = target[k:(k+mini_batch)]
-            cur_net_out = self.net_act_forward(cur_batch)
+            cur_net_out = self.net_act_forward(cur_batch, sc)
             cur_cost += sum(self.cost.act_forward(cur_net_out, cur_target))
             if self.cost == cost_dict['CE']:
                 cur_correct += (cur_target.argmax(axis=1)==cur_net_out.argmax(axis=1)).sum()
@@ -326,12 +325,12 @@ def net_train_main(yaml_model, args, sc):
             sys.stdout.write('\rbatch {}'.format(batch))
             sys.stdout.flush()
             net.batch += 1
-            cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
+            cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt, sc=sc)
             printf('cur cost: {}', cur_cost_bat)
             printf('epoch {}, batch {}', epoch, batch, type="WARN")
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
-            net.back_prop(bat_tgt, conf)
+            net.back_prop(bat_tgt, conf, sc)
             
         sys.stdout.write('\r')
         sys.stdout.flush()
@@ -340,7 +339,7 @@ def net_train_main(yaml_model, args, sc):
         # validation & checkpointing
         _ = timeit.default_timer()
         #try:
-        cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t, mini_batch=50)
+        cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t, mini_batch=50, sc=sc)
         best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
         if cur_val_correct > best_val_correct:
             best_val_correct = cur_val_correct
