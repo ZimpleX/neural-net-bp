@@ -27,8 +27,7 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-    args = parse_args() 
+def sweep_training(args):
     # sweep all yamls in dir
     for f in os.listdir(args.yaml_dir):
         yaml_file = '{}/{}'.format(args.yaml_dir, f)
@@ -54,3 +53,12 @@ if __name__ == '__main__':
             stdout, stderr = runScript(cmd)
         except ScriptException as se:
             printf(se, type='ERROR')
+
+
+
+
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    sweep_training(args)
