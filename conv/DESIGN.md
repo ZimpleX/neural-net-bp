@@ -1,3 +1,5 @@
+## High Level Ideas
+
 ```python
 """
 consider the convolution between layer n-1 and layer n:
@@ -96,7 +98,7 @@ Most intuitive: simply reduce the number of iterations.
 
 - normal data set: best to parallelize `batch  x chan_n x chan_n1`
 - blood cell: possibility exists that training is best when using very small batch size (or even online). --> parallelizing on `row_n` and `col_n` is best in this case. --> since `batch` is small, replicating data should also be fast. 
-- I should try both. 
+- I should try both.
 
 
 
@@ -109,3 +111,19 @@ only parallelize when convolution starts.
 RDD is not good at `ndarray` operations (??).
 
 is the `collect()` method too often (??)
+
+
+
+
+
+## Implementation
+
+### Profiling (Quantitative)
+
+- Scheduler Delay: Big portion of the total runtime & caused by `collect()` operation
+  - `T(num_workers, total_data_size)`
+
+| instance type | num workers | total data size | scheduler delay |
+| ------------- | ----------- | --------------- | --------------- |
+|               |             |                 |                 |
+
