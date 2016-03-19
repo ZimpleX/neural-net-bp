@@ -71,7 +71,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, yaml_model, slide_method):
+    def __init__(self, yaml_model, slide_method, sc):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -82,6 +82,13 @@ class Net_structure:
         """
         if yaml_model is None:
             return
+
+        if sc is None:
+            num_exe = 0
+        else:
+            # num_exe = sc.defaultParallelism
+            num_exe = 8
+        printf('num executors: {}', num_exe)
         self.num_layer = len(yaml_model['network'])    # yaml don't include input layer
         self.w_list = [None] * self.num_layer
         self.dw_list = [None] * self.num_layer
@@ -92,18 +99,31 @@ class Net_structure:
         idx = 0
         prev_chn = yaml_model['input_num_channels']
         prev_img = None
-        for l in yaml_model['network']:
+        for i in range(len(yaml_model['network'])):
+            l = yaml_model['network'][i]
             init_wt = ('init_wt' in l) and l['init_wt'] or 0.0
             cur_chn = l['num_channels']
             act_func = activation_dict[l['type']]
             if l['type'] == 'CONVOLUTION' or l['type'] == 'MAXPOOL':
                 if prev_img is None:
                     prev_img = (yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
+                chan = l['num_channels']
                 kern = l['kernel_size']
                 w_shape = (prev_chn, cur_chn, kern, kern)
-                act_init = (l['type']=='MAXPOOL') and [kern] or []
+                act_init = (l['type']=='MAXPOOL') and [chan, kern] or []
                 act_init += [l['stride'], l['padding']]
                 act_init += [slide_method]
+                SparkMeta = {}
+                SparkMeta['num_executor'] = num_exe
+                if yaml_model['network'][i+1]['type'] not in ['CONVOLUTION', 'MAXPOOL']:
+                    SparkMeta['conn_to_FC'] = True
+                else:
+                    SparkMeta['conn_to_FC'] = False
+                if i == 0:
+                    SparkMeta['first_conv'] = True
+                else:   
+                    SparkMeta['first_conv'] = False
+                act_init += [SparkMeta]
                 self.activ_list[idx] = act_func(*act_init)
                 prev_img = conv.util.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:

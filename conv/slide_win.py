@@ -50,7 +50,7 @@ def _get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     return patch
 
 
-def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, _):
+def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, _, SparkMeta=None):
     """
     Method ONLY for 4d numpy array
     Operation: slide kern_mat through base_mat, according to stride and padding.
@@ -67,9 +67,14 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         *   dimension m = (c + 2*padding - 1 - (f-1)*patch_stride) / sliding_stride + 1
         *   dimension n = (d + 2*padding - 1 - (g-1)*patch_stride) / sliding_stride + 1
     """
-    assert base_mat.shape[1] == kern_mat.shape[1]
     A, b, c, d = base_mat.shape
-    E, b, f, g = kern_mat.shape
+    if type(kern_mat) == type({}):
+        E = kern_mat['channel']
+        f = g = kern_mat['kern']
+        kern_mat = None
+    else:
+        E, b, f, g = kern_mat.shape
+        assert base_mat.shape[1] == kern_mat.shape[1]
     m = (c + 2*padding - 1 - (f-1)*patch_stride)/sliding_stride + 1
     n = (d + 2*padding - 1 - (g-1)*patch_stride)/sliding_stride + 1
     ret_mat = np.zeros((A, E, int(m), int(n)))

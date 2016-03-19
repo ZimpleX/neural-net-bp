@@ -14,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 import timeit
 from stat_cnn.time import RUNTIME
 from logf.printf import printf
+from math import ceil
 
 import pdb
 
@@ -67,7 +68,7 @@ def _get_patch_wrapper(unroll_idx, tile_idx, max_idx, base_mat, dy, dx, padding,
    
 
 
-def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, sc):
+def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, sc, SparkMeta=None):
     """
     Method ONLY for 4d numpy array
     Operation: slide kern_mat through base_mat, according to stride and padding.
@@ -84,7 +85,26 @@ def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, 
         *   dimension m = (c + 2*padding - 1 - (f-1)*patch_stride) / sliding_stride + 1
         *   dimension n = (d + 2*padding - 1 - (g-1)*patch_stride) / sliding_stride + 1
     """
-    # parallelize on batch dimension
+    assert SparkMeta is not None
+    # parallelize on **BATCH** dimension
+    partition = SparkMeta['num_executor']
+    if SparkMeta['first_conv']:
+        tot_batch = base_mat.shape[0]
+        unit_batch = int(ceil(tot_batch / partition))
+        l_base = []
+        for p in range(0,tot_batch,unit_batch):
+            l_base += [base_mat[p:(p+unit_batch)]]
+        
+        _rdd = sc.parallelize(l_base, partition)
+    else:
+        _rdd = base_mat     # batch is independent dim, so assume **RDD** is passed in.
+    
+    import conv.slide_win
+    f = conv.slide_win.slid_win_4d_flip
+    _rdd = _rdd.map(lambda _: f(_,kern_mat,sliding_stride,patch_stride,padding,func_obj,None))
+    # NOTE: will not do the collect operation here --> leave it to the layer class
+    return _rdd
+    
     """
     assert base_mat.shape[1] == kern_mat.shape[1]
     A, b, c, d = base_mat.shape

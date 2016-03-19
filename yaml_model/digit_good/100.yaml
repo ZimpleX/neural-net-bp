@@ -1,7 +1,7 @@
 obj_name: 'digit_classification'
 epoch: 10
 batch: 100
-data_path: /root/usps.npz
+data_path: ./train_data/usps.npz #/root/usps.npz
 checkpoint: 'yaml_model/convnet_usps1.npz'
 #performance_stats: convnet1_method1_stats.npy
 input_image_size_y: 16

@@ -20,3 +20,17 @@ Preliminary measurement:
 | serial       | 19                | 20          | 40            |
 | 8 partitions |                   |             |               |
 
+
+
+
+
+
+
+### CPUload, Duration, Partition
+
+`Duration = T(CPUload, Partition)`
+
+- `Duration = K(Partition)*CPUload+B(Partition)`
+
+
+- `K(Partition) = c*(1/Partition)`

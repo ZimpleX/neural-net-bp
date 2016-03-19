@@ -21,5 +21,5 @@ if __name__ == '__main__':
     net = Net_structure(None, None, None)
     net.import_(args.checkpoint)
     ip_arr = img_cvt.img_to_array(args.test_img)
-    op = net.net_act_forward(ip_arr)
+    op = net.net_act_forward(ip_arr, None)
     printf('predicted category: {}', op.argmax(axis=1))

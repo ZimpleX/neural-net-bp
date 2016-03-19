@@ -20,7 +20,7 @@ _AWS_DIR_INFO = {
 _APP_INFO = {
         'repo_url': 'https://github.com/ZimpleX/neural-net-bp',
         'name': 'blood_cell_classification_3cat',
-        'submit_main': ['conv_unittest.py','main.py','sweep_conv_unittest.py', 'sweep_training.py']
+        'submit_main': ['conv_unittest.py','main.py','sweep_conv_unittest.py', 'sweep_training.py', 'test/batch_eval.py']
 }
 
 def conf_AWS_CLI(credential_f, region):
@@ -128,7 +128,7 @@ def submit_application(name, master_dns, main, args_main, key_id='', secret_key=
     printf('ENTER application submission', type='WARN')
     try:
         shot = [CMD['source_rc'].format(rc=_CUS_BASHRC)]
-        if main in ['conv_unittest.py']:
+        if main in ['conv_unittest.py', 'test/batch_eval.py']:
             submit_cmd = CMD['submit_spark'].format(dns=master_dns, name=name, main=main, args=args_main)
         elif main in ['sweep_training.py', 'sweep_conv_unittest.py', 'main.py']:
             submit_cmd = CMD['submit_normal'].format(name=name, main=main, args=args_main)

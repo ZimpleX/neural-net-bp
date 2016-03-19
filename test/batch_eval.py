@@ -21,7 +21,14 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     net = Net_structure(None, None, None)
-    net.import_(args.checkpoint)
+    try:
+        from pyspark import SparkContext
+        sc = SparkContext(appName='batch_eval')
+    except Exception as e:
+        sc = None
+        printf('Noe Spark: run SERIAL version of CNN', type='WARN')
+    net.import_(args.checkpoint, slide_method='slide_spark', sc=sc)
+
     out_str = ( "Done testing on {} images\n"
                 "average cost: {:.3f}\n"
                 "average accuracy: {:.3f}%")
@@ -34,10 +41,12 @@ if __name__ == '__main__':
         printf('f: {}', f, separator=None)
         dataset = np.load('{}/{}'.format(args.test_batch_dir, f))
         num_img += dataset['data'].shape[0]
-        avg_cost, avg_accuracy = net.evaluate(dataset['data'], dataset['target'], mini_batch=50)
+        mini_batch = (sc is None) and 50 or 250
+        avg_cost, avg_accuracy = net.evaluate(dataset['data'], dataset['target'], mini_batch=mini_batch, sc=sc)
         avg_cost_tot += avg_cost
         avg_accuracy_tot += avg_accuracy
         printf(out_str, dataset['data'].shape[0], avg_cost, 100*avg_accuracy)
+        del dataset
     
     avg_cost_tot /= num_set
     avg_accuracy_tot /= num_set
