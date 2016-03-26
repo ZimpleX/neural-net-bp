@@ -7,6 +7,11 @@ import argparse
 import numpy as np
 from logf.printf import printf
 import os
+from functools import reduce
+import io
+from net.conf import *
+import copy
+import sys
 
 
 def parse_args():
@@ -15,19 +20,39 @@ def parse_args():
     parser.add_argument('test_batch_dir', type=str, help='dir of the batch dataset to be tested')
     return parser.parse_args()
 
+# ref: http://stackoverflow.com/questions/26884871/advantage-of-broadcast-variables
+def evaluate_static(batch_ipt, target, net_bc, mini_batch=0):
+    # net = net_bc.value
+    num_entry = batch_ipt.shape[0]
+    cur_cost = 0.
+    mini_batch = (mini_batch <= 0) and num_entry or mini_batch
+    cur_correct = 0.
+    for k in range(0, num_entry, mini_batch):
+        cur_batch = batch_ipt[k:(k+mini_batch)]
+        cur_target = target[k:(k+mini_batch)]
+        layer_out = cur_batch
+        for i,a in enumerate(net_bc.value.activ_list):
+            layer_out = a.act_forward(layer_out, net_bc.value.w_list[i], net_bc.value.b_list[i], sc=None)
+        cur_cost += sum(net_bc.value.cost.act_forward(layer_out,cur_target))
+        if net_bc.value.cost == cost_dict['CE']:
+            cur_correct += (cur_target.argmax(axis=1)==layer_out.argmax(axis=1)).sum()
+    return cur_cost/num_entry, cur_correct/num_entry
+
+
 
 
 
 if __name__ == '__main__':
     args = parse_args()
-    net = Net_structure(None, None, None)
     try:
         from pyspark import SparkContext
         sc = SparkContext(appName='batch_eval')
     except Exception as e:
         sc = None
-        printf('Noe Spark: run SERIAL version of CNN', type='WARN')
-    net.import_(args.checkpoint, slide_method='slide_spark', sc=sc)
+        printf('No Spark: run SERIAL version of CNN', type='WARN')
+    # sc = None
+    # slide_method = (sc is None) and 'slide_serial' or 'slide_spark'
+    slide_method = 'slide_serial'
 
     out_str = ( "Done testing on {} images\n"
                 "average cost: {:.3f}\n"
@@ -36,18 +61,43 @@ if __name__ == '__main__':
     num_set = 0
     avg_cost_tot = 0.
     avg_accuracy_tot = 0.
-    for f in os.listdir(args.test_batch_dir):
-        num_set += 1
-        printf('f: {}', f, separator=None)
-        dataset = np.load('{}/{}'.format(args.test_batch_dir, f))
-        num_img += dataset['data'].shape[0]
-        mini_batch = (sc is None) and 50 or 250
-        avg_cost, avg_accuracy = net.evaluate(dataset['data'], dataset['target'], mini_batch=mini_batch, sc=sc)
-        avg_cost_tot += avg_cost
-        avg_accuracy_tot += avg_accuracy
-        printf(out_str, dataset['data'].shape[0], avg_cost, 100*avg_accuracy)
-        del dataset
+    # distributed load
+    mini_batch = 200
+    hdfs_files = '{}/*.npz'.format(args.test_batch_dir)
+    f_set = sc.binaryFiles(hdfs_files)
     
+    # broadcast net
+    # dist_data.zipWithIndex().map(lambda _: (_[1],_[0]))
+    # Net_structure(None,None,None).import_(args.checkpoint, slide_method=slide_method, sc=None)
+
+    model = io.BytesIO(open(args.checkpoint,'rb').read())
+    net = Net_structure(None,None,None)
+    net.import_(model, slide_method=slide_method, sc=None)
+    net_bc = sc.broadcast(net)
+    printf('finish broadcasting net')
+
+    dist_data = f_set.map(lambda _: ( _[0],dict(np.load(io.BytesIO(_[1]))) ))   #.zipWithIndex().map(lambda _: (_[1],_[0]))
+    # NOTE: cogroup / join will invoke a shuffle --> too expensive
+    # NOTE: http://www.sparktutorials.net/spark-broadcast-variables---what-are-they-and-how-do-i-use-them
+    # dist_net_data = dist_net.cogroup(dist_data)
+    # printf('finish replicating net')
+    # exit()
+    # (zipIndex, (net, (file_name, data_array)))
+    # result_rdd = dist_net_data.map(lambda _: ( _[1][1][0], _[1][0].evaluate(_[1][1][1]['data'],_[1][1][1]['target'],mini_batch=mini_batch) )).collect()
+    #________________
+    # result_rdd = dist_data.mapPartitions(lambda _: evaluate_static(_[1]['data'],_[1]['target'],net_bc,mini_batch=mini_batch) ,preservesPartitioning=True)
+    result_rdd = dist_data.map(lambda _: (_[0], \
+        evaluate_static(_[1]['data'],_[1]['target'],net_bc,mini_batch=mini_batch)))
+    result_rdd = result_rdd.collect()
+
+    num_img = dist_data.map(lambda _: _[1]['data'].shape[0]).reduce(lambda _1,_2: _1+_2)
+    printf('result:\n{}',result_rdd)
+    
+    num_set = len(result_rdd)
+    avg_cost_tot = reduce(lambda _1,_2: _1+_2[1][0], result_rdd, 0)
+    avg_accuracy_tot = reduce(lambda _1,_2: _1+_2[1][1], result_rdd, 0)
+
+       
     avg_cost_tot /= num_set
     avg_accuracy_tot /= num_set
     printf(out_str, num_img, avg_cost_tot, 100*avg_accuracy_tot)

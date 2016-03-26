@@ -17,6 +17,21 @@ def prepare_small_npz(path_orig, path_out, train_size, valid_size, test_size):
     np.savez(path_out, **ret)
 
 
+def partition_small_npz(path_orig, dir_out, small_batch):
+    """
+    partition a single npz with large batch into several small npz with small batch
+    """
+    raw = np.load(path_orig)
+    raw_keys = raw.keys()
+    tot_batch = raw[raw_keys[0]].shape[0]
+    name_orig = path_orig.split('/')[-1].split('.npz')[0]
+    for r in range(0,tot_batch,small_batch):
+        cur = {k: raw[k][r:(r+small_batch)] for k in raw_keys}
+        f_out = '{}/{}_{}.npz'.format(dir_out, name_orig, r)
+        np.savez(f_out, **cur)
+        printf('saved {}', f_out)
+
+
 def normalize_exp_col(path_npz, num_op=None, scale_axis=(1,2,3)):
     raw = np.load(path_npz)
     ret = {}
