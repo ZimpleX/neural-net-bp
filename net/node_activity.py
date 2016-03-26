@@ -24,7 +24,7 @@ class Node_activity:
     super class for all other FC layer node activity classes
     """
     __metaclass__ = ABCMeta
-    def __init__():
+    def __init__(self):
         pass
     @classmethod
     @abstractmethod
