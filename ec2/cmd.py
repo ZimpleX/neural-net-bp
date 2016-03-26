@@ -63,8 +63,12 @@ CMD = {
     'pipe_remote': """
             python3 -m ec2.spark_launcher --login --pipe {pipe_args}
     """,
-    'hdfs_cp': """
-            $hdfs_dir/hadoop distcp s3n://{f} hdfs://
+    'hdfs_distcp': """
+            $hdfs_dir/hadoop fs -mkdir /sets
+            $hdfs_dir/hadoop distcp s3n://{f} hdfs:///sets/
+    """,
+    'aws_cp': """
+            aws s3 cp s3://{s3_data} {loc_des}
     """,
     'hdfs_conf': """
             hdfs_dir={hdfs}
@@ -104,7 +108,7 @@ CMD = {
             args="{args}"
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
-                --conf spark.eventLog.enabled=true --conf spark.executor.memory=2g --conf spark.driver.memory=2g --py-files packed_module.zip $submit_main $args
+                --conf spark.eventLog.enabled=true --conf spark.executor.memory=4g --conf spark.driver.memory=4g --conf spark.akka.frameSize=2000 --py-files packed_module.zip $submit_main $args
             #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
     """,
     'submit_normal': """

@@ -15,7 +15,7 @@ _AWS_DIR_INFO = {
         'spark': '/root/spark/',
         'hdfs': '/root/ephemeral-hdfs/bin/',
         'log': '/root/neural-net-bp/{train_name}/ann.db',
-        'data': 'bloodcell/3cat_900_scale.npz'
+        'data': ['bloodcell/3cat_smaller/*']
 }
 _APP_INFO = {
         'repo_url': 'https://github.com/ZimpleX/neural-net-bp',
@@ -103,10 +103,13 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         combineCmd  = []
         combineCmd += [CMD['source_rc'].format(rc=_CUS_BASHRC)]
         combineCmd += [CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
+        # >>>>>
+        combineCmd += [CMD['aws_cp'].format(s3_data='spark-ec2-log/blood_cell_classification_3cat/3000/finish.chkpt.npz', loc_des='/root/checkpoint.npz')]
         if is_hdfs:
             combineCmd += [CMD['hdfs_conf']\
                 .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
-            combineCmd += [CMD['hdfs_cp'].format(f=_AWS_DIR_INFO['data'])]
+            for d in _AWS_DIR_INFO['data']:
+                combineCmd += [CMD['hdfs_distcp'].format(f=d)]
         combineCmd += [CMD['dir_create'].format(dir='/tmp/spark-events/')]
         if is_clone:
             combineCmd += [CMD['tar_x']]

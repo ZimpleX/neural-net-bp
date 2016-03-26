@@ -24,3 +24,4 @@ export SP_SUBMIT='/root/spark/bin/spark-submit'
 export PYSPARK_PYTHON=$(which python3)
 export SP_TEST_PY_MAIN='/root/spark-benchmark-python/LogReg/LogisticRegression.py'
 export SP_MASTER=$(cat /root/spark-ec2/cluster-url)
+export PYTHONHASHSEED=0
