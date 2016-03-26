@@ -131,7 +131,7 @@ class Net_structure:
                     prev_chn = prev_chn * prev_img[0] * prev_img[1]
                     prev_img = None
                 w_shape = (prev_chn, cur_chn)
-                self.activ_list[idx] = act_func
+                self.activ_list[idx] = act_func()
             self.w_list[idx] = init_wt * np.random.randn(*w_shape)
             self.b_list[idx] = np.zeros(cur_chn)
             self.dw_list[idx] = np.zeros(w_shape)
@@ -232,9 +232,11 @@ class Net_structure:
                         in case of that, evaluate batch by batch.
                         mini_batch=0 by default --> evaluate all at once.
         """
+        if batch_ipt is None or target is None:
+            return 0.,0.
         num_entry = batch_ipt.shape[0]
         cur_cost = 0.
-        mini_batch = (mini_batch == 0) and num_entry or mini_batch
+        mini_batch = (mini_batch <= 0) and num_entry or mini_batch
         cur_correct = 0.
         for k in range(0, num_entry, mini_batch):
             cur_batch = batch_ipt[k:(k+mini_batch)]
