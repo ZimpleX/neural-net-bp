@@ -26,7 +26,9 @@ class Node_pool(Node_conv):
         self.kern = kern
         self.stride = stride
         self.padding = padding
-        self.slid = eval(slid_method)
+        self.slid_win_4d_flip = eval(slid_method).slid_win_4d_flip
+        self.pool_ff = eval(slid_method).pool_ff
+        self.pool_bp = eval(slid_method).pool_bp
         self.SparkMeta = SparkMeta
 
 
@@ -34,10 +36,10 @@ class Node_pool(Node_conv):
         """
         input and output have the same number of channels
         """
-        ret = self.slid.slid_win_4d_flip(prev_layer, {'channel':self.chan,'kern':self.kern}, self.stride, 1, self.padding, self.slid.pool_ff(), sc, SparkMeta=self.SparkMeta)
+        ret = self.slid_win_4d_flip(prev_layer, {'channel':self.chan,'kern':self.kern}, self.stride, 1, self.padding, self.pool_ff(), sc, SparkMeta=self.SparkMeta)
         if sc is not None and self.SparkMeta['conn_to_FC']:
-            ret = ret.collect()
-            ret = reduce(lambda _1,_2: np.concatenate((_1,_2),axis=0), ret)
+            # ret = ret.collect()
+            ret = ret.reduce(lambda _1,_2: np.concatenate((_1,_2),axis=0))
         return ret
                 
     
@@ -55,5 +57,5 @@ class Node_pool(Node_conv):
         yn_zip = np.concatenate((y_n,c_d_yn.reshape(y_n.shape)), axis=1)    # double the channel
         pd = Fraction(self.kern - self.padding - 1, self.stride)
         ps = ss = Fraction(1, self.stride)
-        c_d_yn1 = self.slid.slid_win_4d_flip(yn_zip, pseudo_kern, ss, ps, pd, self.slid.pool_bp(y_n_1), sc, SparkMeta=self.SparkMeta)
+        c_d_yn1 = self.slid_win_4d_flip(yn_zip, pseudo_kern, ss, ps, pd, self.pool_bp(y_n_1), sc, SparkMeta=self.SparkMeta)
         return None, None, c_d_yn1
