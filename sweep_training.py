@@ -40,6 +40,7 @@ def sweep_training(args):
             s3_db = '{}.db'.format(s3_file)
             s3_chkpt = '{}.chkpt.npz'.format(s3_file)
             # submit script should already cd to main dir (/root/neural-net-bp)
+            # NOTE: it would be better to run another thread to periodically copy db / chkpoint to s3
             cmd = ( "s3_dir={s3_dir}\n"
                     "s3_db={s3_db}\n"
                     "train_name=$(ls -t ./profile_data/ | awk 'NR==1')\n"

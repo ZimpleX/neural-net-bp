@@ -84,7 +84,7 @@ def get_master_DNS(cluster_name):
         exit()
 
 
-def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True, pipe_args=''):
+def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is_clone=True, is_scp=True, is_s3=True, pipe_args=''):
     try:
         if is_scp:
             # ____
@@ -103,15 +103,21 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         combineCmd  = []
         combineCmd += [CMD['source_rc'].format(rc=_CUS_BASHRC)]
         combineCmd += [CMD['key_id_export'].format(key_id=key_id, secret_key=secret_key)]
-        # >>>>>
-        combineCmd += [CMD['aws_cp'].format(s3_data='spark-ec2-log/blood_cell_classification_3cat/3000/finish.chkpt.npz', loc_des='/root/checkpoint.npz')]
-        if is_hdfs:
+        if is_hdfs: # NOTE: for cluster version FF
+            # >>>>>
+            # not putting it in aws cuz checkpoint is only used together with hdfs
+            combineCmd += [CMD['aws_cp'].format(s3_data='spark-ec2-log/blood_cell_classification_3cat/3000/finish.chkpt.npz', loc_des='/root/checkpoint.npz')]
             combineCmd += [CMD['hdfs_conf']\
                 .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
             for d in _AWS_DIR_INFO['data']:
                 combineCmd += [CMD['hdfs_distcp'].format(f=d)]
+        if is_s3:   # NOTE: for serial version training
+            combineCmd += [CMD['dir_create'].format(dir='/root/data_part')]
+            combineCmd += [CMD['dir_create'].format(dir='/root/data_part/train')]
+            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/0.npz',loc_des='/root/data_part/train')]
+            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/1500.npz',loc_des='/root/data_part')]
         combineCmd += [CMD['dir_create'].format(dir='/tmp/spark-events/')]
-        if is_clone:
+        if is_clone:    # extract on EC2
             combineCmd += [CMD['tar_x']]
         combineCmd += [CMD['py3_check']]
         combineCmd += [CMD['swap_space']]
@@ -176,6 +182,6 @@ if __name__ == '__main__':
     if args.via_cli:
         pipe_args += ' --via_cli'
     name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
-        is_hdfs=(args.hdfs), is_clone=(args.clone), is_scp=(args.scp), pipe_args=pipe_args)
+        is_hdfs=(args.hdfs), is_clone=(args.clone), is_scp=(args.scp), is_s3=(args.s3), pipe_args=pipe_args)
     submit_application(name, master_dns, args.main, args.args_main, 
         key_id=key_id, secret_key=secret_key, pipe_args=pipe_args)
