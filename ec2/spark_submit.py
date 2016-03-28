@@ -15,7 +15,7 @@ _AWS_DIR_INFO = {
         'spark': '/root/spark/',
         'hdfs': '/root/ephemeral-hdfs/bin/',
         'log': '/root/neural-net-bp/{train_name}/ann.db',
-        'data': ['bloodcell/3cat_smaller/*']
+        'data_dir': 'bloodcell/3cat_smaller/'
 }
 _APP_INFO = {
         'repo_url': 'https://github.com/ZimpleX/neural-net-bp',
@@ -109,8 +109,7 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
             combineCmd += [CMD['aws_cp'].format(s3_data='spark-ec2-log/blood_cell_classification_3cat/3000/finish.chkpt.npz', loc_des='/root/checkpoint.npz')]
             combineCmd += [CMD['hdfs_conf']\
                 .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
-            for d in _AWS_DIR_INFO['data']:
-                combineCmd += [CMD['hdfs_distcp'].format(f=d)]
+            combineCmd += [CMD['hdfs_distcp'].format(f=_AWS_DIR_INFO['data_dir'])]
         if is_s3:   # NOTE: for serial version training
             combineCmd += [CMD['dir_create'].format(dir='/root/data_part')]
             combineCmd += [CMD['dir_create'].format(dir='/root/data_part/train')]

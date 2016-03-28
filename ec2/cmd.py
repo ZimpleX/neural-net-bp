@@ -64,7 +64,6 @@ CMD = {
             python3 -m ec2.spark_launcher --login --pipe {pipe_args}
     """,
     'hdfs_distcp': """
-            $hdfs_dir/hadoop fs -mkdir /sets
             $hdfs_dir/hadoop distcp s3n://{f} hdfs:///sets/
     """,
     'aws_cp': """
