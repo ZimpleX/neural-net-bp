@@ -140,9 +140,10 @@ class Data:
         continuously yield mini-batches of data, 
         by segmenting the whole data set with batch_size
         """
-        if self.data.shape[0] % batch_size != 0:
-            raise RuntimeError('num of data tuples is not a multiple of batch size')
-        num_batch = self.data.shape[0] // batch_size
+        # if self.data.shape[0] % batch_size != 0:
+        #    raise RuntimeError('num of data tuples is not a multiple of batch size')
+        from math import ceil
+        num_batch = ceil(self.data.shape[0] // batch_size)
         for b in range(num_batch):
             yield self.data[b*batch_size:(b+1)*batch_size, :], \
                     self.target[b*batch_size:(b+1)*batch_size, :]
