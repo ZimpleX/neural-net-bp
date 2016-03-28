@@ -114,7 +114,7 @@ CMD = {
     'submit_normal': """
             app_home=/root/{name}/
             cd $app_home
-            screen -d -m python3 {main} {args}
+            screen -d -m -L python3 {main} {args}
     """,
     'record_submit_cmd': """
             echo '{cmd}' > debug_submit.sh
