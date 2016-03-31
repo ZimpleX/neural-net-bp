@@ -288,7 +288,8 @@ class clt_profile:
 
     def data_to_db(self, db_name='clt_profiling.db'):
         attr_name = ['clt_size', 'node_type', 'num_cores', 'mem_per_node', 
-                'app_id', 'app_name', 'data_size', 'num_partition', 'itr', 'tot_dur', 'stage_id', 'descp'] + METRIC_NAME
+                'app_id', 'app_name', 'data_size', 'num_partition', 'itr', 'tot_dur', 'stage_id', 'descp'] \
+                + [i.replace(' ', '_').replace('/', '_') for i in METRIC_NAME]
         attr_type = ['INTEGER', 'TEXT', 'INTEGER', 'REAL', 
                 'INTEGER', 'TEXT', 'INTEGER', 'INTEGER', 'INTEGER', 'REAL', 'INTEGER', 'TEXT'] + ['REAL']*len(METRIC_NAME)
         clt_data = [self.basic['num_workers'], self.basic['instance_type']]
