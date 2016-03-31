@@ -107,7 +107,9 @@ CMD = {
             args="{args}"
             PYSPARK_PYTHON=$(which python3) \
             /root/spark/bin/spark-submit --master spark://$master_dns:7077 \
-                --conf spark.eventLog.enabled=true --conf spark.executor.memory=4g --conf spark.driver.memory=4g --conf spark.akka.frameSize=2000 --py-files packed_module.zip $submit_main $args
+                --conf spark.eventLog.enabled=true --conf spark.executor.memory=4g --conf spark.driver.memory=4g --conf spark.akka.frameSize=2000 \
+                --total-executor-cores {tot_cores} \
+                --py-files packed_module.zip $submit_main $args
             #/root/spark/bin/spark-submit /root/spark/examples/src/main/python/pi.py 10
     """,
     'submit_normal': """

@@ -10,7 +10,7 @@ DEFAULT_EC2_SPARK_ARGS = {'--instance-type': 't2.micro',
                     '--ami': 'ami-12a66771'}
 DEFAULT_EC2_CLI_ARGS = {'--image-id': 'ami-12a66771',
                     '--count': '1',
-                    '--instance-type': 't2.medium'}
+                    '--instance-type': 't2.large'}
 
 import argparse
 
@@ -61,6 +61,7 @@ def parse_args():
         parser.add_argument('--clone', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if clone from local dir')
         parser.add_argument('--scp', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if scp of credentials/rc')
         parser.add_argument('--s3', action='store_true', default=False, help='[FOR SUBMIT]: add this flag if S3 into ec2 local fs')
+        parser.add_argument('--tot_cores', type=int, default=16, help='total number of cores to deploy in cluster')
         # parser.add_argument('--cnn_slide_method',  type=str, choices=['slide_serial', 'slide_spark'], 
         # default='slide_spark', help='how would you like to perform the sliding window operation for your CNN?')
         parser.add_argument('--main', required=True, type=str, help='py file of main function')
