@@ -11,6 +11,7 @@ from db_util.util import *
 from logf.printf import *
 from time import strftime
 from numpy import *
+import logf.filef as filef
 
 import pdb
 
@@ -124,3 +125,34 @@ def sanity_last_n_commit(*table, num_run=1, db_name=DB_NAME, db_path=DB_DIR_PARE
     bad_table = set(table) - set(table_flt)
     if bad_table:
         printf('tables {} don\'t have attr {}', bad_table, time_attr, type='WARN')
+
+
+def drop_col(table, *col_drop, db_name=DB_NAME, db_path=DB_DIR_PARENT):
+    """
+    very basic function for dropping a column in a sqlite db table.
+    --> reason for this: sqlite does not support drop operation
+    """
+    from functools import reduce
+    db_fullpath = '{}/{}'.format(db_path, db_name)
+    perm = os.stat(db_fullpath).st_mode
+    filef.set_f_perm(db_fullpath, '0666')
+    conn = sqlite3.connect(db_fullpath)
+    c = conn.cursor()
+    table = surround_by_brackets(table)
+    col_dict = get_attr_info(table, c=c)
+    remain_keys = set(col_dict.keys()) - set(surround_by_brackets(col_drop))
+    remain_keys_str = reduce(lambda _1,_2: '{}, {}'.format(_1,_2), remain_keys)
+    cmd = \
+       ('CREATE TABLE _bk ({remain_keys_str});\n'
+        'INSERT INTO _bk SELECT {remain_keys_str} from {table};\n'
+        'DROP TABLE {table};\n'
+        'ALTER TABLE _bk RENAME TO {table};')\
+                .format(table=table, remain_keys_str=remain_keys_str)
+    for cmd_ in cmd.split('\n'):
+        printf(cmd_)
+        c.execute(cmd_)
+    conn.commit()
+    conn.close()
+    filef.set_f_perm(db_fullpath, perm)
+    printf('successfully drop column(s): {}', col_drop)
+
