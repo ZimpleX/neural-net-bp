@@ -140,14 +140,16 @@ def drop_col(table, *col_drop, db_name=DB_NAME, db_path=DB_DIR_PARENT):
     c = conn.cursor()
     table = surround_by_brackets(table)
     col_dict = get_attr_info(table, c=c)
+    # import pdb; pdb.set_trace()
     remain_keys = set(col_dict.keys()) - set(surround_by_brackets(col_drop))
     remain_keys_str = reduce(lambda _1,_2: '{}, {}'.format(_1,_2), remain_keys)
+    remain_attr_str = reduce(lambda _1,_2: '{}, {} {}'.format(_1, _2, col_dict[_2]), remain_keys)
     cmd = \
-       ('CREATE TABLE _bk ({remain_keys_str});\n'
+       ('CREATE TABLE _bk ({remain_attr_str});\n'
         'INSERT INTO _bk SELECT {remain_keys_str} from {table};\n'
         'DROP TABLE {table};\n'
         'ALTER TABLE _bk RENAME TO {table};')\
-                .format(table=table, remain_keys_str=remain_keys_str)
+                .format(table=table, remain_attr_str=remain_attr_str, remain_keys_str=remain_keys_str)
     for cmd_ in cmd.split('\n'):
         printf(cmd_)
         c.execute(cmd_)
@@ -186,3 +188,33 @@ def add_col(table, col_add_name, col_add_type, f_lambda, *dependencies, db_name=
     conn.close()
     filef.set_f_perm(db_fullpath, perm)
     printf('successfully add column: {}', col_add_name)
+
+
+def normalize_col(table, col, group_by_key, db_name=DB_NAME, db_path=DB_DIR_PARENT):
+    db_fullpath = '{}/{}'.format(db_path, db_name)
+    perm = os.stat(db_fullpath).st_mode
+    filef.set_f_perm(db_fullpath, '0666')
+    conn = sqlite3.connect(db_fullpath)
+    c = conn.cursor()
+    table = surround_by_brackets(table)
+    group_by_key = surround_by_brackets(group_by_key)
+    col_norm = '{}_norm'.format(col)
+    col_norm = surround_by_brackets(col_norm)
+    col = surround_by_brackets(col)
+    c.execute('ALTER TABLE {table} ADD COLUMN {col_norm} REAL'.format(table=table, col_norm=col_norm))
+    k_list = list(c.execute('SELECT DISTINCT {filt} FROM {table}'.format(filt=group_by_key, table=table)) )
+    k_list = [i[0] for i in k_list]
+    for k in k_list:
+        m = list(c.execute('SELECT max({col}) FROM {table} WHERE {filt}={k}'.format(col=col, table=table, filt=group_by_key, k=k)))[0]
+        m = float(m[0])
+        d_list = list(c.execute('SELECT {col} FROM {table} WHERE {filt}={k}'.format(col=col, table=table, filt=group_by_key, k=k)))
+        d_list = [i[0] for i in d_list]
+        for d in d_list:
+            c.execute('UPDATE {table} SET {col_norm} = {ret} WHERE {filt}={k1} AND {col}={k2}'\
+                .format(table=table, col_norm=col_norm, ret=d/m, 
+                    filt=group_by_key, k1=k, col=col, k2=d))
+    
+    conn.commit()
+    conn.close()
+    filef.set_f_perm(db_fullpath, perm)
+    printf('successfully normalize column: {}', col)
