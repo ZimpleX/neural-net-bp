@@ -156,3 +156,33 @@ def drop_col(table, *col_drop, db_name=DB_NAME, db_path=DB_DIR_PARENT):
     filef.set_f_perm(db_fullpath, perm)
     printf('successfully drop column(s): {}', col_drop)
 
+
+def add_col(table, col_add_name, col_add_type, f_lambda, *dependencies, db_name=DB_NAME, db_path=DB_DIR_PARENT):
+    """
+    dependencies        col in the original table
+                        should pass dependencies to f_lambda
+    """
+    db_fullpath = '{}/{}'.format(db_path, db_name)
+    perm = os.stat(db_fullpath).st_mode
+    filef.set_f_perm(db_fullpath, '0666')
+    conn = sqlite3.connect(db_fullpath)
+    c = conn.cursor()
+    table = surround_by_brackets(table)
+    col_add_name = surround_by_brackets(col_add_name)
+    dependencies = surround_by_brackets(dependencies)
+    dp_str = reduce(lambda _1,_2:'{}, {}'.format(_1,_2), dependencies)
+    col_dict = get_attr_info(table, c=c)
+    assert set(dependencies).issubset(set(col_dict.keys()))
+    c.execute('ALTER TABLE {table} ADD COLUMN {col} {type}'.format(table=table, col=col_add_name, type=col_add_type))
+    dp_list = list(c.execute('SELECT {dp} FROM {table}'.format(dp=dp_str, table=table)) )
+    for dp in dp_list:
+        up_cond = zip(dependencies, dp)
+        up_cond_str = map(lambda _: '{}={}'.format(_[0],_[1]), up_cond)
+        up_cond_str = reduce(lambda _1,_2: '{} and {}'.format(_1,_2), up_cond_str)
+        c.execute('UPDATE {table} SET {col} = {ret} WHERE {cond}'\
+            .format(table=table, col=col_add_name, 
+                    ret=f_lambda(*dp), cond=up_cond_str))
+    conn.commit()
+    conn.close()
+    filef.set_f_perm(db_fullpath, perm)
+    printf('successfully add column: {}', col_add_name)
