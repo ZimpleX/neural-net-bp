@@ -6,18 +6,18 @@ from net.structure import Net_structure
 import argparse
 import numpy as np
 from logf.printf import printf
-import os
 from functools import reduce
 import io
 from net.conf import *
-import copy
-import sys
+from ec2.EmbedScript import *
 
 
 def parse_args():
     parser = argparse.ArgumentParser('evaluate the trained model on a batch of test images')
     parser.add_argument('checkpoint', type=str, help='path to the checkpoint file of trained net')
     parser.add_argument('test_batch_dir', type=str, help='dir of the batch dataset to be tested')
+    parser.add_argument('--partition', required=True, type=int, help='number of partitions for input data\n[NOTE]: you should enforce this when with another flag when launching spark\n[E.G.]: --total-executor-cores')
+    parser.add_argument('--num_sets', required=True, type=int, help='number of small sets for evaluation')
     return parser.parse_args()
 
 # ref: http://stackoverflow.com/questions/26884871/advantage-of-broadcast-variables
@@ -39,14 +39,47 @@ def evaluate_static(batch_ipt, target, net_bc, mini_batch=0):
     return cur_cost/num_entry, cur_correct/num_entry
 
 
+temp_dir = '/_temp'
+hdfs_bin = '/root/ephemeral-hdfs/bin/'
+def restore_hdfs_data(eval_dir):
+    cmd = 'if {hdfs_bin}/hadoop fs -test -d {temp_dir}; then {hdfs_bin}/hadoop fs -mv {temp_dir}/* {eval_dir}; fi'.format(hdfs_bin=hdfs_bin, temp_dir=temp_dir, eval_dir=eval_dir)
+    try:
+        stdout, stderr = runScript(cmd)
+    except ScriptException as se:
+        printf(se, type='ERROR')
+
+
+def setup_hdfs_data(num_sets, eval_dir):
+    restore_hdfs_data(eval_dir)
+    cmd='{hdfs_bin}/hadoop fs -ls {eval_dir} | grep {eval_dir}'.format(hdfs_bin=hdfs_bin, eval_dir=eval_dir)
+    try:
+        stdout, stderr = runScript(cmd)
+        inf_l = stdout.decode('utf-8').strip().split('\n')
+        f_l = [i.split()[-1] for i in inf_l]
+        tot_sets = len(f_l)
+    except ScriptException as se:
+        printf(se, type='ERROR')
+    cmd = 'if ! {hdfs_bin}/hadoop fs -test -d {temp_dir}; then {hdfs_bin}/hadoop fs -mkdir {temp_dir}; fi'.format(hdfs_bin=hdfs_bin, temp_dir=temp_dir)
+    try:
+        stdout, stderr = runScript(cmd)
+    except ScriptException as se:
+        printf(se, type='ERROR')
+    try:
+        for d in f_l[0:(tot_sets-num_sets)]:
+            stdout, stderr = runScript('{hdfs_bin}/hadoop fs -mv {data} {temp_dir}'.format(hdfs_bin=hdfs_bin, data=d, temp_dir=temp_dir))
+    except ScriptException as se:
+        printf(se, type='ERROR')
+
 
 
 
 if __name__ == '__main__':
     args = parse_args()
+    setup_hdfs_data(args.num_sets, args.test_batch_dir)
+    d_size = args.num_sets * 250
     try:
         from pyspark import SparkContext
-        sc = SparkContext(appName='batch_eval')
+        sc = SparkContext(appName='batch_eval-dsize_{}-partition_{}-itr_{}'.format(d_size,args.partition,1))
     except Exception as e:
         sc = None
         printf('No Spark: run SERIAL version of CNN', type='WARN')
@@ -62,7 +95,7 @@ if __name__ == '__main__':
     avg_cost_tot = 0.
     avg_accuracy_tot = 0.
     # distributed load
-    mini_batch = 200
+    mini_batch = 0
     hdfs_files = '{}/*.npz'.format(args.test_batch_dir)
     f_set = sc.binaryFiles(hdfs_files)
     
@@ -87,7 +120,7 @@ if __name__ == '__main__':
     #________________
     # result_rdd = dist_data.mapPartitions(lambda _: evaluate_static(_[1]['data'],_[1]['target'],net_bc,mini_batch=mini_batch) ,preservesPartitioning=True)
     result_rdd = dist_data.map(lambda _: (_[0], \
-        evaluate_static(_[1]['data'],_[1]['target'],net_bc,mini_batch=mini_batch)))
+        evaluate_static(_[1]['data'],_[1]['target'],net_bc,mini_batch=mini_batch)) )
     result_rdd = result_rdd.collect()
 
     num_img = dist_data.map(lambda _: _[1]['data'].shape[0]).reduce(lambda _1,_2: _1+_2)
@@ -101,3 +134,5 @@ if __name__ == '__main__':
     avg_cost_tot /= num_set
     avg_accuracy_tot /= num_set
     printf(out_str, num_img, avg_cost_tot, 100*avg_accuracy_tot)
+
+    restore_hdfs_data(args.test_batch_dir)
