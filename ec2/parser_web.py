@@ -33,6 +33,8 @@ def time_conv(timeStr):
     format time to be 'second':
         recognize 'ms' / 'mS' / 'min' / 'Min' / 'h'
     """
+    if timeStr == '':
+        return ''
     unit = timeStr.split()[-1]
     val = float(timeStr.split()[0])
     if unit in ['ms', 'mS']:
@@ -48,6 +50,8 @@ def time_conv(timeStr):
 
 def unit_conv(unit_str):
     ret = time_conv(unit_str)
+    if ret == '':
+        return ''
     if type(ret) == type(''):
         unit = ret.split()[-1]
         val = float(ret.split()[0])
@@ -76,7 +80,8 @@ METRIC_NAME = [ 'Duration',         # computing time
                 'Input Size',
                 'Shuffle Read Size',
                 'Shuffle Read Blocked Time',
-                'Shuffle Remote Reads']        # NOTE: i am not considering Record metric currently
+                'Shuffle Remote Reads',
+                'Input Size / Records']        # NOTE: i am not considering Record metric currently
 
 
 
@@ -132,7 +137,8 @@ class app_profile:
         self.job_list = []
         self.stage_list = []
         # dic value is an numpy array --> index is the stage id
-        self.data = {k: None for k in METRIC_NAME}
+        self.data_per = {k: None for k in METRIC_NAME}      # value per executor --> will be meaningless if executor switches too often
+        self.data_sum = {k: None for k in METRIC_NAME}
 
     def __str__(self):
         return ("appID:       {id}\n"
@@ -173,23 +179,48 @@ class app_profile:
         for s in stage_table.find_all('tr'):
             self.stage_list += [stage_profile(s, self.dns_parent)]
         s_len = len(self.stage_list)
-        self.data = {k:np.zeros(s_len) for k in self.data.keys()}
+        self.data_per = {k:np.zeros(s_len) for k in self.data_per.keys()}
+        self.data_sum = {k:np.zeros(s_len) for k in self.data_sum.keys()}
         
     def parse_stages(self):
-        idx = 0
-        for s in self.stage_list:
+        for idx,s in enumerate(self.stage_list):
             r_pub = urlreq.urlopen(s.description['href'])
             s_soup = BeautifulSoup(r_pub, 'html.parser')
             d_table = s_soup.find_all('tbody')[0]
             for t in d_table.find_all('tr'):
                 k = t.find_all('td')[0].get_text().strip()
                 v = t.find_all('td')[3].get_text()
-                self.data[k][idx] = unit_conv(v)
-            idx += 1
+                self.data_per[k][idx] = unit_conv(v)
+            d_table = s_soup.find_all('table')[2]
+            t_title = d_table.find_all('thead')[0]
+            d_title = []
+            for t in t_title.find_all('th'):
+                d_title += [t.get_text().strip()]
+            d_title_clip = []
+            for i,t in enumerate(d_title):
+                if t in METRIC_NAME:
+                    d_title_clip += [(i,t)]
+                    
+            row_html_l = d_table.find_all('tbody')[0].find_all('tr')
+            for row in row_html_l:
+                d_i = [i[0] for i in d_title_clip]
+                d_m = [i[1] for i in d_title_clip]
+                # pdb.set_trace()
+                v = np.array(list(map(lambda _: _.get_text().strip(), row.find_all('td'))))[d_i]
+                v = list(map(lambda _: unit_conv(_), v))
+                # pdb.set_trace()
+                kv = zip(d_m, v)
+                for i in kv:
+                    kk = i[0]
+                    vv = i[1]
+                    if type(vv) == type(0) or type(vv) == type(0.):
+                        self.data_sum[kk] += vv
 
     def print_data(self):
-        for k in self.data.keys():
-            printf('{}\n{}',k,self.data[k],type='',separator='-')
+        for k in self.data_per.keys():
+            printf('{}\n{}',k,self.data_per[k],type='',separator='-')
+        for k in self.data_sum.keys():
+            printf('{}\n{}',k,self.data_sum[k],type='',separator='-')
 
 
 
@@ -244,9 +275,8 @@ class clt_profile:
         app_table = self.master_soup.find_all('tbody')[2]
         num_app = len(app_table.find_all('tr'))
         end_idx = (end_idx < 0) and (num_app-1) or end_idx
-        count = 0
         self.app_list = []
-        for app in app_table.find_all('tr'):
+        for count,app in enumerate(app_table.find_all('tr')):
             if count > end_idx:
                 break
             if count >= start_idx:
@@ -255,7 +285,6 @@ class clt_profile:
                 a.set_stages()
                 a.parse_stages()
                 self.app_list += [a]
-            count += 1
 
     def data_to_db(self, db_name='clt_profiling.db'):
         attr_name = ['clt_size', 'node_type', 'num_cores', 'mem_per_node', 
@@ -272,8 +301,8 @@ class clt_profile:
             app_data = [a.cores, a.mem_per_node, a.id['name'], a_name, a_dsize, a_partition, a_itr, a.duration]
             stage_data = None
             for k in METRIC_NAME:
-                assert a.data[k] is not None
-                data_T = a.data[k].reshape(-1,1)
+                assert a.data_sum[k] is not None
+                data_T = a.data_sum[k].reshape(-1,1)
                 stage_data = ((stage_data is None) and [data_T] \
                         or [np.concatenate((stage_data,data_T), axis=1)])[0]
             desp_data = np.array([s.description['name'] for s in a.stage_list]).reshape(-1,1)
