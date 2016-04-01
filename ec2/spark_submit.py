@@ -113,8 +113,9 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         if is_s3:   # NOTE: for serial version training
             combineCmd += [CMD['dir_create'].format(dir='/root/data_part')]
             combineCmd += [CMD['dir_create'].format(dir='/root/data_part/train')]
-            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/0.npz',loc_des='/root/data_part/train')]
-            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/1500.npz',loc_des='/root/data_part')]
+            for td in ['0', '1500', '3000']:
+                combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/{}.npz'.format(td),loc_des='/root/data_part/train')]
+            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/4500.npz',loc_des='/root/data_part')]
         combineCmd += [CMD['dir_create'].format(dir='/tmp/spark-events/')]
         if is_clone:    # extract on EC2
             combineCmd += [CMD['tar_x']]
@@ -132,12 +133,12 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         exit()
 
 
-def submit_application(name, master_dns, main, args_main, key_id='', secret_key='', pipe_args=''):
+def submit_application(name, master_dns, main, args_main, tot_cores, key_id='', secret_key='', pipe_args=''):
     printf('ENTER application submission', type='WARN')
     try:
         shot = [CMD['source_rc'].format(rc=_CUS_BASHRC)]
         if main in ['conv_unittest.py', 'test/batch_eval.py']:
-            submit_cmd = CMD['submit_spark'].format(dns=master_dns, name=name, main=main, args=args_main)
+            submit_cmd = CMD['submit_spark'].format(dns=master_dns, name=name, main=main, args=args_main, tot_cores=tot_cores)
         elif main in ['sweep_training.py', 'sweep_conv_unittest.py', 'main.py']:
             submit_cmd = CMD['submit_normal'].format(name=name, main=main, args=args_main)
         shot += [CMD['key_id_export'].format(key_id=key_id,secret_key=secret_key)]
@@ -182,5 +183,5 @@ if __name__ == '__main__':
         pipe_args += ' --via_cli'
     name = prepare(args.identity_file, master_dns, args.credential_file, key_id, secret_key, 
         is_hdfs=(args.hdfs), is_clone=(args.clone), is_scp=(args.scp), is_s3=(args.s3), pipe_args=pipe_args)
-    submit_application(name, master_dns, args.main, args.args_main, 
+    submit_application(name, master_dns, args.main, args.args_main, args.tot_cores,
         key_id=key_id, secret_key=secret_key, pipe_args=pipe_args)
