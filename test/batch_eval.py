@@ -75,16 +75,41 @@ def setup_hdfs_data(num_sets, eval_dir):
 
 if __name__ == '__main__':
     args = parse_args()
-    setup_hdfs_data(args.num_sets, args.test_batch_dir)
-    d_size = args.num_sets * 250
     try:
         from pyspark import SparkContext
         sc = SparkContext(appName='batch_eval-dsize_{}-partition_{}-itr_{}'.format(d_size,args.partition,1))
     except Exception as e:
         sc = None
         printf('No Spark: run SERIAL version of CNN', type='WARN')
-    # sc = None
-    # slide_method = (sc is None) and 'slide_serial' or 'slide_spark'
+    ####################
+    #  Serial version  #
+    ####################
+    if sc is None:
+        import os
+        net = Net_structure(None, None, None)
+        net.import_(args.checkpoint)
+        tot_batch = 0
+        tot_cost = 0.
+        tot_correct = 0.
+        for f in os.listdir(args.test_batch_dir):
+            cur_f = '{}/{}'.format(args.test_batch_dir, f)
+            test = np.load(cur_f)
+            cur_batch = test['data'].shape[0]
+            cur_cost, cur_correct = net.evaluate(test['data'], test['target'], mini_batch=50)
+            tot_batch += cur_batch
+            tot_cost += cur_cost * cur_batch
+            tot_correct += cur_correct * cur_batch
+            printf('done testing {}\ncost: {:.3f}, correct: {:.3f}%', cur_f, cur_cost, 100*cur_correct)
+        cost = tot_cost / tot_batch
+        correct = tot_correct / tot_batch
+        printf('done testing {} images\ncost: {:.3f}, correct: {:.3f}%', tot_batch, cost, 100*correct)
+        exit()
+    
+    #####################
+    #  Cluster version  #
+    #####################
+    setup_hdfs_data(args.num_sets, args.test_batch_dir)
+    d_size = args.num_sets * 250
     slide_method = 'slide_serial'
 
     out_str = ( "Done testing on {} images\n"
@@ -113,7 +138,6 @@ if __name__ == '__main__':
     # NOTE: cogroup / join will invoke a shuffle --> too expensive
     # NOTE: http://www.sparktutorials.net/spark-broadcast-variables---what-are-they-and-how-do-i-use-them
     # dist_net_data = dist_net.cogroup(dist_data)
-    # printf('finish replicating net')
     # exit()
     # (zipIndex, (net, (file_name, data_array)))
     # result_rdd = dist_net_data.map(lambda _: ( _[1][1][0], _[1][0].evaluate(_[1][1][1]['data'],_[1][1][1]['target'],mini_batch=mini_batch) )).collect()
