@@ -27,27 +27,28 @@ This is a self-implemented version of ImageNet (DCNN). The net includes `fully-c
 
 ## ImageNet Model Design
 
-current performance:
-
-- `./yaml_model/checkpoint/cell_cnn1.npz`
-  - epoch: 20
-  - batch: 1500
-
-| Img subset | avg cost | avg accuracy (%) |
-| ---------- | -------- | ---------------- |
-| 0-1500     | 0.371    | 87.133           |
-| 1500-3000  | 0.581    | 79.267           |
-| 3000-4500  | 0.711    | 76.200           |
-| 4500-6000  | 0.626    | 77.067           |
-| 6000-7500  | 0.651    | 77.733           |
-| Total      | 0.588    | 79.480           |
-
 - `./yaml_model/checkpoint/cell_cnn1_3000_final_chkpt.npz`
   - epoch: 46
   - batch: 8400
+  - 3 conv layer
+  - feature map: 32 - 64 - 128
 
 | name       | data size | accuracy (%) |
 | ---------- | --------- | ------------ |
 | training   | 3000      | 99.9         |
 | validation | 1500      | 88.3         |
 | testing    | 3000      | 89.1         |
+
+
+
+- `./yaml_model/checkpoint/cell_cnn2_4500_final_chkpt.npz`
+  - epoch: 40
+  - 3 conv layer
+  - feature map: 16 - 32 - 64
+
+| name       | data size | accuracy (%) | cost  |
+| ---------- | --------- | ------------ | ----- |
+| train      | 4500      | 100.000      | 0.002 |
+| validation | 1500      | 90.200       | 0.478 |
+| testing    | 1500      | 90.200       | 0.460 |
+
