@@ -81,14 +81,16 @@ class Net_structure:
         cost_type           the class representing the chosen cost function
         """
         if yaml_model is None:
+            self.w_list = None
+            self.b_list = None
             return
 
         if sc is None:
             num_exe = 0
         else:
             # num_exe = sc.defaultParallelism
+            # TODO: change this --> auto get the number of cores
             num_exe = 8
-        printf('num executors: {}', num_exe)
         self.num_layer = len(yaml_model['network'])    # yaml don't include input layer
         self.w_list = [None] * self.num_layer
         self.dw_list = [None] * self.num_layer
@@ -248,10 +250,11 @@ class Net_structure:
         return cur_cost/num_entry, cur_correct/num_entry
             
 
-    def export_(self, yaml_model):
+    def export_(self, yaml_model, sync_script=None):
         """
         Save the checkpoint net configuration (*.npz)
         """
+        # TODO: maybe support sync to remote?
         path = yaml_model['checkpoint']
         info = {}
         info['w_list'] = self.w_list
@@ -260,8 +263,8 @@ class Net_structure:
         info['cost'] = self.cost
         info['epoch'] = self.epoch
         info['batch'] = self.batch
-        # pdb.set_trace()
         np.savez(path, **info)
+        printf('save checkpoint file: {}', path)
 
     
     def import_(self, path, slide_method='slide_serial', sc=None):
@@ -270,8 +273,16 @@ class Net_structure:
         """
         info = np.load(path)
         yaml_model = info['yaml_model'].reshape(1)[0]
-        # pdb.set_trace()
         self.__init__(yaml_model, slide_method, sc)
+        if self.w_list is not None:
+            # the case of partial trained chkpt using new yaml_model
+            # this is to ensure that the yaml_model in args and that in chkpt matches
+            for i,w in enumerate(info['w_list']):
+                assert w.shape == self.w_list[i].shape
+        if self.b_list is not None: 
+            for i,b in enumerate(info['b_list']):
+                assert b.shape == self.b_list[i].shape
+
         self.w_list = info['w_list']    # probably need to convert to list
         self.b_list = info['b_list']
         self.cost = info['cost'].reshape(1)[0]  # probably no need for this
