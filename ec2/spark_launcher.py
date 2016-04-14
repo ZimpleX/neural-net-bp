@@ -229,6 +229,10 @@ if __name__=='__main__':
         else:
             login(wrap_script, spark_ec2_flag, args.cluster_name, ip_opt)
     elif args.destroy:
+        from logf.printf import think_twice
+        if not think_twice('DESTROY PERMANENTLY'):
+            printf('not performing destroy, exit now!', type='WARN')
+            exit()
         if args.via_cli:
             cli_destroy(args.cluster_name)
         else:
