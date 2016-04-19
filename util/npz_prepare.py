@@ -79,6 +79,21 @@ def normalize_raw_data(raw, path_out, start_idx, end_idx, num_op=None, scale_axi
     np.savez(path_out, **ret)
 
 
+def split_npz_cat(in_path, out_path_regx, split_key):
+    """
+    out_path_regx       e.g., cell_cat{}.npz
+    """
+    fin = np.load(in_path)
+    out_val = set(map(tuple, fin[split_key]))
+    for v in out_val:
+        v = np.array(v)
+        split_out = {}
+        idx = (fin[split_key] == v).all(axis=1).nonzero()[0]
+        for k in fin.keys():
+            split_out[k] = fin[k][idx]
+        np.savez(out_path_regx.format(v), **split_out)
+        
+
 
 if __name__ == '__main__':
     #output_data = 'train_data/3cat_1000_scale.npz'
