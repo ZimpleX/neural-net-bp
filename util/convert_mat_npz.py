@@ -9,19 +9,19 @@ import os
 import pdb
 
 __cat_idx__ = {
-    'cha': '0',
-    'chg': '1',
-    'edu': '2',
-    'gym': '3',
-    'mer': '4',
-    'nav': '5',
-    'por': '6',
-    'sce': '7',
-    'tha': '8',
-    'Debris': '0',
-    'MCF7': '1',
-    'PBMC': '2',
-    'THP1': '3'
+    'cha': 0,
+    'chg': 1,
+    'edu': 2,
+    'gym': 3,
+    'mer': 4,
+    'nav': 5,
+    'por': 6,
+    'sce': 7,
+    'tha': 8,
+    'Debris': 0,
+    'MCF7': 1,
+    'PBMC': 2,
+    'THP1': 3
 }
 
 

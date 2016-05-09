@@ -44,12 +44,14 @@ def normalize_exp_col(path_npz, num_op=None, scale_axis=(1,2,3)):
         ret[tag] = 2.*(raw[tag] - rmin)/(rmax-rmin) - 1.    # normalize
 
     for tag in ['train_labels', 'validation_labels', 'test_labels']:
-        if len(raw[tag].shape) == 1:
+        if (len(raw[tag].shape) == 1) or \
+            (len(raw[tag].shape) == 2 and 1 in raw[tag].shape):
             num_entry = raw[tag].shape[0]
+            raw_tag = raw[tag].flatten().astype(np.int)
             if num_op is None:
-                num_op = raw[tag].max() - raw[tag].min() + 1
+                num_op = raw_tag.max() - raw_tag.min() + 1
             z = np.zeros((num_entry, num_op))
-            z[np.arange(num_entry), raw[tag]] = 1.
+            z[np.arange(num_entry), raw_tag] = 1.
             ret[tag] = z
 
     np.savez(path_npz, **ret)
