@@ -7,6 +7,7 @@ Prerequisite: bob.learn.libsvm python module
 from PIL import Image
 import numpy as np
 import argparse
+from logf.printf import printf
 
 
 def libsvm_to_npz(path_libsvm, path_npz, channel, height, width):
@@ -20,6 +21,11 @@ def libsvm_to_npz(path_libsvm, path_npz, channel, height, width):
 
 
 def npz_concatenate(out_npz, *path_npz):
+    """
+    concatenating may fail for large datasets, if the ndarray cannot fill into memory.
+    --> TODO:
+        change to hdf5
+    """
     data_l = [np.load(p) for p in path_npz]
     keys = set([tuple(d.keys()) for d in data_l])
     assert len(keys) == 1
@@ -27,7 +33,11 @@ def npz_concatenate(out_npz, *path_npz):
     data_merge = {}
     num_entries = 0
     for k in keys:
-        data_merge[k] = np.concatenate(tuple([dl[k] for dl in data_l]), axis=0)
+        try:
+            data_merge[k] = np.concatenate(tuple([dl[k] for dl in data_l]), axis=0)
+        except MemoryError:
+            printf("out of memory. The data is probably too large.")
+            exit()
         if num_entries == 0:
             num_entries = data_merge[k].shape[0]
         else:

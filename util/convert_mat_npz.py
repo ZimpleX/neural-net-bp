@@ -80,13 +80,8 @@ def mat_to_npz(path_mat, path_npz, norm_img_key='norm_cell', phase_img_key='phas
         np.savez(temp_phase, **npz_phase_data)
 
     from util.convert_libsvm_npz import npz_concatenate
-    try:
-        npz_concatenate('{}/norm_{}.npz'.format(path_npz, count), *temp_norm_list)
-        npz_concatenate('{}/phase_{}.npz'.format(path_npz, count), *temp_phase_list)
-    except Exception as e:
-        printf('error concatenating (probably out of memory): {}', e)
-        printf('keeping temp files: {}', temp_norm_list+temp_phase_list)
-        exit()
+    npz_concatenate('{}/norm_{}.npz'.format(path_npz, count), *temp_norm_list)
+    npz_concatenate('{}/phase_{}.npz'.format(path_npz, count), *temp_phase_list)
 
     # clear up
     for d in temp_norm_list + temp_phase_list:
