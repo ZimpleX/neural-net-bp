@@ -1,9 +1,9 @@
 app_home='/root/neural-net-bp/'
 timestamp_f='update_time'
 cd $app_home
-db_dir_wildcard='sweep_3cat_*'
+db_dir_wildcard='cell_kelvin_*'
 db_dir='./profile_data/'$db_dir_wildcard
-db_full_dir=$(ls profile_data/ | grep "sweep_3cat_.*")
+db_full_dir=$(ls profile_data/ | grep "^cell_kelvin_.*")
 if ! [ -d $db_dir ]
 then
     exit
