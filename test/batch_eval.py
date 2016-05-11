@@ -96,7 +96,7 @@ if __name__ == '__main__':
             cur_f = '{}/{}'.format(args.test_batch_dir, f)
             test = np.load(cur_f)
             cur_batch = test['data'].shape[0]
-            cur_cost, cur_correct = net.evaluate(test['data'], test['target'], mini_batch=50, eval_details=True, eval_name=f)
+            cur_cost, cur_correct = net.evaluate(test['data'], test['target'], mini_batch=150, eval_details=True, eval_name=f)
             tot_batch += cur_batch
             tot_cost += cur_cost * cur_batch
             tot_correct += cur_correct * cur_batch

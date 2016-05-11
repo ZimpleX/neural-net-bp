@@ -308,8 +308,13 @@ class Net_structure:
                     _type = ['TEXT', 'INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
                     _db_name = 'eval_out_prob.db'
                     _idx = (np.arange(cur_net_out.shape[0])+k)[...,np.newaxis]
+                    cur_net_out.sort(axis=1)
                     from db_util.basic import populate_db
-                    populate_db(_attr, _type, (eval_name,), _idx, _compare[...,np.newaxis], cur_net_out, db_name=_db_name)
+                    _compare = _compare[...,np.newaxis].astype(np.int)
+                    _pair = np.concatenate((_compare, cur_net_out), axis=1)#.astype(_dtype)
+                    _field = ','.join(['i8'] + ['f8']*num_out_cat)
+                    _pair.view(_field).sort(order=['f0', 'f{}'.format(num_out_cat)], axis=0)
+                    populate_db(_attr, _type, (eval_name,), _idx, _pair, db_name=_db_name)
         return cur_cost/num_entry, cur_correct/num_entry
             
 
