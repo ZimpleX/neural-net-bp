@@ -75,6 +75,7 @@ def setup_hdfs_data(num_sets, eval_dir):
 
 if __name__ == '__main__':
     args = parse_args()
+    d_size = args.num_sets * 250
     try:
         from pyspark import SparkContext
         sc = SparkContext(appName='batch_eval-dsize_{}-partition_{}-itr_{}'.format(d_size,args.partition,1))
@@ -95,7 +96,7 @@ if __name__ == '__main__':
             cur_f = '{}/{}'.format(args.test_batch_dir, f)
             test = np.load(cur_f)
             cur_batch = test['data'].shape[0]
-            cur_cost, cur_correct = net.evaluate(test['data'], test['target'], mini_batch=50)
+            cur_cost, cur_correct = net.evaluate(test['data'], test['target'], mini_batch=50, eval_details=True, eval_name=f)
             tot_batch += cur_batch
             tot_cost += cur_cost * cur_batch
             tot_correct += cur_correct * cur_batch
@@ -108,8 +109,7 @@ if __name__ == '__main__':
     #####################
     #  Cluster version  #
     #####################
-    setup_hdfs_data(args.num_sets, args.test_batch_dir)
-    d_size = args.num_sets * 250
+    # setup_hdfs_data(args.num_sets, args.test_batch_dir)
     slide_method = 'slide_serial'
 
     out_str = ( "Done testing on {} images\n"
@@ -159,4 +159,4 @@ if __name__ == '__main__':
     avg_accuracy_tot /= num_set
     printf(out_str, num_img, avg_cost_tot, 100*avg_accuracy_tot)
 
-    restore_hdfs_data(args.test_batch_dir)
+    # restore_hdfs_data(args.test_batch_dir)

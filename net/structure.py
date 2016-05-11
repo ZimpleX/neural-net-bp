@@ -280,7 +280,7 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-    def evaluate(self, batch_ipt, target, mini_batch=0, sc=None, eval_details=False):
+    def evaluate(self, batch_ipt, target, mini_batch=0, sc=None, eval_details=False, eval_name='null'):
         """
         mini_batch:     if the evaluation set is large, then evaluate all at a time may cause out of memory error,
                         especially when the DCNN has many layers.
@@ -300,16 +300,16 @@ class Net_structure:
             cur_cost += sum(self.cost.act_forward(cur_net_out, cur_target))
             if self.cost == cost_dict['CE']:
                 _compare = (cur_target.argmax(axis=1)==cur_net_out.argmax(axis=1))
-                cur_correct += (compare).sum()
+                cur_correct += (_compare).sum()
                 if eval_details:
                     # populate output of the CNN for detailed inspection
                     num_out_cat = cur_net_out.shape[1]
-                    _attr = ['index', 'is_correct'] + ['cat{}'.format(i) for i in range(num_out_cat)]
-                    _type = ['INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
+                    _attr = ['name', 'index', 'is_correct'] + ['cat{}'.format(i) for i in range(num_out_cat)]
+                    _type = ['TEXT', 'INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
                     _db_name = 'eval_out_prob.db'
                     _idx = (np.arange(cur_net_out.shape[0])+k)[...,np.newaxis]
                     from db_util.basic import populate_db
-                    populate_db(_attr, _type, _idx, _compare, cur_net_out, db_name=_db_name)
+                    populate_db(_attr, _type, (eval_name,), _idx, _compare[...,np.newaxis], cur_net_out, db_name=_db_name)
         return cur_cost/num_entry, cur_correct/num_entry
             
 
