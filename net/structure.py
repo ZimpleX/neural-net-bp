@@ -30,7 +30,11 @@ import timeit
 import sys
 import copy
 import os
+from functools import reduce
 from stat_cnn.mem_usage import *
+
+import conv.conv_layer
+import conv.pool_layer
 
 import pdb
 
@@ -155,6 +159,55 @@ class Net_structure:
         self.w_list = w_list
         self.b_list = b_list
 
+
+    def flattern_w_b(self):
+        """
+        flattern the net's w & b.
+
+        every feature map in the conv layer gets an index,
+        the whole weight between FC layers gets an index.
+        
+        The second tuple is for mapping back. 
+        e.g.,
+            the [i][j] feature map in layer k gets an index (k,(i,j))
+        """
+        w_flatterned = []
+        b_flatterned = []
+        for i,w in enumerate(self.w_list):
+            # TODO: skip pooling layers
+            if type(self.activ_list[i]) is conv.pool_layer.Node_pool:
+                continue
+            if len(w.shape) == 4:
+                d0 = w.shape[0]
+                d1 = w.shape[1]
+                w_flatterned += [(w[ii//d1][ii%d1], (i, (ii//d1, ii%d1))) for ii in range(d0*d1)]
+            else:
+                w_flatterned += [(w, (i,))]
+
+        for j,b in enumerate(self.b_list):
+            if type(self.activ_list[i]) is conv.pool_layer.Node_pool:
+                continue
+            b_flatterned += [(b, (j,))]
+        
+        return w_flatterned, b_flatterned
+
+    def eval_delta_w_b(self, orig_flattern_w, orig_flattern_b, cur_flattern_w, cur_flattern_b):
+        """
+        evaluate how much w (feamap) & b has changed through these epochs.
+        """
+        eval_delta_w = []
+        for j,w in enumerate(cur_flattern_w):
+            dw = (w[0] - orig_flattern_w[j][0]).reshape(1, -1)
+            _ = reduce(lambda _1,_2: _1+_2, map(lambda x: x*x, dw))
+            eval_delta_w += [(_, w[1])]
+        eval_delta_b = []
+        for i,b in enumerate(cur_flattern_b):
+            db = b[0] - orig_flattern_b[i][0]
+            _ = reduce(lambda _1,_2: _1+_2, map(lambda x: x*x, db))
+            eval_delta_b += [(_, b[1])]
+        return eval_delta_w, eval_delta_b
+
+
     def __str__(self):
         """
         print the value of weight and bias array, for each layer
@@ -227,7 +280,7 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-    def evaluate(self, batch_ipt, target, mini_batch=0, sc=None):
+    def evaluate(self, batch_ipt, target, mini_batch=0, sc=None, eval_details=False):
         """
         mini_batch:     if the evaluation set is large, then evaluate all at a time may cause out of memory error,
                         especially when the DCNN has many layers.
@@ -246,7 +299,17 @@ class Net_structure:
             cur_net_out = self.net_act_forward(cur_batch, sc)
             cur_cost += sum(self.cost.act_forward(cur_net_out, cur_target))
             if self.cost == cost_dict['CE']:
-                cur_correct += (cur_target.argmax(axis=1)==cur_net_out.argmax(axis=1)).sum()
+                _compare = (cur_target.argmax(axis=1)==cur_net_out.argmax(axis=1))
+                cur_correct += (compare).sum()
+                if eval_details:
+                    # populate output of the CNN for detailed inspection
+                    num_out_cat = cur_net_out.shape[1]
+                    _attr = ['index', 'is_correct'] + ['cat{}'.format(i) for i in range(num_out_cat)]
+                    _type = ['INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
+                    _db_name = 'eval_out_prob.db'
+                    _idx = (np.arange(cur_net_out.shape[0])+k)[...,np.newaxis]
+                    from db_util.basic import populate_db
+                    populate_db(_attr, _type, _idx, _compare, cur_net_out, db_name=_db_name)
         return cur_cost/num_entry, cur_correct/num_entry
             
 
@@ -303,7 +366,7 @@ class Net_structure:
 #########################
 #        NN flow        #
 #########################
-def net_train_main(yaml_model, args, sc):
+def net_train_main(yaml_model, args, sc, old_net=None):
     """
     define main separately to facilitate unittest
     """
@@ -318,13 +381,17 @@ def net_train_main(yaml_model, args, sc):
     #  data & net & conf  #
     #---------------------#
     data_set = Data(yaml_model, timestamp, profile=True)
-    net = Net_structure(yaml_model, args.slide_method, sc)
-    if args.partial_trained is not None:
-        net.import_(args.partial_trained, args.slide_method, sc)
-    print_to_file(_LOG_FILE['net'], net, type=None)
-
     conf = Conf(yaml_model)
-    print_to_file(_LOG_FILE['conf'], conf)
+    if old_net is None:
+        net = Net_structure(yaml_model, args.slide_method, sc)
+        if args.partial_trained is not None:
+            net.import_(args.partial_trained, args.slide_method, sc)
+        print_to_file(_LOG_FILE['net'], net, type=None)
+        print_to_file(_LOG_FILE['conf'], conf)
+    else:
+        net = old_net
+
+    orig_flattern_w, orig_flattern_b = copy.deepcopy(net.flattern_w_b())
 
     data_util.profile_net_conf(db_subdir, yaml_model, timestamp)
     #---------------------------#
@@ -392,8 +459,10 @@ def net_train_main(yaml_model, args, sc):
 
     end_time = timeit.default_timer()
     printf('training took: {:.3f}', end_time-start_time)
-    print_to_file(_LOG_FILE['net'], net, type=None)
+    # print_to_file(_LOG_FILE['net'], net, type=None)
+    cur_flattern_w, cur_flattern_b = net.flattern_w_b()
+    eval_dw, eval_db = net.eval_delta_w_b(orig_flattern_w, orig_flattern_b, cur_flattern_w, cur_flattern_b)
 
-    return end_time - start_time
+    return end_time - start_time, eval_dw, eval_db, cur_flattern_w, cur_flattern_b
 
 
