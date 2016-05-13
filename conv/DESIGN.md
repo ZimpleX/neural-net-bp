@@ -99,6 +99,30 @@ Most intuitive: simply reduce the number of iterations.
 - normal data set: best to parallelize `batch  x chan_n x chan_n1`
 - blood cell: possibility exists that training is best when using very small batch size (or even online). --> parallelizing on `row_n` and `col_n` is best in this case. --> since `batch` is small, replicating data should also be fast. 
 - I should try both.
+- serial version: best with batch size of 10. --> cuz 3 types, 100 will undermine the "stochastic" nature of the training. 
+- to parallelize:
+  - starting from the same initial weight, let the 10 nodes each individually gradient descent on 750 images with 10 mini-batch, then combine the final net. --> way to combine: based on the delta w(i,j) after 75 batch updates: take the max delta among the 10 delta w values?
+  - Or just keep the one with the highest validation accuracy?
+    - Comparison of this and the serial version should be simple
+
+
+- But the *max* seems to make more sense. 
+  - Think about the feamap --> take max, do you need to re-arrange (re-order) ?
+  - Is the order of feamap preserved? --> too bad if not.
+  - THEN: Instead of combine in a pixel-wise fashion, we can do map by map, after coming up with a measure for relative change of weight (delta w) for a whole map.
+  - [practical handbook of GA] -- pp.144
+
+
+- need to have a sense of the percentage change (delta w)
+- how does GPU achieve the speedup? --> should be parallelization as well --> but maybe GPU communication cost is much lower, like in the case of FPGA.
+- GA: seems to be a completely different story. 
+- *How to verify*
+- *swap the members in the subgroup* (maybe after some point in the training)
+
+
+- Get the roofline model for Spark
+- check the delta for after 7500 images, compare it with that of first 750, second 750, ...
+- How do you compare?
 
 
 
@@ -127,3 +151,18 @@ is the `collect()` method too often (??)
 | ------------- | ----------- | --------------- | --------------- |
 |               |             |                 |                 |
 
+
+
+
+
+
+
+### TODO: v2
+
+effect of down-sampling, noise, distortion, ...
+
+what cell is the net classifying well.
+
+is the pre-knowledge of images helping with the architecture design? --> the kernel size, the initialization of weights
+
+how to evaluate the training quality change (quantitatively)?
