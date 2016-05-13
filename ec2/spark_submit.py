@@ -106,16 +106,17 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
         if is_hdfs: # NOTE: for cluster version FF
             # >>>>>
             # not putting it in aws cuz checkpoint is only used together with hdfs
-            combineCmd += [CMD['aws_cp'].format(s3_data='spark-ec2-log/blood_cell_classification_3cat/3000/finish.chkpt.npz', loc_des='/root/checkpoint.npz')]
+            combineCmd += [CMD['aws_cp'].format(s3_data='spark-ec2-log/long_3cat_16feamap_3layer_10batch/long_run_3layer_16feamap/f16.chkpt.npz', loc_des='/root/checkpoint.npz')]
             combineCmd += [CMD['hdfs_conf']\
                 .format(hdfs=_AWS_DIR_INFO['hdfs'], key_id=key_id, secret=secret_key)]
-            combineCmd += [CMD['hdfs_distcp'].format(f=_AWS_DIR_INFO['data_dir'])]
+            for repeat in range(4):
+                combineCmd += [CMD['hdfs_distcp'].format(f=_AWS_DIR_INFO['data_dir'], d='sets{}'.format(repeat))]
         if is_s3:   # NOTE: for serial version training
             combineCmd += [CMD['dir_create'].format(dir='/root/data_part')]
             combineCmd += [CMD['dir_create'].format(dir='/root/data_part/train')]
-            for td in ['0', '1500', '3000']:
-                combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/{}.npz'.format(td),loc_des='/root/data_part/train')]
-            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/4500.npz',loc_des='/root/data_part')]
+            for td in ['4cat_phase_776']:#['0', '1500', '3000']:
+                combineCmd += [CMD['aws_cp'].format(s3_data='cell-kelvin/{}.npz'.format(td),loc_des='/root/data_part/train')]
+            # combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/4500.npz',loc_des='/root/data_part')]
         combineCmd += [CMD['dir_create'].format(dir='/tmp/spark-events/')]
         if is_clone:    # extract on EC2
             combineCmd += [CMD['tar_x']]
