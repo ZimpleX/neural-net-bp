@@ -440,11 +440,9 @@ def net_train_main(yaml_model, args, sc, old_net=None):
         correct_bat = 0.
         for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(conf.batch)):
             batch += 1
-            sys.stdout.write('\rbatch {}'.format(batch))
-            sys.stdout.flush()
             net.batch += 1
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt, sc=sc)
-            printf('cur cost: {}', cur_cost_bat)
+            printf('cur cost: {:.4f}', cur_cost_bat)
             printf('epoch {}, batch {}', epoch, batch, type="WARN")
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
