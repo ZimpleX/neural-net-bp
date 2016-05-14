@@ -293,6 +293,14 @@ class Net_structure:
         cur_cost = 0.
         mini_batch = (mini_batch <= 0) and num_entry or mini_batch
         cur_correct = 0.
+        if eval_details:
+            num_out_cat = target.shape[1]
+            _attr = ['name', 'index', 'is_correct'] + ['cat{}'.format(i) for i in range(num_out_cat)]
+            _type = ['TEXT', 'INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
+            _db_name = 'eval_out_prob.db'
+            tot_net_out = None
+            tot_compare = None
+           
         for k in range(0, num_entry, mini_batch):
             cur_batch = batch_ipt[k:(k+mini_batch)]
             cur_target = target[k:(k+mini_batch)]
@@ -303,18 +311,23 @@ class Net_structure:
                 cur_correct += (_compare).sum()
                 if eval_details:
                     # populate output of the CNN for detailed inspection
-                    num_out_cat = cur_net_out.shape[1]
-                    _attr = ['name', 'index', 'is_correct'] + ['cat{}'.format(i) for i in range(num_out_cat)]
-                    _type = ['TEXT', 'INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
-                    _db_name = 'eval_out_prob.db'
-                    _idx = (np.arange(cur_net_out.shape[0])+k)[...,np.newaxis]
                     cur_net_out.sort(axis=1)
-                    from db_util.basic import populate_db
-                    _compare = _compare[...,np.newaxis].astype(np.int)
-                    _pair = np.concatenate((_compare, cur_net_out), axis=1)#.astype(_dtype)
-                    _field = ','.join(['i8'] + ['f8']*num_out_cat)
-                    _pair.view(_field).sort(order=['f0', 'f{}'.format(num_out_cat)], axis=0)
-                    populate_db(_attr, _type, (eval_name,), _idx, _pair, db_name=_db_name)
+                    _compare = _compare[..., np.newaxis].astype(np.int)
+                    if tot_compare is None:
+                        tot_compare = copy.deepcopy(_compare)
+                    else:
+                        tot_compare = np.concatenate((tot_compare, _compare), axis=0)
+                    if tot_net_out is None:
+                        tot_net_out = copy.deepcopy(cur_net_out)
+                    else:
+                        tot_net_out = np.concatenate((tot_net_out, cur_net_out), axis=0)
+        if eval_details:
+            _idx = (np.arange(num_entry))[..., np.newaxis]
+            from db_util.basic import populate_db
+            _pair = np.concatenate((tot_compare, tot_net_out), axis=1)
+            _field = ','.join(['i8'] + ['f8']*num_out_cat)
+            _pair.view(_field).sort(order=['f0', 'f{}'.format(num_out_cat)], axis=0)
+            populate_db(_attr, _type, (eval_name,), _idx, _pair, db_name=_db_name)
         return cur_cost/num_entry, cur_correct/num_entry
             
 
