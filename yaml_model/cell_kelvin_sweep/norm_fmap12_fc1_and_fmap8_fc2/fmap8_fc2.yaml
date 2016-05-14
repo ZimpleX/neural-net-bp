@@ -1,0 +1,75 @@
+obj_name: 'cell_kelvin_4cat_norm_fmap8_fc2'
+epoch: 40
+batch: 10
+data_path: /root/data_part/train/4cat_norm_776.npz
+checkpoint: 'yaml_model/4cat_norm_fmap8_fc2.npz'
+input_image_size_y: 305
+input_image_size_x: 305
+input_num_channels: 4
+inc_rate: 1.0
+dec_rate: 1.0
+momentum: 0.9
+alpha: 0.002
+cost: CE
+shuffle: true
+
+network:
+  - name: conv1
+    type: CONVOLUTION
+    num_channels: 8
+    kernel_size: 10     # (305 + 2*1 - 10)/3 + 1 = 100
+    stride: 3
+    padding: 1
+    init_wt: 0.1
+
+  - name: maxpool1
+    type: MAXPOOL
+    num_channels: 8
+    kernel_size: 2      # (100 + 2*0 - 2)/2 + 1 = 50
+    stride: 2
+    padding: 0
+
+  - name: conv2
+    type: CONVOLUTION
+    num_channels: 16
+    kernel_size: 6      # (50 + 2*3 - 6)/2 + 1 = 26
+    stride: 2
+    padding: 3
+    init_wt: 0.1
+
+  - name: maxpool2
+    type: MAXPOOL
+    num_channels: 16    # (26 + 2*0 - 2)/2 + 1 = 13
+    kernel_size: 2
+    stride: 2
+    padding: 0
+
+  - name: conv3
+    type: CONVOLUTION
+    num_channels: 32
+    kernel_size: 4      # (13 + 2*0 - 4)/1 + 1 = 10
+    stride: 1
+    padding: 0
+    init_wt: 0.1
+
+  - name: maxpool3
+    type: MAXPOOL
+    num_channels: 32   # (10 + 2*0 - 2)/2 + 1 = 5
+    kernel_size: 2
+    stride: 2
+    padding: 0
+
+  - name: fc1
+    type: FC_SIG
+    num_channels: 800
+    init_wt: 0.02
+
+  - name: fc2
+    type: FC_SIG
+    num_channels: 20
+    init_wt: 0.02
+
+  - name: output
+    type: FC_SOFTMAX
+    num_channels: 4
+    init_wt: 0.02
