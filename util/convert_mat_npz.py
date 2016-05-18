@@ -86,4 +86,3 @@ def mat_to_npz(path_mat, path_npz, norm_img_key='norm_cell', phase_img_key='phas
     # clear up
     for d in temp_norm_list + temp_phase_list:
         os.remove(d)
-        

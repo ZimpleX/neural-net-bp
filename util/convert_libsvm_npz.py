@@ -50,6 +50,64 @@ def npz_concatenate(out_npz, *path_npz):
     np.savez(out_npz, **data_merge)
 
 
+def hdf5_concatenate(out_h5, *path_npz):
+    """
+    concatenate list of npz files into a hdf5.
+    This is supposed to be called when the previous npz_concatenate
+    function failed (ndarray cannot fit in RAM).
+    
+    NOTE:
+        assume the npz file contains two arrays (data & label), not
+        in the format of (train, validation, test).
+    """
+    # get info from a list of smaller npz files
+    tot_size = 0
+    shape_list = None
+    key_list = None
+    dtype_list = None
+    for f in path_npz:
+        _f = np.load(f)
+        _key = _f.keys()
+        _cur_shape_list = [_f[ki].shape[1:] for ki in _key]
+        _dtype = [_f[ki].dtype for ki in _key]
+        if shape_list is None:
+            shape_list = _cur_shape_list
+            key_list = _key
+            dtype_list = _dtype
+        else:
+            assert shape_list == _cur_shape_list
+            assert key_list == _key
+            assert dtype_list == _dtype
+        tot_size += _f[_key[0]].shape[0]
+        printf('getting shape for: {}', f, separator=None)
+    shape_list = [(tot_size,)+i for i in shape_list]
+    printf("shape of arrays: {}", shape_list)
+
+    # create empty large h5 files
+    import tables as tb
+    with tb.openFile(out_h5, mode='w', title="huge data") as h5file:
+        root = h5file.root
+        for i,shape in enumerate(shape_list):
+            if dtype_list[i] == np.array(1).dtype:
+                _type = tb.Int64Atom()
+            elif dtype_list[i] == np.array(1.).dtype:
+                _type = tb.Float64Atom()
+            else:
+                printf("unrecognized data type!", type="ERROR")
+                exit()
+            h5file.createCArray(root, key_list[i], _type, shape=shape)
+        printf("created h5 file: {}", h5file)
+        # fill in real data from small files into h5
+        cur_idx = 0
+        for f in path_npz:
+            _f = np.load(f)
+            _batch = _f[_f.keys()[0]].shape[0]
+            for _k in key_list:
+                h5file.get_node(root, name=_k)[cur_idx:cur_idx+_batch] = _f[_k][:]
+            cur_idx += _batch
+            printf('update data to index: {}', cur_idx)
+
+
 def parse_args():
     parser = argparse.ArgumentParser('simple data format converter')
     parser.add_argument('path_libsvm', type=str, help='input path of *.libsvm')

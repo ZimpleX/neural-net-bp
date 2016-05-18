@@ -322,6 +322,7 @@ class Net_structure:
                     else:
                         tot_net_out = np.concatenate((tot_net_out, cur_net_out), axis=0)
         if eval_details:
+            # TODO: should also set a limit for one-time populating output array.
             _idx = (np.arange(num_entry))[..., np.newaxis]
             from db_util.basic import populate_db
             _pair = np.concatenate((tot_compare, tot_net_out), axis=1)
