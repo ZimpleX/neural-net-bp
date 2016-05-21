@@ -17,6 +17,35 @@ def prepare_small_npz(path_orig, path_out, train_size, valid_size, test_size):
     np.savez(path_out, **ret)
 
 
+def prepare_h5(h5, train_size, valid_size, test_size):
+    """
+
+    """
+    import tables as tb
+    slices = [slice(0,train_size),
+        slice(train_size,train_size+valid_size),
+        slice(train_size+valid_size,train_size+valid_size+test_size)]
+    with tb.openFile(h5, mode='r') as h5f1:
+        root1 = h5f1.root
+        arr_keys = list(h5f1.get_node(root1)._v_children.keys())
+        arr_shape = []
+        arr_atom = []
+        for k in arr_keys:
+            arr_shape += [h5f1.get_node(root1, name=k).shape]
+            arr_atom += [h5f1.get_node(root1, name=k).atom]
+        h5s = ['{}_{}.h5'.format(h5.split('.h5')[-2],n) for n in ['train','valid','test']]
+        batches = [train_size, valid_size, test_size]
+        for s,h in enumerate(h5s):
+            with tb.openFile(h,mode='w') as f:
+                for i,k in enumerate(arr_keys):
+                    shape = list(arr_shape[i])
+                    shape[0] = batches[s]
+                    f.createCArray(f.root,k,arr_atom[i],shape=shape)
+                    f.get_node(f.root, name=k)[:] = h5f1.get_node(root1,name=k)[slices[s]]
+
+
+
+
 def partition_small_npz(path_orig, dir_out, small_batch):
     """
     partition a single npz with large batch into several small npz with small batch
