@@ -108,6 +108,34 @@ def split_npz_cat(in_path, out_path_regx, split_key):
         
 
 
+
+def hdf5_shuffle(hdf5):
+    """
+    Do the in-place shuffle.
+    For efficient memory access, store shuffled array in the new array.
+    After the shuffle, the old array can be deleted.
+    """
+    import timeit
+    start_time = timeit.default_timer()
+    import tables as tb
+    with tb.openFile(hdf5, mode='r+') as h5f:
+        root1 = h5f.root
+        arr_keys = list(h5f.get_node(root1)._v_children.keys())
+        for k in arr_keys:
+            arr = h5f.get_node(root1,name=k)
+            tot = arr.shape[0]
+            for r in range(tot-1,0,-1):     # tot-1, ..., 1
+                idx = np.random.randint(0,r+1)
+                _temp = arr[r]
+                arr[r] = arr[idx]
+                arr[idx] = _temp
+    end_time = timeit.default_timer()
+    printf("time spent on shuffling: {:.3f}", end_time-start_time)
+                
+
+
+
+
 if __name__ == '__main__':
     #output_data = 'train_data/3cat_1000_scale.npz'
     #input_data = 'train_data/3cat_7500.npz'
