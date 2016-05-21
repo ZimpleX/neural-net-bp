@@ -433,9 +433,7 @@ def net_train_main(yaml_model, args, sc, old_net=None):
     for epoch in range(conf.num_epoch):
         # shuffle data
         if yaml_model['shuffle'] == True:
-            np.random.shuffle(indices)
-            data_set.data = data_set.data[indices]
-            data_set.target = data_set.target[indices]
+            data_set.shuffle()
         net.epoch += 1
         cost_bat = 0.
         correct_bat = 0.

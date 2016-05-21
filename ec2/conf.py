@@ -8,7 +8,7 @@ DEFAULT_NAME = 'unnamed_cluster'
 DEFAULT_EC2_SPARK_ARGS = {'--instance-type': 't2.micro',
                     '--region': 'ap-southeast-1',
                     '--ami': 'ami-12a66771'}
-DEFAULT_EC2_CLI_ARGS = {'--image-id': 'ami-12a66771',
+DEFAULT_EC2_CLI_ARGS = {'--image-id': 'ami-0c87566f',
                     '--count': '1',
                     '--instance-type': 't2.large'}
 

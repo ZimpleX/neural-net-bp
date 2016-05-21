@@ -93,6 +93,29 @@ class Data:
         self.valid_t = data['validation_labels']
         yaml_model['data_size'] = self.data.shape[0]
         yaml_model['test_size'] = self.test_d.shape[0]
+
+
+    def _load_h5(self, yaml_model):
+        import tables as tb
+        # NOTE: don't forget to close
+        self.train_h5 = tb.openFile(yaml_model['h5_train'], mode='r')
+        self.valid_h5 = tb.openFile(yaml_model['h5_valid'], mode='r')
+        self.test_h5 = tb.openFile(yaml_model['h5_test'], mode='r')
+        self.data = self.train_h5.root.data
+        self.target = self.train_h5.root.target
+        self.valid_d = self.valid_h5.root.data
+        self.valid_t = self.valid_h5.root.target
+        self.test_d = self.test_h5.root.data
+        self.test_t = self.test_h5.root.target
+        yaml_model['data_size'] = self.data.shape[0]
+        yaml_model['test_size'] = self.test_d.shape[0]
+
+
+    def _close_h5(self, yaml_model):
+        self.train_h5.close()
+        self.valid_h5.close()
+        self.test_h5.close()
+
        
 
     def __init__(self, yaml_model, timestamp, profile=True):
@@ -103,6 +126,10 @@ class Data:
                 self._load_db(yaml_model, timestamp, profile=profile)
             elif data_type == 'npz':
                 self._load_npz(yaml_model)
+                self.shuffle = self.shuffle_npz
+        elif 'h5_train' in yaml_model.keys():
+            self._load_h5(yaml_model)
+            self.shuffle = self.shuffle_h5
         else:   # TODO: this is temporary work-around
             assert 'raw_train_dir' in yaml_model.keys()
             assert 'raw_validation_path' in yaml_model.keys()
@@ -148,3 +175,24 @@ class Data:
             yield self.data[b*batch_size:(b+1)*batch_size, :], \
                     self.target[b*batch_size:(b+1)*batch_size, :]
 
+
+    def shuffle_npz(self):
+        import numpy as np
+        indices = np.arange(self.data.shape[0])
+        np.random.shuffle(indices)
+        self.data = self.data[indices]
+        self.target = self.target[indices]
+
+
+    def shuffle_h5(self):
+        import tables as tb
+        import numpy as np
+        tot = self.data.shape[0]
+        for r in range(tot-1,0,-1):
+            idx = np.random.randint(0,r+1)
+            _temp = self.data[r]
+            self.data[r] = self.data[idx]
+            self.data[idx] = _temp
+            _temp = self.target[r]
+            self.target[r] = self.target[idx]
+            self.target[idx] = _temp
