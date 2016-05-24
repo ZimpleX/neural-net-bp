@@ -150,11 +150,11 @@ def hdf5_shuffle(hdf5):
     with tb.openFile(hdf5, mode='r+') as h5f:
         root1 = h5f.root
         arr_keys = list(h5f.get_node(root1)._v_children.keys())
-        for k in arr_keys:
-            arr = h5f.get_node(root1,name=k)
-            tot = arr.shape[0]
-            for r in range(tot-1,0,-1):     # tot-1, ..., 1
-                idx = np.random.randint(0,r+1)
+        tot = h5f.get_node(root1,name=arr_keys[0]).shape[0]
+        for r in range(tot-1,0,-1):
+            idx = np.random.randint(0,r+1)
+            for k in arr_keys:
+                arr = h5f.get_node(root1,name=k)
                 _temp = arr[r]
                 arr[r] = arr[idx]
                 arr[idx] = _temp
