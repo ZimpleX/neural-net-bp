@@ -98,9 +98,9 @@ class Data:
     def _load_h5(self, yaml_model):
         import tables as tb
         # NOTE: don't forget to close
-        self.train_h5 = tb.openFile(yaml_model['h5_train'], mode='r')
-        self.valid_h5 = tb.openFile(yaml_model['h5_valid'], mode='r')
-        self.test_h5 = tb.openFile(yaml_model['h5_test'], mode='r')
+        self.train_h5 = tb.openFile(yaml_model['h5_train'], mode='r+')
+        self.valid_h5 = tb.openFile(yaml_model['h5_valid'], mode='r+')
+        self.test_h5 = tb.openFile(yaml_model['h5_test'], mode='r+')
         self.data = self.train_h5.root.data
         self.target = self.train_h5.root.target
         self.valid_d = self.valid_h5.root.data
