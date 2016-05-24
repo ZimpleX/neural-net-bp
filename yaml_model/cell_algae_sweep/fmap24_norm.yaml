@@ -1,10 +1,10 @@
 obj_name: 'cell_algae_4cat_norm'
 epoch: 40
 batch: 30
-h5_train: /root/data_part/train.h5
-h5_valid: /root/data_part/valid.h5
-h5_test: /root/data_part/test.h5
-checkpoint: 'yaml_model/4cat_norm_fmap24.npz'
+h5_train: /data/algae/out.shuffled_train.h5
+h5_valid: /data/algae/out.shuffled_valid.h5
+h5_test: /data/algae/out.shuffled_test.h5
+checkpoint: 'yaml_model/4cat_algae_norm_fmap24.npz'
 input_image_size_y: 511
 input_image_size_x: 511
 input_num_channels: 4
@@ -68,5 +68,5 @@ network:
 
   - name: output
     type: FC_SOFTMAX
-    num_channels: 4
+    num_channels: 9
     init_wt: 0.02
