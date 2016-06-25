@@ -112,10 +112,10 @@ def prepare(id_f, master_dns, credential_f, key_id, secret_key, is_hdfs=True, is
             for repeat in range(4):
                 combineCmd += [CMD['hdfs_distcp'].format(f=_AWS_DIR_INFO['data_dir'], d='sets{}'.format(repeat))]
         if is_s3:   # NOTE: for serial version training
-            combineCmd += [CMD['dir_create'].format(dir='/data/algae')]
-            for td in ['train', 'valid', 'test']:#['0', '1500', '3000']:
-                combineCmd += [CMD['aws_cp'].format(s3_data='algle-queenie/out.shuffled_{}.h5'.format(td),loc_des='/data/algae')]
-            # combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/4500.npz',loc_des='/root/data_part')]
+            #combineCmd += [CMD['dir_create'].format(dir='/data/algae')]
+            for td in ['0', '1500', '3000']:
+                combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/{}.npz'.format(td),loc_des='/root/data_part/train/')]
+            combineCmd += [CMD['aws_cp'].format(s3_data='bloodcell/3cat_part/4500.npz',loc_des='/root/data_part')]
         combineCmd += [CMD['dir_create'].format(dir='/tmp/spark-events/')]
         if is_clone:    # extract on EC2
             combineCmd += [CMD['tar_x']]

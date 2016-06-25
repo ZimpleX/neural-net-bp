@@ -133,6 +133,7 @@ class Data:
         else:   # TODO: this is temporary work-around
             assert 'raw_train_dir' in yaml_model.keys()
             assert 'raw_validation_path' in yaml_model.keys()
+            self.shuffle = self.shuffle_npz
             import os
             d_tup = ()
             t_tup = ()
