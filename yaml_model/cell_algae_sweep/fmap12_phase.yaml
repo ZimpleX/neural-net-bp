@@ -1,13 +1,13 @@
-obj_name: 'cell_algae_4cat_fmap24_norm'
+obj_name: 'cell_algae_4cat_fmap12_phase'
 epoch: 40
 batch: 30
-h5_train: /data/algae/norm.shuffled_train.h5
-h5_valid: /data/algae/norm.shuffled_valid.h5
-h5_test: /data/algae/norm.shuffled_test.h5
-checkpoint: 'yaml_model/9cat_algae_norm_fmap24.npz'
+h5_train: /data/algae/phase.shuffled_train.h5
+h5_valid: /data/algae/phase.shuffled_valid.h5
+h5_test: /data/algae/phase.shuffled_test.h5
+checkpoint: 'yaml_model/9cat_algae_phase_fmap12.npz'
 input_image_size_y: 511
 input_image_size_x: 511
-input_num_channels: 4
+input_num_channels: 1
 inc_rate: 1.0
 dec_rate: 1.0
 momentum: 0.9
@@ -18,7 +18,7 @@ shuffle: true
 network:
   - name: conv1
     type: CONVOLUTION
-    num_channels: 24
+    num_channels: 12
     kernel_size: 16     # (511 + 2*0 - 16)/5 + 1 = 100
     stride: 5
     padding: 0
@@ -26,14 +26,14 @@ network:
 
   - name: maxpool1
     type: MAXPOOL
-    num_channels: 24
+    num_channels: 12
     kernel_size: 2      # (100 + 2*0 - 2)/2 + 1 = 50
     stride: 2
     padding: 0
 
   - name: conv2
     type: CONVOLUTION
-    num_channels: 48
+    num_channels: 24
     kernel_size: 6      # (50 + 2*3 - 6)/2 + 1 = 26
     stride: 2
     padding: 3
@@ -41,14 +41,14 @@ network:
 
   - name: maxpool2
     type: MAXPOOL
-    num_channels: 48    # (26 + 2*0 - 2)/2 + 1 = 13
+    num_channels: 24    # (26 + 2*0 - 2)/2 + 1 = 13
     kernel_size: 2
     stride: 2
     padding: 0
 
   - name: conv3
     type: CONVOLUTION
-    num_channels: 96
+    num_channels: 48
     kernel_size: 4      # (13 + 2*0 - 4)/1 + 1 = 10
     stride: 1
     padding: 0
@@ -56,14 +56,14 @@ network:
 
   - name: maxpool3
     type: MAXPOOL
-    num_channels: 96   # (10 + 2*0 - 2)/2 + 1 = 5
+    num_channels: 48   # (10 + 2*0 - 2)/2 + 1 = 5
     kernel_size: 2
     stride: 2
     padding: 0
 
   - name: fc1
     type: FC_SIG
-    num_channels: 2400
+    num_channels: 1200
     init_wt: 0.02
 
   - name: output
