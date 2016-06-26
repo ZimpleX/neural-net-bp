@@ -50,7 +50,7 @@ def _get_patch(base_mat, y_start_base, x_start_base, dy, dx, unit):
     return patch
 
 
-def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj, _, SparkMeta=None):
+def slid_win_4d_flip(base_mat, kern_mat, sliding_stride, patch_stride, padding, func_obj):
     """
     Method ONLY for 4d numpy array
     Operation: slide kern_mat through base_mat, according to stride and padding.

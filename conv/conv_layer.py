@@ -6,7 +6,6 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from net.node_activity import Node_activity
 import conv.slide_win as slide_serial
-import conv.slide_win_spark as slide_spark
 from functools import reduce
 
 import pdb
@@ -22,15 +21,14 @@ class Node_conv(Node_activity):
     make sure that the kernel width is equal to kernel height!!
     """
     __metaclass__ = ABCMeta
-    def __init__(self, stride, padding, slid_method, SparkMeta):
+    def __init__(self, stride, padding):
         self.stride = stride
         self.padding = padding
-        self.slid_win_4d_flip = eval(slid_method).slid_win_4d_flip
-        self.convolution = eval(slid_method).convolution
-        self.SparkMeta = SparkMeta
+        self.slid_win_4d_flip = slide_serial.slid_win_4d_flip
+        self.convolution = slide_serial.convolution
 
 
-    def act_forward(self, prev_layer, w, b, sc=None):
+    def act_forward(self, prev_layer, w, b):
         """
         NOTE:
             w is actually the flipped kernel:
@@ -44,16 +42,9 @@ class Node_conv(Node_activity):
             please refer to slid_win_4d_flip for height' and width'
         """
         ret = self.slid_win_4d_flip(prev_layer, np.swapaxes(w, 0, 1), 
-                self.stride, 1, self.padding, self.convolution(), sc, SparkMeta=self.SparkMeta)
+                self.stride, 1, self.padding, self.convolution())
         b_exp = b[np.newaxis, :, np.newaxis, np.newaxis]
-        if sc is not None:  
-            # slid_win_4d_flip won't do the collect operation
-            ret_clip = ret.map(lambda _: np.clip(_+b_exp, 0, np.finfo(np.float64).max))
-            if self.SparkMeta['conn_to_FC']:
-                # ret_clip = ret_clip.collect()
-                ret_clip = ret_clip.reduce(lambda _1,_2: np.concatenate((_1,_2),axis=0))
-        else:
-            ret_clip = np.clip(ret+b_exp, 0, np.finfo(np.float64).max)    # ReLU
+        ret_clip = np.clip(ret+b_exp, 0, np.finfo(np.float64).max)    # ReLU
         return ret_clip
 
     @classmethod
@@ -64,7 +55,7 @@ class Node_conv(Node_activity):
         return np.greater(y_n, 0.)
    
 
-    def c_d_w_b_yn1(self, c_d_yn, y_n, y_n_1, w, is_c_d_yn1=1, sc=None):
+    def c_d_w_b_yn1(self, c_d_yn, y_n, y_n_1, w, is_c_d_yn1=1):
         """
         stride, padding are both the integer value in the feed forward case.
         get derivative of cost w.r.t. weight, bias, prev_layer.
@@ -74,6 +65,7 @@ class Node_conv(Node_activity):
             y_n         (batch) x (channel_n) x (height) x (width)
             y_n_1       (batch) x (channel_n_1) x (height') x (width')
             w           (channel_n_1) x (channel_n) x (kern) x (kern)
+            is_c_d_yn1  See superclass definition
         """
         c_d_xn = self._c_d_xn(c_d_yn, y_n)
         c_d_b = np.sum(c_d_xn, axis=(0,2,3))
@@ -83,7 +75,7 @@ class Node_conv(Node_activity):
         #   padding = padding
         #   slide_stride = 1
         c_d_w = self.slid_win_4d_flip(np.swapaxes(y_n_1,0,1), np.swapaxes(c_d_xn,0,1), 
-                1, self.stride, self.padding, self.convolution(), sc, SparkMeta=self.SparkMeta)
+                1, self.stride, self.padding, self.convolution())
         assert c_d_w.shape == w.shape
         ####  c_d_yn1  ####
         ##  c_d_xn (*) w ##
@@ -91,7 +83,10 @@ class Node_conv(Node_activity):
         #   padding = (kern-padding-1)/stride
         #   slide_stride = 1/stride
         pad2 = Fraction(w.shape[-1] - self.padding - 1, self.stride)
-        c_d_yn1 = self.slid_win_4d_flip(c_d_xn, w[:,:,::-1,::-1], Fraction(1, self.stride), 
-                Fraction(1, self.stride), pad2, self.convolution(), sc, SparkMeta=self.SparkMeta)
-        assert c_d_yn1.shape == y_n_1.shape
+        if is_c_d_yn1:
+            c_d_yn1 = self.slid_win_4d_flip(c_d_xn, w[:,:,::-1,::-1], Fraction(1, self.stride), 
+                Fraction(1, self.stride), pad2, self.convolution())
+            assert c_d_yn1.shape == y_n_1.shape
+        else:
+            c_d_yn1 = None
         return c_d_w, c_d_b, c_d_yn1
