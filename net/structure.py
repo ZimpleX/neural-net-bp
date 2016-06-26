@@ -4,14 +4,6 @@ define the general structure of the whole network, including:
     activate function of each layer;
     deritive of the active function (w.r.t weight / output of prev layer / bias)
 
-
-TODO:
-    * could try generating data by the neural net itself, then see if the net can learn it
-    * how to escape local minimum
-    * sum Cost function w.r.t all examples in one mini-batch
-      when obtaining delta, divide by size of mini-batch
-    * adapt learning rate
-    * add gradient checking using finite difference
 """
 
 import numpy as np
@@ -72,7 +64,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, yaml_model, slide_method):
+    def __init__(self, yaml_model):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -101,7 +93,7 @@ class Net_structure:
             init_wt = ('init_wt' in l) and l['init_wt'] or 0.0
             cur_chn = l['num_channels']
             act_func = activation_dict[l['type']]
-            if l['type'] == 'CONVOLUTION' or l['type'] == 'MAXPOOL':
+            if l['type'] in ['CONVOLUTION', 'MAXPOOL']:
                 if prev_img is None:
                     prev_img = (yaml_model['input_image_size_y'], yaml_model['input_image_size_x'])
                 chan = l['num_channels']
@@ -109,7 +101,6 @@ class Net_structure:
                 w_shape = (prev_chn, cur_chn, kern, kern)
                 act_init = (l['type']=='MAXPOOL') and [chan, kern] or []
                 act_init += [l['stride'], l['padding']]
-                act_init += [slide_method]
                 self.activ_list[idx] = act_func(*act_init)
                 prev_img = conv.util.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:
@@ -293,13 +284,13 @@ class Net_structure:
         printf('save checkpoint file: {}', path)
 
     
-    def import_(self, path, slide_method='slide_serial'):
+    def import_(self, path):
         """
         Load the checkpointing file for playing around the trained model
         """
         info = np.load(path)
         yaml_model = info['yaml_model'].reshape(1)[0]
-        self.__init__(yaml_model, slide_method)
+        self.__init__(yaml_model)
         if self.w_list is not None:
             # the case of partial trained chkpt using new yaml_model
             # this is to ensure that the yaml_model in args and that in chkpt matches
@@ -346,9 +337,9 @@ def net_train_main(yaml_model, args, old_net=None):
     data_set = Data(yaml_model, timestamp, profile=True)
     conf = Conf(yaml_model)
     if old_net is None:
-        net = Net_structure(yaml_model, args.slide_method)
+        net = Net_structure(yaml_model)
         if args.partial_trained is not None:
-            net.import_(args.partial_trained, args.slide_method)
+            net.import_(args.partial_trained)
         print_to_file(_LOG_FILE['net'], net, type=None)
         print_to_file(_LOG_FILE['conf'], conf)
     else:

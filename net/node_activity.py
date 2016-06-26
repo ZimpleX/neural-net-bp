@@ -73,7 +73,7 @@ class Node_activity:
     @classmethod
     def c_d_w_b_yn1(cls, c_d_yn, y_n, y_n_1, w, is_c_d_yn1=1):
         """
-        NOTE: DON'T overwrite this function when creating subclass
+        NOTE: DON'T overwrite this function when creating subclass in FC layers
 
         get derivative of cost w.r.t. weight, bias, prev_layer.
 
@@ -95,9 +95,10 @@ class Node_activity:
         d_chain = y_n_1.reshape(batch, -1)  # (batch) x (N_n_1)
         c_d_w = np.dot(d_chain.T, c_d_xn)   # dot product is summing over mini-batch
         c_d_b = np.sum(c_d_xn, axis=0)
-        c_d_yn1 = None
         if is_c_d_yn1:
             c_d_yn1 = np.dot(c_d_xn, w.T)
+        else:
+            c_d_yn1 = None
         return c_d_w, c_d_b, c_d_yn1
 
 
