@@ -375,7 +375,7 @@ def net_train_main(yaml_model, args, old_net=None):
             net.batch += 1
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
             printf('cur cost: {:.4f}', cur_cost_bat)
-            printf('epoch {}, batch {}', epoch, batch, type="WARN")
+            printf('epoch {:4d}, batch {:6d}', epoch, batch, type="WARN")
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
@@ -400,6 +400,8 @@ def net_train_main(yaml_model, args, old_net=None):
 
     end_time = timeit.default_timer()
     printf('training took: {:.3f}', end_time-start_time)
+
+    data_set.cleanup()
 
     return end_time - start_time
 

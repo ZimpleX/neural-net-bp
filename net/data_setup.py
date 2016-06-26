@@ -31,12 +31,15 @@ class Data:
         f_list = os.listdir(data_dir)
         f_format = yaml_model['data_format']
         assert set(f_list) == set(['{}.{}'.format(i,f_format) for i in self.all_data.keys()])
+        self.f_opened = []
         if f_format == 'h5':
             self._load_h5(f_list, data_dir, yaml_model)
             self.shuffle = self.shuffle_h5
+            self.cleanup = self.clenup_h5
         elif f_format == 'npz':
             self._load_npz(f_list, data_dir, yaml_model)
             self.shuffle = self.shuffle_npz
+            self.cleanup = self.cleanup_npz
         else:
             printf('invalid file format: {}.\t\texit!',f_format)
             exit()
@@ -62,6 +65,7 @@ class Data:
         for f in f_list:
             # NOTE: don't forget to close
             h5f = tb.openFile('{}/{}'.format(data_dir,f), mode='r+')
+            self.f_opened += [h5f]
             f_info = f.split('.')
             assert len(f_info) == 2
             assert f_info[1] == 'h5'
@@ -69,12 +73,11 @@ class Data:
             yaml_model['{}_size'.format(f_info[0])] = h5f.root.target.shape[0]
 
 
-    def _close_h5(self, yaml_model):
-        self.train_h5.close()
-        self.valid_h5.close()
-        self.test_h5.close()
+    def cleanup_npz(self): pass
 
-       
+    def cleanup_h5(self):
+        for h5f in self.f_opened:
+            h5f.close()
 
 
 
