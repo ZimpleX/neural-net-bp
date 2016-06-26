@@ -32,6 +32,7 @@ import copy
 import os
 from functools import reduce
 from stat_cnn.mem_usage import *
+from math import ceil
 
 import conv.conv_layer
 import conv.pool_layer
@@ -43,10 +44,6 @@ np.random.seed(0)
 _LOG_FILE = {'net': '{}-net',
             'conf': '{}-conf'}
 
-# profiling the time spent on each component
-_TIME = {'checkpoint': 0.,
-        'ff': 0.,
-        'bp': 0.}
 
 # TODO: make a data class, store raw data (current mini batch)
 # and output of each layer
@@ -75,7 +72,7 @@ class Net_structure:
        c_d_b[i][j]:     partial derivative of cost w.r.t. ith layer b
                         operating on the jth node on that layer
     """
-    def __init__(self, yaml_model, slide_method, sc):
+    def __init__(self, yaml_model, slide_method):
         """
         layer_size_list     let the num of nodes in each layer be Ni --> [N1,N2,...Nm]
                             including the input and output layer
@@ -89,12 +86,6 @@ class Net_structure:
             self.b_list = None
             return
 
-        if sc is None:
-            num_exe = 0
-        else:
-            # num_exe = sc.defaultParallelism
-            # TODO: change this --> auto get the number of cores
-            num_exe = 8
         self.num_layer = len(yaml_model['network'])    # yaml don't include input layer
         self.w_list = [None] * self.num_layer
         self.dw_list = [None] * self.num_layer
@@ -119,17 +110,6 @@ class Net_structure:
                 act_init = (l['type']=='MAXPOOL') and [chan, kern] or []
                 act_init += [l['stride'], l['padding']]
                 act_init += [slide_method]
-                SparkMeta = {}
-                SparkMeta['num_executor'] = num_exe
-                if yaml_model['network'][i+1]['type'] not in ['CONVOLUTION', 'MAXPOOL']:
-                    SparkMeta['conn_to_FC'] = True
-                else:
-                    SparkMeta['conn_to_FC'] = False
-                if i == 0:
-                    SparkMeta['first_conv'] = True
-                else:   
-                    SparkMeta['first_conv'] = False
-                act_init += [SparkMeta]
                 self.activ_list[idx] = act_func(*act_init)
                 prev_img = conv.util.ff_next_img_size(prev_img, kern, l['padding'], l['stride'])
             else:
@@ -160,54 +140,6 @@ class Net_structure:
         self.b_list = b_list
 
 
-    def flattern_w_b(self):
-        """
-        flattern the net's w & b.
-
-        every feature map in the conv layer gets an index,
-        the whole weight between FC layers gets an index.
-        
-        The second tuple is for mapping back. 
-        e.g.,
-            the [i][j] feature map in layer k gets an index (k,(i,j))
-        """
-        w_flatterned = []
-        b_flatterned = []
-        for i,w in enumerate(self.w_list):
-            # TODO: skip pooling layers
-            if type(self.activ_list[i]) is conv.pool_layer.Node_pool:
-                continue
-            if len(w.shape) == 4:
-                d0 = w.shape[0]
-                d1 = w.shape[1]
-                w_flatterned += [(w[ii//d1][ii%d1], (i, (ii//d1, ii%d1))) for ii in range(d0*d1)]
-            else:
-                w_flatterned += [(w, (i,))]
-
-        for j,b in enumerate(self.b_list):
-            if type(self.activ_list[i]) is conv.pool_layer.Node_pool:
-                continue
-            b_flatterned += [(b, (j,))]
-        
-        return w_flatterned, b_flatterned
-
-    def eval_delta_w_b(self, orig_flattern_w, orig_flattern_b, cur_flattern_w, cur_flattern_b):
-        """
-        evaluate how much w (feamap) & b has changed through these epochs.
-        """
-        eval_delta_w = []
-        for j,w in enumerate(cur_flattern_w):
-            dw = (w[0] - orig_flattern_w[j][0]).reshape(1, -1)
-            _ = reduce(lambda _1,_2: _1+_2, map(lambda x: x*x, dw))
-            eval_delta_w += [(_, w[1])]
-        eval_delta_b = []
-        for i,b in enumerate(cur_flattern_b):
-            db = b[0] - orig_flattern_b[i][0]
-            _ = reduce(lambda _1,_2: _1+_2, map(lambda x: x*x, db))
-            eval_delta_b += [(_, b[1])]
-        return eval_delta_w, eval_delta_b
-
-
     def __str__(self):
         """
         print the value of weight and bias array, for each layer
@@ -230,7 +162,7 @@ class Net_structure:
                             self.w_list[i], self.b_list[i], self.dw_list[i], self.db_list[i])
         return '{}\n{}\n'.format(net_stat, stringf(layer_str, 0, self.w_list[0].shape[0], type=None, separator='-'))
 
-    def net_act_forward(self, data, sc):
+    def net_act_forward(self, data):
         """
         action: 
             data = activity((data dot weight) + bias)
@@ -246,11 +178,11 @@ class Net_structure:
         layer_out = data
         for i in range(self.num_layer):
             layer_out = self.activ_list[i] \
-                .act_forward(layer_out, self.w_list[i], self.b_list[i], sc=sc)
+                .act_forward(layer_out, self.w_list[i], self.b_list[i])
             self.y_list[i+1] = layer_out
         return layer_out
 
-    def back_prop(self, target, conf, sc):
+    def back_prop(self, target, conf):
         """
         do the actual back-propagation
         (refer to "Glossary" for notation & abbreviation)
@@ -265,7 +197,7 @@ class Net_structure:
             cur_f = self.activ_list[n]
             cur_y = self.y_list[n+1]
             prev_y = self.y_list[n]
-            cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n, sc=sc)
+            cur_dw, cur_db, cur_c_d_y = cur_f.c_d_w_b_yn1(cur_c_d_y, cur_y, prev_y, self.w_list[n], is_c_d_yn1=n)
             if cur_dw is None:  # skip pooling layer
                 continue
             #-------------#
@@ -280,7 +212,7 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-    def evaluate(self, batch_ipt, target, mini_batch=0, sc=None, eval_details=False, eval_name='null', debug=False):
+    def evaluate(self, batch_ipt, target, mini_batch=0, eval_details=False, eval_name='null', debug=False):
         """
         mini_batch:     if the evaluation set is large, then evaluate all at a time may cause out of memory error,
                         especially when the DCNN has many layers.
@@ -306,7 +238,7 @@ class Net_structure:
             for k in range(0, num_entry, mini_batch):
                 cur_batch = batch_ipt[k:(k+mini_batch)]
                 cur_target = target[k:(k+mini_batch)]
-                cur_net_out = self.net_act_forward(cur_batch, sc)
+                cur_net_out = self.net_act_forward(cur_batch)
                 if net_out is None:
                     net_out = cur_net_out
                 else:
@@ -316,7 +248,7 @@ class Net_structure:
         for k in range(0, num_entry, mini_batch):
             cur_batch = batch_ipt[k:(k+mini_batch)]
             cur_target = target[k:(k+mini_batch)]
-            cur_net_out = self.net_act_forward(cur_batch, sc)
+            cur_net_out = self.net_act_forward(cur_batch)
             cur_cost += sum(self.cost.act_forward(cur_net_out, cur_target))
             if self.cost == cost_dict['CE']:
                 _compare = (cur_target.argmax(axis=1)==cur_net_out.argmax(axis=1))
@@ -344,7 +276,7 @@ class Net_structure:
         return cur_cost/num_entry, cur_correct/num_entry
             
 
-    def export_(self, yaml_model, sync_script=None):
+    def export_(self, yaml_model):
         """
         Save the checkpoint net configuration (*.npz)
         """
@@ -361,13 +293,13 @@ class Net_structure:
         printf('save checkpoint file: {}', path)
 
     
-    def import_(self, path, slide_method='slide_serial', sc=None):
+    def import_(self, path, slide_method='slide_serial'):
         """
         Load the checkpointing file for playing around the trained model
         """
         info = np.load(path)
         yaml_model = info['yaml_model'].reshape(1)[0]
-        self.__init__(yaml_model, slide_method, sc)
+        self.__init__(yaml_model, slide_method)
         if self.w_list is not None:
             # the case of partial trained chkpt using new yaml_model
             # this is to ensure that the yaml_model in args and that in chkpt matches
@@ -397,7 +329,7 @@ class Net_structure:
 #########################
 #        NN flow        #
 #########################
-def net_train_main(yaml_model, args, sc, old_net=None):
+def net_train_main(yaml_model, args, old_net=None):
     """
     define main separately to facilitate unittest
     """
@@ -414,15 +346,13 @@ def net_train_main(yaml_model, args, sc, old_net=None):
     data_set = Data(yaml_model, timestamp, profile=True)
     conf = Conf(yaml_model)
     if old_net is None:
-        net = Net_structure(yaml_model, args.slide_method, sc)
+        net = Net_structure(yaml_model, args.slide_method)
         if args.partial_trained is not None:
-            net.import_(args.partial_trained, args.slide_method, sc)
+            net.import_(args.partial_trained, args.slide_method)
         print_to_file(_LOG_FILE['net'], net, type=None)
         print_to_file(_LOG_FILE['conf'], conf)
     else:
         net = old_net
-
-    orig_flattern_w, orig_flattern_b = copy.deepcopy(net.flattern_w_b())
 
     data_util.profile_net_conf(db_subdir, yaml_model, timestamp)
     #---------------------------#
@@ -430,15 +360,13 @@ def net_train_main(yaml_model, args, sc, old_net=None):
     #---------------------------#
     start_time = timeit.default_timer()
     cost_data = None    # populate into db in single db connection
-    net_data = [[(-1,-1), data_set.target]] \
-             #+ [[(0, 0), net.net_act_forward(data_set.data)]]
 
     #-----------------#
     #    main loop    #
     #-----------------#
-    num_batch = data_set.data.shape[0] / conf.batch
+    num_batch = ceil(data_set.all_data['train'][1].shape[0] / conf.batch)
     batch = 0
-    indices = np.arange(data_set.data.shape[0])
+    indices = np.arange(data_set.all_data['train'][1].shape[0])
     best_val_cost = sys.float_info.max
     best_val_correct = 0.
 
@@ -449,47 +377,39 @@ def net_train_main(yaml_model, args, sc, old_net=None):
         net.epoch += 1
         cost_bat = 0.
         correct_bat = 0.
-        for b, (bat_ipt, bat_tgt) in enumerate(data_set.get_batches(conf.batch)):
+        for b in range(num_batch):
+            bat_ipt = data_set.all_data['train'][0][b*conf.batch:(b+1)*conf.batch,:]
+            bat_tgt = data_set.all_data['train'][1][b*conf.batch:(b+1)*conf.batch,:]
             batch += 1
             net.batch += 1
-            cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt, sc=sc)
+            cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
             printf('cur cost: {:.4f}', cur_cost_bat)
             printf('epoch {}, batch {}', epoch, batch, type="WARN")
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
-            net.back_prop(bat_tgt, conf, sc)
+            net.back_prop(bat_tgt, conf)
             
         sys.stdout.write('\r')
         sys.stdout.flush()
         cost_bat /= num_batch
         correct_bat /= num_batch
         # validation & checkpointing
-        _ = timeit.default_timer()
-        #try:
-        cur_val_cost, cur_val_correct = net.evaluate(data_set.valid_d, data_set.valid_t, mini_batch=50, sc=sc)
+        cur_val_cost, cur_val_correct = net.evaluate(data_set.all_data['valid'][0], data_set.all_data['valid'][1], mini_batch=50)
         best_val_cost = (cur_val_cost<best_val_cost) and cur_val_cost or best_val_cost
         if cur_val_correct > best_val_correct:
             best_val_correct = cur_val_correct
             net.export_(yaml_model)
-        __ = timeit.default_timer()
-        _TIME['checkpoint'] += (__ - _)
 
         cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
         data_util.profile_cost(db_subdir, cost_data, timestamp)
    
-        #if (args.profile_output and net.epoch % epc_stride == 0) \
-        #    or (net.epoch == conf.num_epoch):
-        #    net_data += [[(net.epoch, net.batch), net.net_act_forward(data_set.data)]]
         printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
         printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
 
 
     end_time = timeit.default_timer()
     printf('training took: {:.3f}', end_time-start_time)
-    # print_to_file(_LOG_FILE['net'], net, type=None)
-    cur_flattern_w, cur_flattern_b = net.flattern_w_b()
-    eval_dw, eval_db = net.eval_delta_w_b(orig_flattern_w, orig_flattern_b, cur_flattern_w, cur_flattern_b)
 
-    return end_time - start_time, eval_dw, eval_db, cur_flattern_w, cur_flattern_b
+    return end_time - start_time
 
 

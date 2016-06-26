@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
-tiny = 1e-30
+tiny = 1e-30    # avoid math error for log()
 
+#####################
+#  cost superclass  #
+#####################
 class Cost:
     __metaclass__ = ABCMeta
     @classmethod
@@ -24,6 +27,9 @@ class Cost:
         pass
 
 
+###################
+#  cost subclass  #
+###################
 class Cost_sqr(Cost):
     """
     square sum cost function
@@ -44,7 +50,7 @@ class Cost_ce(Cost):
     """
     cross-entropy cost function.
     [NOTE]: this MUST be used together with softmax, because c_d_y will actually
-        compute c_d_x directly. --> See doc in node_activity.Node_softmax for explanation.
+        compute c_d_x directly. --> See doc in 'node_activity.Node_softmax' for explanation.
     """
     @classmethod
     def act_forward(cls, y_out, t):

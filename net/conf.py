@@ -1,6 +1,6 @@
 """
 default configuration for the ANN: 
-    can be overwritten by cmd line arg
+    can be overwritten by cmd line args
 """
 TRAINING_DIR = './train_data/'
 DB_DIR_PARENT = './profile_data/'
@@ -53,4 +53,4 @@ activation_dict = { 'FC_SIG': Node_sigmoid,
 from net.cost import *
 
 cost_dict = {'SQR': Cost_sqr,
-                'CE': Cost_ce}
+             'CE': Cost_ce}
