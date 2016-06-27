@@ -8,7 +8,6 @@ import db_util as db
 import re
 import sqlite3
 import numpy as np
-import util.data_proc as data_util
 import timeit
 
 import pdb
@@ -17,7 +16,7 @@ class Data:
     """
     load training / testing data for neural net
     """
-    def __init__(self, yaml_model, timestamp, profile=True):
+    def __init__(self, yaml_model, timestamp):
         """
         supported file extensions:
             *.h5

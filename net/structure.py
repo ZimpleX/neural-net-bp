@@ -13,7 +13,7 @@ import conv.util
 from net.cost import *
 from net.data_setup import *
 from net.conf import *
-import util.data_proc as data_util
+import util.profile_data as profile
 from logf.stringf import *
 from logf.printf import *
 from logf.filef import *
@@ -334,7 +334,7 @@ def net_train_main(yaml_model, args, old_net=None):
     #---------------------#
     #  data & net & conf  #
     #---------------------#
-    data_set = Data(yaml_model, timestamp, profile=True)
+    data_set = Data(yaml_model, timestamp)
     conf = Conf(yaml_model)
     if old_net is None:
         net = Net_structure(yaml_model)
@@ -345,7 +345,7 @@ def net_train_main(yaml_model, args, old_net=None):
     else:
         net = old_net
 
-    data_util.profile_net_conf(db_subdir, yaml_model, timestamp)
+    profile.profile_net_conf(db_subdir, yaml_model, timestamp)
     #---------------------------#
     #  populate initial output  #
     #---------------------------#
@@ -392,7 +392,7 @@ def net_train_main(yaml_model, args, old_net=None):
             net.export_(yaml_model)
 
         cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
-        data_util.profile_cost(db_subdir, cost_data, timestamp)
+        profile.profile_cost(db_subdir, cost_data, timestamp)
    
         printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
         printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
