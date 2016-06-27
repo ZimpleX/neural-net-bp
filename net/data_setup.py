@@ -23,11 +23,11 @@ class Data:
             *.npz
         """
         import os
-        self.all_data = {'train': (None,None),  # (data, target)
-                         'valid': (None,None),
-                         'test':  (None,None)}
+        self.all_data = {'train': [None,None],  # (data, target)
+                         'valid': [None,None],
+                         'test':  [None,None]}
         data_dir = yaml_model['data_dir']
-        f_list = os.listdir(data_dir)
+        f_list = [i for i in os.listdir(data_dir) if i[0] != '.']
         f_format = yaml_model['data_format']
         assert set(f_list) == set(['{}.{}'.format(i,f_format) for i in self.all_data.keys()])
         self.f_opened = []
@@ -55,7 +55,7 @@ class Data:
             f_info = f.split('.')
             assert len(f_info) == 2
             assert f_info[1] == 'npz'
-            self.all_data[f_info[0]] = (npzf['data'], npzf['target'])
+            self.all_data[f_info[0]] = [npzf['data'], npzf['target']]
             yaml_model['{}_size'.format(f_info[0])] = npzf['target'].shape[0]
 
 
@@ -68,7 +68,7 @@ class Data:
             f_info = f.split('.')
             assert len(f_info) == 2
             assert f_info[1] == 'h5'
-            self.all_data[f_info[0]] = (h5f.root.data, h5f.root.target)
+            self.all_data[f_info[0]] = [h5f.root.data, h5f.root.target]
             yaml_model['{}_size'.format(f_info[0])] = h5f.root.target.shape[0]
 
 

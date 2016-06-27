@@ -361,6 +361,8 @@ def net_train_main(yaml_model, args, old_net=None):
     best_val_cost = sys.float_info.max
     best_val_correct = 0.
 
+    print("\n\n")
+    printf("START TRAINING.", type="TRAIN", separator="><")
     for epoch in range(conf.num_epoch):
         # shuffle data
         if yaml_model['shuffle'] == True:
@@ -374,8 +376,8 @@ def net_train_main(yaml_model, args, old_net=None):
             batch += 1
             net.batch += 1
             cur_cost_bat, cur_correct_bat = net.evaluate(bat_ipt, bat_tgt)
-            printf('cur cost: {:.4f}', cur_cost_bat)
-            printf('epoch {:4d}, batch {:6d}', epoch, batch, type="WARN")
+            sys.stdout.write("       epoch {:4d}, batch {:6d}:   cost {:7.4f}\r".format(net.epoch,batch,cur_cost_bat))
+            sys.stdout.flush()
             cost_bat += cur_cost_bat
             correct_bat += cur_correct_bat
             net.back_prop(bat_tgt, conf)
