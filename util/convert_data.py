@@ -1,12 +1,31 @@
-import scipy.io
 import numpy as np
+import scipy.io
 from logf.printf import printf
 import logf.filef as ff
 import os
-from PIL import Image
-import os
 
-import pdb
+from PIL import Image
+import copy
+
+#####################################
+#  libsvm, mat, npz, h5 conversion  #
+#####################################
+def libsvm_to_npz(path_libsvm, path_npz, channel, height, width):
+    """
+    path_libsvm:    input path for libsvm file
+    path_npz:       output path for npz file
+
+    data stored in the output npz should be of dimension:
+        batch x channel x height x width
+    """
+    import bob.learn.libsvm as bsvm
+    f_libsvm = bsvm.File(path_libsvm)
+    label, data = f_libsvm.read_all()
+    entries = data.shape[0]
+    data = data.reshape(entries, channel, height, width)
+    data_compact = {'target': label, 'data': data}
+    np.savez(path_npz, **data_compact)
+
 
 __cat_idx__ = {
     'cha': 0,
@@ -79,10 +98,51 @@ def mat_to_npz(path_mat, path_npz, norm_img_key='norm_cell', phase_img_key='phas
         printf('saving {} phase.npz', sub)
         np.savez(temp_phase, **npz_phase_data)
 
-    from util.convert_libsvm_npz import npz_concatenate
+    from util.misc_data import npz_concatenate
     npz_concatenate('{}/norm_{}.npz'.format(path_npz, count), *temp_norm_list)
     npz_concatenate('{}/phase_{}.npz'.format(path_npz, count), *temp_phase_list)
 
     # clear up
     for d in temp_norm_list + temp_phase_list:
         os.remove(d)
+
+
+
+#############################
+#  array, image conversion  #
+#############################
+def array_to_img(path_in, path_out, tag, channel, height, width, num_images=100, scale_individual=True):
+    raw = np.load(path_in)[tag]
+    entry = raw.shape[0]
+    if channel == 1:
+        raw = raw.reshape(entry, height, width)
+    else:
+        raw = raw.reshape(entry, channel, height, width)
+    stride = entry // num_images
+    raw = raw[0::stride, ...]
+    if scale_individual:
+        for i in range(len(raw)):
+            rmin = np.min(raw[i])
+            rmax = np.max(raw[i])
+            raw[i] = (255/(rmax-rmin)) * (raw[i] - rmin)
+    else:
+        rmin = np.min(raw)
+        rmax = np.max(raw)
+        raw = (255/(rmax-rmin)) * (raw - rmin)
+    i = 0
+    for img in raw:
+        Image.fromarray(np.uint8(img)).save(path_out.format(i))
+        i += 1
+
+def img_to_array(path_img):
+    arr_img = np.asarray(Image.open(path_img))
+    # scale to -1 ~ 1
+    arr_img = copy.deepcopy(arr_img)
+    arr_img = arr_img/127.5 - 1.
+    # reshape
+    shape = arr_img.shape
+    if len(shape) == 2:
+        return arr_img.reshape(1,1,*shape)
+    else:
+        return arr_img.transpose((2,0,1))[np.newaxis, ...]
+ 

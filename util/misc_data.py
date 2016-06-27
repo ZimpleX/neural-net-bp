@@ -1,30 +1,61 @@
-"""
-This script is for converting the libsvm data format to png.
-
-Prerequisite: bob.learn.libsvm python module
-"""
-
-from PIL import Image
 import numpy as np
-import argparse
 from logf.printf import printf
 
 
-def libsvm_to_npz(path_libsvm, path_npz, channel, height, width):
-    import bob.learn.libsvm as bsvm
-    f_libsvm = bsvm.File(path_libsvm)
-    label, data = f_libsvm.read_all()
-    entries = data.shape[0]
-    data = data.reshape(entries, channel, height, width)
-    data_compact = {'target': label, 'data': data}
-    np.savez(path_npz, **data_compact)
+def npz_lossy_normalize(path_in, path_out):
+    """
+    Normalize each [-1,1] floating point image to [0,255] utf-8,
+    then normalize back to [-1,1].
+    This is intentional to see how the precision of data types 
+    affects the classification results.
+    """
+    f_in = np.load(path_in)
+    d = f_in['data']
+    assert d.max() == 1. and d.min() == -1.
+    d += 1.
+    d /= 2.     # 0~1
+    d *= 255.   # 0~255
+    d = d.astype(np.uint8).astype(np.float)
+    d /= 255    # 0~1
+    d -= 0.5
+    d *= 2.     # -1~1
+    np.savez(path_out, **{'data':d,'target':f_in['target']})
 
+
+def npz_partition_small(path_orig, dir_out, small_batch):
+    """
+    partition a single npz with large batch into several small npz with small batch
+    """
+    raw = np.load(path_orig)
+    raw_keys = raw.keys()
+    tot_batch = raw[raw_keys[0]].shape[0]
+    name_orig = path_orig.split('/')[-1].split('.npz')[0]
+    for r in range(0,tot_batch,small_batch):
+        cur = {k: raw[k][r:(r+small_batch)] for k in raw_keys}
+        f_out = '{}/{}_{}.npz'.format(dir_out, name_orig, r)
+        np.savez(f_out, **cur)
+        printf('saved {}', f_out)
+
+
+def npz_split_cat(in_path, out_path_regx, split_key):
+    """
+    split out several npz files based on the target.
+    out_path_regx       e.g., cell_cat{}.npz
+    """
+    fin = np.load(in_path)
+    out_val = set(map(tuple, fin[split_key]))
+    for v in out_val:
+        v = np.array(v)
+        split_out = {}
+        idx = (fin[split_key] == v).all(axis=1).nonzero()[0]
+        for k in fin.keys():
+            split_out[k] = fin[k][idx]
+        np.savez(out_path_regx.format(v), **split_out)
+ 
 
 def npz_concatenate(out_npz, *path_npz):
     """
     concatenating may fail for large datasets, if the ndarray cannot fill into memory.
-    --> TODO:
-        change to hdf5
     """
     data_l = [np.load(p) for p in path_npz]
     keys = set([tuple(d.keys()) for d in data_l])
@@ -107,15 +138,3 @@ def hdf5_concatenate(out_h5, *path_npz):
             cur_idx += _batch
             printf('update data to index: {}', cur_idx)
 
-
-def parse_args():
-    parser = argparse.ArgumentParser('simple data format converter')
-    parser.add_argument('path_libsvm', type=str, help='input path of *.libsvm')
-    parser.add_argument('path_npz', type=str, help='output path of *.npz')
-    return parser.parse_args()
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    #libsvm_to_npz(args.path_libsvm, args.path_npz, 1, 256, 256)
-    #npz_concatenate('train_data/3cat_7500.npz', 'train_data/3T3_2500.npz', 'train_data/OST_2500.npz', 'train_data/OAC_2500.npz')

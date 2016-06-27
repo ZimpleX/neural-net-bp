@@ -33,7 +33,7 @@ def profile_net_conf(data_dir_name, yaml_model, timestamp, db_path=DB_DIR_PARENT
 
     net_attr = ['struct', 'cost_type', 'train_func', 'train_size', 'test_size',
             'batch_size', 'learn_rate', 'inc_rate', 'dec_rate', 'momentum']
-    net_val = array([net_struct, yaml_model['cost'], yaml_model['obj_name'], yaml_model['data_size'], yaml_model['test_size'],
+    net_val = array([net_struct, yaml_model['cost'], yaml_model['obj_name'], yaml_model['train_size'], yaml_model['test_size'],
             yaml_model['batch'], yaml_model['alpha'], yaml_model['inc_rate'], yaml_model['dec_rate'], yaml_model['momentum']])
     net_attr_type = ['TEXT', 'TEXT', 'TEXT', 'INTEGER', 'INTEGER',
             'INTEGER', 'REAL', 'REAL', 'REAL', 'REAL']
