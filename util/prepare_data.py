@@ -31,14 +31,19 @@ def h5_prepare(h5, train_size, valid_size, test_size):
 
 
 
-def normalize_exp_target(raw, path_out, start_idx, end_idx, num_op=None, scale_axis=(1,2,3)):
+def npz_normalize_reshape_expand(path_in, path_out, dshape=None, start_idx=0, end_idx=None, num_op=None, scale_axis=(1,2,3)):
     """
-    raw is loaded npz / h5 data;
-    path_out is str
+    path_in is input npz path;
+    path_out is output npz path
     """
+    raw = np.load(path_in)
+    end_idx = (end_idx is None) and len(raw['data']) or end_idx
     data = raw['data'][start_idx:end_idx]
+    if dshape is not None:
+        data = data.reshape(dshape)
     target = raw['target'][start_idx:end_idx].astype(int)
     ret = {}
+    ret['target'] = target
     # prepare target
     if (len(target.shape) == 1) or \
        (len(target.shape) == 2 and 1 in target.shape):
