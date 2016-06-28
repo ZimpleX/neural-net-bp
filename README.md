@@ -52,3 +52,9 @@ This is a self-implemented version of ImageNet (DCNN). The net includes `fully-c
 | validation | 1500      | 90.200       | 0.478 |
 | testing    | 1500      | 90.200       | 0.460 |
 
+
+## Yaml Example
+```
+data_dir: path/to/data		# dir containing the train/valid/test data
+data_format: h5 or npz
+```

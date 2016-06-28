@@ -203,7 +203,7 @@ class Net_structure:
             self.w_list[n] -= w_rate * self.dw_list[n]
 
 
-    def evaluate(self, batch_ipt, target, mini_batch=0, eval_details=False, eval_name='null', debug=False):
+    def evaluate(self, batch_ipt, target, mini_batch=0, eval_details=False, eval_name='null'):
         """
         mini_batch:     if the evaluation set is large, then evaluate all at a time may cause out of memory error,
                         especially when the DCNN has many layers.
@@ -223,18 +223,6 @@ class Net_structure:
             _db_name = 'eval_out_prob.db'
             tot_net_out = None
             tot_compare = None
-
-        if debug:
-            net_out = None
-            for k in range(0, num_entry, mini_batch):
-                cur_batch = batch_ipt[k:(k+mini_batch)]
-                cur_target = target[k:(k+mini_batch)]
-                cur_net_out = self.net_act_forward(cur_batch)
-                if net_out is None:
-                    net_out = cur_net_out
-                else:
-                    net_out = np.concatenate((net_out,cur_net_out),axis=0)
-            np.savez('debug_CNN.npz', **{'CNN_decision':net_out})
 
         for k in range(0, num_entry, mini_batch):
             cur_batch = batch_ipt[k:(k+mini_batch)]
@@ -402,7 +390,8 @@ def net_train_main(yaml_model, args, old_net=None):
 
     end_time = timeit.default_timer()
     printf('training took: {:.3f}', end_time-start_time)
-
+    
+    net.evaluate(data_set.all_data['test'][0],data_set.all_data['test'][1],mini_batch=100,eval_details=True)
     data_set.cleanup()
 
     return end_time - start_time

@@ -1,9 +1,9 @@
-obj_name: 'digit_classification'
+obj_name: 'digit_usps'  # profiling data will be stored in dir named after this
 epoch: 10
 batch: 100
-data_path: ./train_data/usps.npz #/root/usps.npz
-checkpoint: 'yaml_model/convnet_usps1.npz'
-#performance_stats: convnet1_method1_stats.npy
+data_format: npz
+data_dir: ./train_data/usps/
+checkpoint: ./checkpoint/digit_usps.npz
 input_image_size_y: 16
 input_image_size_x: 16
 input_num_channels : 1

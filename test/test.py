@@ -12,7 +12,7 @@ from net.data_setup import *
 import unittest as ut
 from numpy import *
 from numpy.testing import *
-from util.data_proc import *
+from util.profile_data import *
 from util.data_generator import *
 import db_util as db
 import os
