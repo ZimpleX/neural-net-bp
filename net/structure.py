@@ -77,7 +77,8 @@ class Net_structure:
             self.w_list = None
             self.b_list = None
             return
-
+       
+        self.obj_name = yaml_model['obj_name']
         self.num_layer = len(yaml_model['network'])    # yaml don't include input layer
         self.w_list = [None] * self.num_layer
         self.dw_list = [None] * self.num_layer
@@ -220,7 +221,7 @@ class Net_structure:
             num_out_cat = target.shape[1]
             _attr = ['name', 'index', 'is_correct'] + ['cat{}'.format(i) for i in range(num_out_cat)]
             _type = ['TEXT', 'INTEGER', 'INTEGER'] + ['REAL']*num_out_cat
-            _db_name = 'eval_out_prob.db'
+            _db_name = '{}/{}'.format(self.obj_name, 'eval_out_prob.db')
             tot_net_out = None
             tot_compare = None
 
@@ -314,7 +315,6 @@ def net_train_main(yaml_model, args, old_net=None):
     """
     # this is assuming that path of training data file is 
     # residing inside a dir named by the task name, and using '/' as delimiter
-    db_subdir = yaml_model['obj_name']
     timestamp = strftime('%Y.%m.%d-%H.%M.%S')
     for f in _LOG_FILE.keys():
         _LOG_FILE[f] = _LOG_FILE[f].format(timestamp)
@@ -333,7 +333,7 @@ def net_train_main(yaml_model, args, old_net=None):
     else:
         net = old_net
 
-    profile.profile_net_conf(db_subdir, yaml_model, timestamp)
+    profile.profile_net_conf(net.obj_name, yaml_model, timestamp)
     #---------------------------#
     #  populate initial output  #
     #---------------------------#
@@ -382,16 +382,19 @@ def net_train_main(yaml_model, args, old_net=None):
             net.export_(yaml_model)
 
         cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
-        profile.profile_cost(db_subdir, cost_data, timestamp)
+        profile.profile_cost(net.obj_name, cost_data, timestamp)
    
-        printf('end of epoch {}, avg cost: {:.5f}, avg correct {:.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
-        printf("       cur validation accuracy: {:.3f}", cur_val_correct, type=None, separator=None)
+        printf('end of epoch {:4d}, avg cost: {:7.4f}, avg correct {:4.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
+        printf("       cur validation accuracy: {:4.3f}", cur_val_correct, type=None, separator=None)
 
 
     end_time = timeit.default_timer()
-    printf('training took: {:.3f}', end_time-start_time)
+    printf('training took: {:9.3f} s', end_time-start_time)
     
-    net.evaluate(data_set.all_data['test'][0],data_set.all_data['test'][1],mini_batch=100,eval_details=True)
+    test_cost, test_acc = net.evaluate(data_set.all_data['test'][0],data_set.all_data['test'][1],mini_batch=100,eval_details=True)
+    print("\n\n")
+    printf("TEST set: cost {7.4f}, accuracy {4.3f}".format(test_cost, test_acc))
+    print("\n\n")
     data_set.cleanup()
 
     return end_time - start_time
