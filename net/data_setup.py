@@ -34,7 +34,7 @@ class Data:
         if f_format == 'h5':
             self._load_h5(f_list, data_dir, yaml_model)
             self.shuffle = self.shuffle_h5
-            self.cleanup = self.clenup_h5
+            self.cleanup = self.cleanup_h5
         elif f_format == 'npz':
             self._load_npz(f_list, data_dir, yaml_model)
             self.shuffle = self.shuffle_npz
