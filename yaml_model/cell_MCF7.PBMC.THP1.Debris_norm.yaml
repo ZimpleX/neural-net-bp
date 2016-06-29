@@ -7,8 +7,6 @@ checkpoint: ./checkpoint/cell_MCF7.PBMC.THP1.Debris_norm.npz
 input_image_size_y: 305
 input_image_size_x: 305
 input_num_channels: 4
-inc_rate: 1.0
-dec_rate: 1.0
 momentum: 0.9
 alpha: 0.002
 cost: CE

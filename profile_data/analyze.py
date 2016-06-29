@@ -23,8 +23,6 @@ _ATTR_RANGE = [ 'struct',
                 'test_size',
                 'batch_size',
                 'learn_rate',
-                'inc_rate',
-                'dec_rate',
                 'momentum']
 
 def parse_args():

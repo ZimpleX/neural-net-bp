@@ -16,8 +16,6 @@ class Conf:
         self.batch = yaml_model['batch']
         self.b_rate = yaml_model['alpha']
         self.w_rate = yaml_model['alpha']
-        self.inc_rate = yaml_model['inc_rate']
-        self.dec_rate = yaml_model['dec_rate']
         self.momentum = yaml_model['momentum']
 
     def __str__(self):
@@ -26,12 +24,8 @@ class Conf:
                 --------------------
                 learning rate (bias):   {}
                 learning rate (weight): {}
-                incremental rate:       {}
-                decremental rate:       {}
                 momentum:               {}
-                """.format(self.b_rate, self.w_rate, 
-                        self.inc_rate, self.dec_rate,
-                        self.momentum)
+                """.format(self.b_rate, self.w_rate, self.momentum)
 
 
 #########################################
