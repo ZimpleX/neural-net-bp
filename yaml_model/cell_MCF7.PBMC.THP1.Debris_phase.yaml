@@ -1,5 +1,5 @@
 obj_name: cell_MCF7.PBMC.THP1.Debris_norm
-epoch: 40
+epoch: 10
 batch: 10
 data_format: npz
 data_dir: ./train_data/cell_MCF7.PBMC.THP1.Debris_norm/
