@@ -1,11 +1,12 @@
-obj_name: 'cell_kelvin_4cat_phase'
-epoch: 40
-batch: 10
-data_path: /root/data_part/train/4cat_phase_776.npz
-checkpoint: 'yaml_model/4cat_phase_fmap8.npz'
-input_image_size_y: 305
-input_image_size_x: 305
-input_num_channels: 1
+obj_name: cell_algae_norm
+epoch: 10
+batch: 30
+data_format: h5
+data_dir: ./train_data/cell_algae_norm/
+checkpoint: ./checkpoint/cell_algae_norm.npz
+input_image_size_y: 511
+input_image_size_x: 511
+input_num_channels: 4
 inc_rate: 1.0
 dec_rate: 1.0
 momentum: 0.9
@@ -16,22 +17,22 @@ shuffle: true
 network:
   - name: conv1
     type: CONVOLUTION
-    num_channels: 8
-    kernel_size: 10     # (305 + 2*1 - 10)/3 + 1 = 100
-    stride: 3
-    padding: 1
+    num_channels: 24
+    kernel_size: 16     # (511 + 2*0 - 16)/5 + 1 = 100
+    stride: 5
+    padding: 0
     init_wt: 0.1
 
   - name: maxpool1
     type: MAXPOOL
-    num_channels: 8
+    num_channels: 24
     kernel_size: 2      # (100 + 2*0 - 2)/2 + 1 = 50
     stride: 2
     padding: 0
 
   - name: conv2
     type: CONVOLUTION
-    num_channels: 16
+    num_channels: 48
     kernel_size: 6      # (50 + 2*3 - 6)/2 + 1 = 26
     stride: 2
     padding: 3
@@ -39,14 +40,14 @@ network:
 
   - name: maxpool2
     type: MAXPOOL
-    num_channels: 16    # (26 + 2*0 - 2)/2 + 1 = 13
+    num_channels: 48    # (26 + 2*0 - 2)/2 + 1 = 13
     kernel_size: 2
     stride: 2
     padding: 0
 
   - name: conv3
     type: CONVOLUTION
-    num_channels: 32
+    num_channels: 96
     kernel_size: 4      # (13 + 2*0 - 4)/1 + 1 = 10
     stride: 1
     padding: 0
@@ -54,17 +55,17 @@ network:
 
   - name: maxpool3
     type: MAXPOOL
-    num_channels: 32   # (10 + 2*0 - 2)/2 + 1 = 5
+    num_channels: 96   # (10 + 2*0 - 2)/2 + 1 = 5
     kernel_size: 2
     stride: 2
     padding: 0
 
   - name: fc1
     type: FC_SIG
-    num_channels: 800
+    num_channels: 2400
     init_wt: 0.02
 
   - name: output
     type: FC_SOFTMAX
-    num_channels: 4
+    num_channels: 9
     init_wt: 0.02

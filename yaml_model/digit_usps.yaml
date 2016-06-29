@@ -1,8 +1,8 @@
-obj_name: 'digit_usps'  # profiling data will be stored in dir named after this
+obj_name: digit_usps    # profiling data will be stored in dir named after this
 epoch: 10
 batch: 100
 data_format: npz
-data_dir: ./train_data/usps/
+data_dir: ./train_data/digit_usps/
 checkpoint: ./checkpoint/digit_usps.npz
 input_image_size_y: 16
 input_image_size_x: 16

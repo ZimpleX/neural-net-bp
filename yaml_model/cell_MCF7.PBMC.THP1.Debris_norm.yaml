@@ -1,8 +1,9 @@
-obj_name: 'cell_kelvin_4cat_norm'
-epoch: 40
+obj_name: cell_MCF7.PBMC.THP1.Debris_norm
+epoch: 10
 batch: 10
-data_path: /root/data_part/train/4cat_norm_776.npz
-checkpoint: 'yaml_model/4cat_norm_fmap8.npz'
+data_format: npz
+data_dir: ./train_data/cell_MCF7.PBMC.THP1.Debris_norm/
+checkpoint: ./checkpoint/cell_MCF7.PBMC.THP1.Debris_norm.npz
 input_image_size_y: 305
 input_image_size_x: 305
 input_num_channels: 4
