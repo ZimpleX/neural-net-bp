@@ -1,60 +1,78 @@
 ## About
 
-This is a self-implemented version of ImageNet (DCNN). The net includes `fully-connected` layers, and `convolutional` layers (include `pooling`). The net is supposed to be compatible with [Apache Spark](spark.apache.org), so that the training process can be accelerated by the [Amazon EC2](aws.amazon.com/ec2). 
+This is a self-implemented version of Deep Convolutional Neural Network (DCNN). The net includes `fully-connected` layers, and `convolutional` layers (include `max-pooling`). The algorithm demonstrates satisfying learning outcome for classification of several real life datasets (e.g., **[digits](https://drive.google.com/open?id=0B3_QnE0SWYqPQktPNVFKajJLblk), [blood cells](https://drive.google.com/open?id=0B3_QnE0SWYqPUGVkempZa0FCSVk), [algae cells](https://drive.google.com/open?id=0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg)**).
 
-- language version: `python 3`
-- py-packages: 
+**Net Structure:**
+
+- Specify details of each layer as `*.yaml` file
+- `FC` layers:
+  - support user-defined net activation function & cost function
+- `convolutional` layers:
+  - support any `stride` & `padding`
+  - `feed-forward` & `back-propogation` are expressed in a single high-level function `slid_win_4d_flip`
+
+
+## Software Requirements
+- Language: `Python3`
+- `Python` packages: 
   - `numpy`, `yaml` (required for DCNN)
-  - `sqlite3` (optional, for profiling plotter)
-  - `pyspark` (optional, for `Spark` acceleration)
-  - `subprocess` (optional, for connection with `ec2`)
-- net structure:
-  - Specify details of each layer as `*.yaml` file
-  - `FC` layers:
-    - support user-defined net activation function & cost function
-  - `convolutional` layers:
-    - support any `stride` & `padding`
-    - `feed-forward` & `back-propogation` are expressed in a high-level function `slid_win_4d_flip`
+  - `sqlite3` (required for profiling the training process)
+  - `subprocess` (optional, for connection with `Amazon ec2` server)
+- Easy installation: [Anaconda](https://www.continuum.io/downloads) containing most of the required packages.
+
 
 ## Directory Structure
 
-- `main.py`: takes one `yaml` model to train
-- `conv_unittest.py`: for unit-test & profiling the convolution operation ONLY
-- `sweep.py`: takes all `yaml` models in a directory for training. Suitable for design space exploration. 
-- `net`: ...
-- `conv`: ...
-- ...
+- `main.py`: takes one `yaml` model to train 
+- `./net/`: high level definition of the algorithm
+	- `./net/structure.py`: CNN structure and main training loop
+	- `./net/cost.py`: cost function definition
+	- `./net/node_activity.py`: layer activation definition
+	- `./net/data_setup.py`: load training data
+	- `./net/conf.py`: high-level configuration macros
+- `./conv/`: convolution & pooling layer definition
+	- `./conv/slide_win.py`: extract out the common operation for both conv and pooling layers
+	- `./conv/conv_layer.py`: convolution layer definition
+	- `./conv/pool_layer.py`: max pooling layer definition
+	- `./conv/util.py`: other utility functions
+- `./db_util/`: utility function for populating the profiling data throughout the training into `sqlite3` database
+- `./logf/`: unifying the logging behavior
+- `./util/`: general utility functions (e.g., pre-processing data to convert it from `*.mat` into `*.npz` or `*.h5`)
+- `./ec2/`: interface to `Amazon ec2` servers, for running training on remote machine
+- `./stat_cnn/`: global variables storing statistics throughout training
+- `./yaml_model/`: user defined CNN models
+- `./checkpoint/`: store the CNN checkpoints throughout training
+- `./profile_data/`: store the profiling data throughout training
+- `./train_data/`: directory for storing the training datasets (symbol link)
 
-## ImageNet Model Design
+## Totorial
 
-- `./yaml_model/checkpoint/cell_cnn1_3000_final_chkpt.npz`
-  - epoch: 46
-  - batch: 8400
-  - 3 conv layer
-  - feature map: 32 - 64 - 128
+**Digit Classification:**
 
-| name       | data size | accuracy (%) |
-| ---------- | --------- | ------------ |
-| training   | 3000      | 99.9         |
-| validation | 1500      | 88.3         |
-| testing    | 3000      | 89.1         |
+- Data set: USPS
+- Data Format: `npz`
+- Image: 16 x 16 grey scale (1 input channel)
+- Obtain data from [here](https://drive.google.com/open?id=0B3_QnE0SWYqPQktPNVFKajJLblk), put the 3 `*.npz` files under `./train_data/digit_usps/`
+- Run `python3 main.py ./yaml_model/digit_usps.yaml` for training
+- Inspect profiling data from `./profile_data/digit_usps/` and checkpoint from `./checkpoint/`
+	- Sample plot from the profiling data (`epoch` vs. `classification accuracy`):
+	- ![](./sample_plot.png)
 
+**Blood Cell Classification:**
 
-
-- `./yaml_model/checkpoint/cell_cnn2_4500_final_chkpt.npz`
-  - epoch: 40
-  - 3 conv layer
-  - feature map: 16 - 32 - 64
-
-| name       | data size | accuracy (%) | cost  |
-| ---------- | --------- | ------------ | ----- |
-| train      | 4500      | 100.000      | 0.002 |
-| validation | 1500      | 90.200       | 0.478 |
-| testing    | 1500      | 90.200       | 0.460 |
+- Data set: self-generated cell images (MCF7, PBMC, THP1 and Debris)
+- Data Format: `npz`
+- Image: 305 x 305 "norm" image (4 input channels)
+- Obtain data from [here](https://drive.google.com/open?id=0B3_QnE0SWYqPUGVkempZa0FCSVk), put the 3 `*.npz` files under `./train_data/cell_MCF7.PBMC.THP1.Debris_norm/`
+- Run `python3 main.py ./yaml_model/cell_MCF7.PBMC.THP1.Debris_norm.yaml` for training
+- Inspect profiling data from `./profile_data/cell_MCF7.PBMC.THP1.Debris_norm/` and checkpoint from `./checkpoint/`
 
 
-## Yaml Example
-```
-data_dir: path/to/data		# dir containing the train/valid/test data
-data_format: h5 or npz
-```
+**Algae Cell Classification:**
+
+- Data set: self-generated algae images (9 categories)
+- Data Format: `hdf5`
+- Image: 511 x 511 "phase" image (1 input channel)
+- Obtain data from [here](https://drive.google.com/open?id=0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg), put the 3 `*.h5` files under `./train_data/cell_algae_phase/`
+- Run `python3 main.py ./yaml_model/cell_algae_phase.yaml` for training
+- Inspect profiling data from `./profile_data/cell_algae_phase/` and checkpoint from `./checkpoint/`
