@@ -74,7 +74,7 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 - Data set: self-generated algae images (9 categories)
 - Data Format: `hdf5` (Unlike `npz`, `hdf5` files don't need to fit into memory)
 - Image: 511 x 511 "phase" image (1 input channel)
-- Obtain data from [here](https://drive.google.com/drive/u/0/folders/0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg), put the 3 `*.h5` files under `./train_data/cell_algae_phase/`
+- Obtain data from [here](https://drive.google.com/open?id=0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg), put the 3 `*.h5` files under `./train_data/cell_algae_phase/`
 - Run `python3 main.py ./yaml_model/cell_algae_phase.yaml` for training
 - Inspect profiling data from `./profile_data/cell_algae_phase/` and checkpoint from `./checkpoint/`
 
