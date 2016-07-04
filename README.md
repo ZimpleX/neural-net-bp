@@ -1,6 +1,6 @@
 ## About
 
-This is a self-implemented version of Deep Convolutional Neural Network (DCNN). The net includes `fully-connected` layers, and `convolutional` layers (include `max-pooling`). The algorithm demonstrates satisfying learning outcome for classification of several real life datasets (e.g., **[digits](https://drive.google.com/open?id=0B3_QnE0SWYqPQktPNVFKajJLblk), [blood cells](https://drive.google.com/open?id=0B3_QnE0SWYqPUGVkempZa0FCSVk), [algae cells](https://drive.google.com/open?id=0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg)**).
+This is a self-implemented version of Deep Convolutional Neural Network (DCNN). The net includes `fully-connected` layers, and `convolutional` layers (include `max-pooling`). The algorithm demonstrates satisfying learning outcome for classification of several real life datasets (e.g., **[digits](#digit_usps), [blood cells](#blood_cells), [algae cells ](#algae_cells)**).
 
 **Net Structure:**
 
@@ -19,6 +19,7 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
   - `sqlite3` (required for profiling the training process)
   - `subprocess` (optional, for connection with `Amazon ec2` server)
 - Easy installation: [Anaconda](https://www.continuum.io/downloads) containing most of the required packages.
+- [Optional] To conveniently view the profiling data in the `sqlite3` database, you may install a db viewer (for example: [this one](http://sqlitebrowser.org))
 
 
 ## Directory Structure
@@ -43,11 +44,11 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 - `./yaml_model/`: user defined CNN models
 - `./checkpoint/`: store the CNN checkpoints throughout training
 - `./profile_data/`: store the profiling data throughout training
-- `./train_data/`: directory for storing the training datasets (symbol link)
+- `./train_data/`: directory for storing the training datasets (symbol link: **[N.B.]** re-link this to your own local data directory)
 
 ## Totorial
 
-**Digit Classification:**
+### Warm Up: Digit Classification <a name="digit_usps"></a>
 
 - Data set: USPS
 - Data Format: `npz`
@@ -58,7 +59,7 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 	- Sample plot from the profiling data (`epoch` vs. `classification accuracy`):
 	- ![](./sample_plot.png)
 
-**Blood Cell Classification:**
+### CNN with Multiple Input Channels: Blood Cell Classification <a name="blood_cells"></a>
 
 - Data set: self-generated cell images (MCF7, PBMC, THP1 and Debris)
 - Data Format: `npz`
@@ -68,11 +69,12 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 - Inspect profiling data from `./profile_data/cell_MCF7.PBMC.THP1.Debris_norm/` and checkpoint from `./checkpoint/`
 
 
-**Algae Cell Classification:**
+### CNN with Huge Data Sets: Algae Cell Classification <a name="algae_cells"></a>
 
 - Data set: self-generated algae images (9 categories)
-- Data Format: `hdf5`
+- Data Format: `hdf5` (Unlike `npz`, `hdf5` files don't need to fit into memory)
 - Image: 511 x 511 "phase" image (1 input channel)
-- Obtain data from [here](https://drive.google.com/open?id=0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg), put the 3 `*.h5` files under `./train_data/cell_algae_phase/`
+- Obtain data from [here](https://drive.google.com/drive/u/0/folders/0B3_QnE0SWYqPYU1ra3JHQ1Jfbjg), put the 3 `*.h5` files under `./train_data/cell_algae_phase/`
 - Run `python3 main.py ./yaml_model/cell_algae_phase.yaml` for training
 - Inspect profiling data from `./profile_data/cell_algae_phase/` and checkpoint from `./checkpoint/`
+
