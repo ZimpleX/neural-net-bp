@@ -78,3 +78,9 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 - Run `python3 main.py ./yaml_model/cell_algae_phase.yaml` for training
 - Inspect profiling data from `./profile_data/cell_algae_phase/` and checkpoint from `./checkpoint/`
 
+### Others
+- Run `python3 main.py <yaml model> -p <previous npz checkpoint file>` to resume the training from the checkpoint.
+- The profiling database file
+	- `ann.db` contains 2 tables: `meta` and `profile_cost`, identified by the populating timestamp. Each table may contain information for different runs. You could easily compare several CNN models for the same data set within a single `ann.db`.
+	- `eval_out_prob.db` is for evaulating the testing data set. It stores the classification probablility output by the final CNN (and sort these probabilities in ascending order). It also seperates the correctly classified data from the wrong ones. 
+- ...
