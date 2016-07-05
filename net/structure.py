@@ -393,7 +393,7 @@ def net_train_main(yaml_model, args, old_net=None):
     
     test_cost, test_acc = net.evaluate(data_set.all_data['test'][0],data_set.all_data['test'][1],mini_batch=100,eval_details=True)
     print("\n\n")
-    printf("TEST set: cost {7.4f}, accuracy {4.3f}".format(test_cost, test_acc))
+    printf("TEST set: cost {:7.4f}, accuracy {:4.3f}".format(test_cost, test_acc))
     print("\n\n")
     data_set.cleanup()
 
