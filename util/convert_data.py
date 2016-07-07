@@ -137,7 +137,7 @@ def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
     entry, channel, height, width = data_in.shape
     data_in = data_in.reshape(entry, channel*height, width)
     target_in = np.nonzero(target_in)[1]
-    img_out = dir_out + '/img{}_cat{}.png'
+    img_out = dir_out + '/img{}_channel{}_category{}.png'
     if scale_individual:
         for i in range(len(data_in)):
             rmin = np.min(data_in[i])
@@ -149,17 +149,17 @@ def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
         data_in = (255/(rmax-rmin)) * (data_in - rmin)
     for i,img in enumerate(data_in):
         Image.fromarray(np.uint8(img))\
-                .save(img_out.format(i,target_in[i]))
+                .save(img_out.format(i,channel,target_in[i]))
 
 def img_to_array(path_img):
     arr_img = np.asarray(Image.open(path_img))
     # scale to -1 ~ 1
-    arr_img = copy.deepcopy(arr_img)
     arr_img = arr_img/127.5 - 1.
-    # reshape
+    f_img = path_img.split('/')[-1]
+    channel = int(f_img.split('_')[1].split('channel')[1])
     shape = arr_img.shape
-    if len(shape) == 2:
-        return arr_img.reshape(1,1,*shape)
-    else:
+    if len(shape) == 3: # probably RGB image
         return arr_img.transpose((2,0,1))[np.newaxis, ...]
- 
+    else:
+        assert len(shape) == 2
+        return arr_img.reshape(channel, -1, shape[1])[np.newaxis, ...]
