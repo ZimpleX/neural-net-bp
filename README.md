@@ -84,7 +84,8 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 	- `ann.db` contains 2 tables: `meta` and `profile_cost`, identified by the populating timestamp. Each table may contain information for different runs. You could easily compare several CNN models for the same data set within a single `ann.db`.
 	- `eval_out_prob.db` is for evaulating the testing data set. It stores the classification probablility output by the final CNN (and sort these probabilities in ascending order). It also seperates the correctly classified data from the wrong ones. 
 
-- **Visualization**:
+- **Visualization**
+	- **NOTE:** by default, the visualization function scales each image individually for better visual contrast. If you want to change this behavior, pass `scale_individual=False` to the `array_to_img` function in `./util/convert_data.py`
 
 ```
 # Launch iPython.
