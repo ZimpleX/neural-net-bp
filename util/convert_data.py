@@ -111,28 +111,45 @@ def mat_to_npz(path_mat, path_npz, norm_img_key='norm_cell', phase_img_key='phas
 #############################
 #  array, image conversion  #
 #############################
-def array_to_img(path_in, path_out, tag, channel, height, width, num_images=100, scale_individual=True):
-    raw = np.load(path_in)[tag]
-    entry = raw.shape[0]
-    if channel == 1:
-        raw = raw.reshape(entry, height, width)
-    else:
-        raw = raw.reshape(entry, channel, height, width)
-    stride = entry // num_images
-    raw = raw[0::stride, ...]
+def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
+    """
+    dataset_in: dictionary of the format {"data": ndarray, "target": ndarray} (same as training).
+    dir_out:    directory storing the output images
+    slice_:     the slice for array in dataset_in
+    scale_individual
+                whether you want to scale the images invidually or altogether.
+                the scaling invidually would make the images look 'sharper'.
+    """
+    from logf.filef import mkdir_r
+    mkdir_r(dir_out)
+    try:
+        data_in = dataset_in['data'][slice_]
+        target_in = dataset_in['target'][slice_]
+    except TypeError:
+        data_in = dataset_in.data[slice_]
+        target_in = dataset_in.target[slice_]
+    try:
+        data_in = np.asarray(data_in)
+        target_in = np.asarray(target_in)
+    except MemoryError:
+        printf("memory error occurred! Try using smaller slice!", type='ERROR')
+        exit()
+    entry, channel, height, width = data_in.shape
+    data_in = data_in.reshape(entry, channel*height, width)
+    target_in = np.nonzero(target_in)[1]
+    img_out = dir_out + '/img{}_cat{}.png'
     if scale_individual:
-        for i in range(len(raw)):
-            rmin = np.min(raw[i])
-            rmax = np.max(raw[i])
-            raw[i] = (255/(rmax-rmin)) * (raw[i] - rmin)
+        for i in range(len(data_in)):
+            rmin = np.min(data_in[i])
+            rmax = np.max(data_in[i])
+            data_in[i] = (255/(rmax-rmin)) * (data_in[i] - rmin)
     else:
-        rmin = np.min(raw)
-        rmax = np.max(raw)
-        raw = (255/(rmax-rmin)) * (raw - rmin)
-    i = 0
-    for img in raw:
-        Image.fromarray(np.uint8(img)).save(path_out.format(i))
-        i += 1
+        rmin = np.min(data_in)
+        rmax = np.max(data_in)
+        data_in = (255/(rmax-rmin)) * (data_in - rmin)
+    for i,img in enumerate(data_in):
+        Image.fromarray(np.uint8(img))\
+                .save(img_out.format(i,target_in[i]))
 
 def img_to_array(path_img):
     arr_img = np.asarray(Image.open(path_img))

@@ -83,4 +83,58 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 - The profiling database file
 	- `ann.db` contains 2 tables: `meta` and `profile_cost`, identified by the populating timestamp. Each table may contain information for different runs. You could easily compare several CNN models for the same data set within a single `ann.db`.
 	- `eval_out_prob.db` is for evaulating the testing data set. It stores the classification probablility output by the final CNN (and sort these probabilities in ascending order). It also seperates the correctly classified data from the wrong ones. 
-- ...
+
+- **Visualization**:
+
+```
+# Launch iPython.
+# Example for visualizing the "digit" dataset (*.npz format):
+
+In [1]: import numpy as np
+
+In [2]: import util.convert_data as c
+
+In [3]: path_in = './train_data/digit_usps/test.npz'
+
+In [4]: dir_out = './viz/digit_usps'
+
+In [5]: npz_in = np.load(path_in)
+
+In [6]: # slice_ is slicing into array of 'npz_in', 
+
+In [7]: # in this example, we would like to only visualize every 10 digits
+
+In [8]: slice_ = slice(0,10000,10)
+
+In [9]: c.array_to_img(npz_in, dir_out, slice_)
+[INFO] created dir: ./viz
+[INFO] created dir: ./viz/digit_usps
+
+In [10]: # Done! check images in './viz/digit_usps/'
+
+
+# Example for visualizing the "algae" dataset (*.h5 format)
+
+In [11]: import tables as tb
+
+In [12]: path_in = './train_data/cell_algae_phase/test.h5'
+
+In [13]: dir_out = './viz/cell_algae_phase'
+
+In [14]: h5_in = tb.open_file(path_in).root
+
+In [15]: # now we want to visualize every 3 algae images
+
+In [16]: slice_ = slice(0,10000,3)
+
+In [17]: c.array_to_img(h5_in, dir_out, slice_)
+[INFO] created dir: ./viz/cell_algae_phase
+
+In [18]: # Done! check images in './viz/cell_algae_phase'
+
+# NOTE: try yourself for the blood cell example. 
+# In this case, the data contains 4 input channels, 
+# so in each output image, the 4 channels are concatenated vertically. 
+```
+
+- **Manually test the trained CNN model**
