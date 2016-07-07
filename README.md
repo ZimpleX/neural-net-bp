@@ -138,3 +138,36 @@ In [18]: # Done! check images in './viz/cell_algae_phase'
 ```
 
 - **Manually test the trained CNN model**
+
+```
+# Run the following command in terminal (refer to ./test/play.py)
+
+# Example: classify a trained digit classification CNN model:
+$ python3 -m test.play ./checkpoint/digit_usps.npz ./viz/digit_usps/img0_channel1_category9.png
+
+# Or, you can also test multiple images in a directory
+$ python3 -m test.play ./checkpoint/digit_usps.npz ./viz/digit_usps/
+
+# Sample output:
+[IN] file: img13_channel1_category8.png
+[OUT] predicted category: [5]
+[IN] file: img25_channel1_category1.png
+[OUT] predicted category: [1]
+[IN] file: img36_channel1_category0.png
+[OUT] predicted category: [0]
+[IN] file: img3_channel1_category7.png
+[OUT] predicted category: [7]
+[IN] file: img55_channel1_category0.png
+[OUT] predicted category: [0]
+[IN] file: img57_channel1_category4.png
+[OUT] predicted category: [4]
+[IN] file: img74_channel1_category1.png
+[OUT] predicted category: [1]
+[IN] file: img76_channel1_category4.png
+[OUT] predicted category: [4]
+[IN] file: img79_channel1_category3.png
+[OUT] predicted category: [3]
+[IN] file: img8_channel1_category2.png
+[OUT] predicted category: [2]
+
+```

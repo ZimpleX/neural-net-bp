@@ -29,5 +29,5 @@ if __name__ == '__main__':
     for img in img_list:
         ip_arr = util.convert_data.img_to_array(img)
         op = net.net_act_forward(ip_arr)
-        printf('file: {}',img.split('/')[-1])
-        printf('predicted category: {}', op.argmax(axis=1), separator=None)
+        printf('file: {}',img.split('/')[-1],type='IN')
+        printf('predicted category: {}', op.argmax(axis=1), separator=None, type='OUT')
