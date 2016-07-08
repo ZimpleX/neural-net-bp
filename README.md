@@ -46,7 +46,7 @@ This is a self-implemented version of Deep Convolutional Neural Network (DCNN). 
 - `./profile_data/`: store the profiling data throughout training
 - `./train_data/`: directory for storing the training datasets (symbol link: **[N.B.]** re-link this to your own local data directory)
 
-## Totorial
+## Tutorial
 
 ### Warm Up: Digit Classification <a name="digit_usps"></a>
 
