@@ -111,7 +111,7 @@ def mat_to_npz(path_mat, path_npz, norm_img_key='norm_cell', phase_img_key='phas
 #############################
 #  array, image conversion  #
 #############################
-def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
+def array_to_img(dataset_in, dir_out, slice_, scale_individual=True, cnn_eval_in=None, start_idx=0):
     """
     dataset_in: dictionary of the format {"data": ndarray, "target": ndarray} (same as training).
     dir_out:    directory storing the output images
@@ -119,6 +119,8 @@ def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
     scale_individual
                 whether you want to scale the images invidually or altogether.
                 the scaling invidually would make the images look 'sharper'.
+    cnn_eval_in:
+                the classification result from a trained CNN.
     """
     from logf.filef import mkdir_r
     mkdir_r(dir_out)
@@ -137,7 +139,10 @@ def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
     entry, channel, height, width = data_in.shape
     data_in = data_in.reshape(entry, channel*height, width)
     target_in = np.nonzero(target_in)[1]
-    img_out = dir_out + '/img{}_channel{}_category{}.png'
+    if cnn_eval_in is None:
+        img_out = dir_out + '/img{}_channel{}_category{}.png'
+    else:
+        img_out = dir_out + '/img{}_channel{}_correct{}_wrong{}.png'
     if scale_individual:
         for i in range(len(data_in)):
             rmin = np.min(data_in[i])
@@ -148,8 +153,12 @@ def array_to_img(dataset_in, dir_out, slice_, scale_individual=True):
         rmax = np.max(data_in)
         data_in = (255/(rmax-rmin)) * (data_in - rmin)
     for i,img in enumerate(data_in):
-        Image.fromarray(np.uint8(img))\
-                .save(img_out.format(i,channel,target_in[i]))
+        if cnn_eval_in is None:
+            Image.fromarray(np.uint8(img))\
+                .save(img_out.format(i+start_idx,channel,target_in[i]))
+        else:
+            Image.fromarray(np.uint8(img))\
+                .save(img_out.format(i+start_idx,channel,target_in[i],cnn_eval_in[i].argmax()))
 
 def img_to_array(path_img):
     arr_img = np.asarray(Image.open(path_img))

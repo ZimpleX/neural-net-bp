@@ -225,6 +225,7 @@ class Net_structure:
             tot_net_out = None
             tot_compare = None
 
+        wrong_count = 0
         for k in range(0, num_entry, mini_batch):
             cur_batch = batch_ipt[k:(k+mini_batch)]
             cur_target = target[k:(k+mini_batch)]
@@ -235,16 +236,26 @@ class Net_structure:
                 cur_correct += (_compare).sum()
                 if eval_details:
                     # populate output of the CNN for detailed inspection
-                    cur_net_out.sort(axis=1)
                     _compare = _compare[..., np.newaxis].astype(np.int)
+                    # store wrongly classified images
+                    i_wrong = np.nonzero(_compare-1)[0]
+                    img_wrong = cur_batch[i_wrong,...]
+                    target_wrong = cur_target[i_wrong,...]
+                    netout_wrong = cur_net_out[i_wrong,...]
+                    from util.convert_data import array_to_img
+                    dir_out = '{}/{}/{}_{}'.format(DB_DIR_PARENT,self.obj_name,'wrong_img',self.timestamp)
+                    array_to_img({'data':img_wrong,'target':target_wrong},
+                        dir_out,slice(0,mini_batch,1),cnn_eval_in=netout_wrong,start_idx=wrong_count)
                     if tot_compare is None:
                         tot_compare = copy.deepcopy(_compare)
                     else:
                         tot_compare = np.concatenate((tot_compare, _compare), axis=0)
+                    cur_net_out.sort(axis=1)
                     if tot_net_out is None:
                         tot_net_out = copy.deepcopy(cur_net_out)
                     else:
                         tot_net_out = np.concatenate((tot_net_out, cur_net_out), axis=0)
+                wrong_count += np.nonzero(_compare-1)[0].shape[0]
         if eval_details:
             # TODO: should also set a limit for one-time populating output array.
             _idx = (np.arange(num_entry))[..., np.newaxis]
@@ -332,6 +343,7 @@ def net_train_main(yaml_model, args, old_net=None):
         print_to_file(_LOG_FILE['conf'], conf)
     else:
         net = old_net
+    net.timestamp = timestamp
 
     profile.profile_net_conf(net.obj_name, yaml_model, timestamp)
     #---------------------------#
