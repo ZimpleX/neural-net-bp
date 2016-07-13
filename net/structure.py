@@ -73,6 +73,7 @@ class Net_structure:
                             length of list = num of layers excluding input layer
         cost_type           the class representing the chosen cost function
         """
+        self.timestamp = strftime('%Y.%m.%d-%H.%M.%S')
         if yaml_model is None:
             self.w_list = None
             self.b_list = None
@@ -263,7 +264,7 @@ class Net_structure:
             _pair = np.concatenate((tot_compare, tot_net_out), axis=1)
             _field = ','.join(['i8'] + ['f8']*num_out_cat)
             _pair.view(_field).sort(order=['f0', 'f{}'.format(num_out_cat)], axis=0)
-            populate_db(_attr, _type, (eval_name,), _idx, _pair, db_name=_db_name)
+            populate_db(_attr, _type, (eval_name,), _idx, _pair, db_name=_db_name, usr_time=self.timestamp)
         return cur_cost/num_entry, cur_correct/num_entry
             
 
@@ -310,8 +311,8 @@ class Net_structure:
             self.dw_list[i] = np.zeros(self.w_list[i].shape)
             self.db_list[i] = np.zeros(self.b_list[i].shape)
         self.y_list = [None] * (self.num_layer + 1)
-        self.epoch = info['epoch']
-        self.batch = info['batch']
+        self.epoch = int(info['epoch'])
+        self.batch = int(info['batch'])
 
 
 
@@ -324,16 +325,9 @@ def net_train_main(yaml_model, args, old_net=None):
     """
     define main separately to facilitate unittest
     """
-    # this is assuming that path of training data file is 
-    # residing inside a dir named by the task name, and using '/' as delimiter
-    timestamp = strftime('%Y.%m.%d-%H.%M.%S')
-    for f in _LOG_FILE.keys():
-        _LOG_FILE[f] = _LOG_FILE[f].format(timestamp)
-    
     #---------------------#
     #  data & net & conf  #
     #---------------------#
-    data_set = Data(yaml_model, timestamp)
     conf = Conf(yaml_model)
     if old_net is None:
         net = Net_structure(yaml_model)
@@ -343,9 +337,14 @@ def net_train_main(yaml_model, args, old_net=None):
         print_to_file(_LOG_FILE['conf'], conf)
     else:
         net = old_net
-    net.timestamp = timestamp
 
-    profile.profile_net_conf(net.obj_name, yaml_model, timestamp)
+    for f in _LOG_FILE.keys():
+        _LOG_FILE[f] = _LOG_FILE[f].format(net.timestamp)
+    
+    data_set = Data(yaml_model, net.timestamp)
+
+
+    profile.profile_net_conf(net.obj_name, yaml_model, net.timestamp)
     #---------------------------#
     #  populate initial output  #
     #---------------------------#
@@ -394,7 +393,7 @@ def net_train_main(yaml_model, args, old_net=None):
             net.export_(yaml_model)
 
         cost_data  = [[net.epoch, net.batch, cost_bat, correct_bat, cur_val_cost, cur_val_correct]]
-        profile.profile_cost(net.obj_name, cost_data, timestamp)
+        profile.profile_cost(net.obj_name, cost_data, net.timestamp)
    
         printf('end of epoch {:4d}, avg cost: {:7.4f}, avg correct {:4.3f}', net.epoch, cost_bat, correct_bat, type='TRAIN')
         printf("       cur validation accuracy: {:4.3f}", cur_val_correct, type=None, separator=None)

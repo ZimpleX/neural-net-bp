@@ -143,32 +143,54 @@ In [18]: # Done! check images in './viz/cell_algae_phase'
 ```
 # Run the following command in terminal (refer to ./test/play.py)
 
-# Example: classify a trained digit classification CNN model:
+# Example: classify using a trained digit classification CNN model:
+
+# 1. Input images:
 $ python3 -m test.play ./checkpoint/digit_usps.npz ./viz/digit_usps/img0_channel1_category9.png
-
-# Or, you can also test multiple images in a directory
+# Or, pass in a directory
 $ python3 -m test.play ./checkpoint/digit_usps.npz ./viz/digit_usps/
-
 # Sample output:
-[IN] file: img13_channel1_category8.png
-[OUT] predicted category: [5]
-[IN] file: img25_channel1_category1.png
-[OUT] predicted category: [1]
-[IN] file: img36_channel1_category0.png
-[OUT] predicted category: [0]
-[IN] file: img3_channel1_category7.png
-[OUT] predicted category: [7]
-[IN] file: img55_channel1_category0.png
-[OUT] predicted category: [0]
-[IN] file: img57_channel1_category4.png
-[OUT] predicted category: [4]
-[IN] file: img74_channel1_category1.png
-[OUT] predicted category: [1]
-[IN] file: img76_channel1_category4.png
-[OUT] predicted category: [4]
-[IN] file: img79_channel1_category3.png
-[OUT] predicted category: [3]
-[IN] file: img8_channel1_category2.png
-[OUT] predicted category: [2]
+[INFO] parent dir: viz.ignore/digit_usps/
+------------------------------------------
+PREDICTED                       INPUT_FILE
+------------------------------------------
+        9      img0_channel1_category9.png
+        9    img100_channel1_category9.png
+        5    img101_channel1_category5.png
+        0    img102_channel1_category0.png
+        3    img103_channel1_category3.png
+        5    img104_channel1_category5.png
+        5    img105_channel1_category5.png
+        5    img106_channel1_category5.png
+        7    img107_channel1_category7.png
+        7    img108_channel1_category7.png
+        1    img109_channel1_category1.png
+        0     img10_channel1_category0.png
+        0    img110_channel1_category0.png
+        2    img111_channel1_category2.png
+    ...
 
+# 2. Input npz / h5 files:
+$ python3 -m test.play checkpoint/cell_algae_phase.npz train_data/cell_algae_phase/test.h5
+# Or, pass in a directory
+$ python3 -m test.play checkpoint/cell_algae_phase.npz train_data/cell_algae_phase/
+# Sample output:
+[INFO] created dir: ./profile_data//cell_algae_phase/wrong_img_2016.07.13-20.58.32
+[INFO] success: populate 270 entries into table [null|null]
+[INFO] success: populate 1171 entries into table [null|null]
+[INFO] success: populate 360 entries into table [null|null]
+[INFO] parent dir: train_data/cell_algae_phase/
+-----------------------------------------------
+NUM_ENTRIES    ACCURACY        COST        FILE
+-----------------------------------------------
+        270      0.6889      0.8913     test.h5
+       1171      0.7045      0.8374    train.h5
+        360      0.6972      0.8804    valid.h5
+-----------------------------------------------
+       1801      0.7007      0.8540       TOTAL
 ```
+
+- **Visualize the wrongly classified images**
+	- The wrongly classified data are automatically converted to visual images to help inspection into the CNN model
+	- To find those images, go to `./profile_data/<data_set_name>/wrong_img_<timestamp>/`
+	- Source code: `evaluate()` function in `./net/structure.py`
