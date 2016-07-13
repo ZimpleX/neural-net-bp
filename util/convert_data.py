@@ -160,15 +160,24 @@ def array_to_img(dataset_in, dir_out, slice_, scale_individual=True, cnn_eval_in
             Image.fromarray(np.uint8(img))\
                 .save(img_out.format(i+start_idx,channel,target_in[i],cnn_eval_in[i].argmax()))
 
-def img_to_array(path_img):
-    arr_img = np.asarray(Image.open(path_img))
+def img_to_array(l_path_img):
+    """
+    Input a list of images, convert them to ndarray
+    """
+    _l = [np.asarray(Image.open(img))[np.newaxis,...] \
+                for img in l_path_img]
+    arr_img = np.concatenate(_l)
     # scale to -1 ~ 1
     arr_img = arr_img/127.5 - 1.
-    f_img = path_img.split('/')[-1]
-    channel = int(f_img.split('_')[1].split('channel')[1])
     shape = arr_img.shape
-    if len(shape) == 3: # probably RGB image
-        return arr_img.transpose((2,0,1))[np.newaxis, ...]
+    if len(shape) == 4: # probably RGB image
+        return arr_img.transpose((0,3,1,2))
     else:
-        assert len(shape) == 2
-        return arr_img.reshape(channel, -1, shape[1])[np.newaxis, ...]
+        assert len(shape) == 3
+        # get num of channel
+        l_f_img = [path_img.split('/')[-1] for path_img in l_path_img]
+        l_chan = [int(f_img.split('_')[1].split('channel')[1])\
+                    for f_img in l_f_img]
+        assert len(set(l_chan)) == 1
+        channel = l_chan[0]
+        return arr_img.reshape(shape[0],channel,-1,shape[2])

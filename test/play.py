@@ -26,8 +26,16 @@ if __name__ == '__main__':
         img_list = ['{}/{}'.format(args.test_img,i) for i in img_list]
     else:
         img_list = [args.test_img]
-    for img in img_list:
-        ip_arr = util.convert_data.img_to_array(img)
-        op = net.net_act_forward(ip_arr)
-        printf('file: {}',img.split('/')[-1],type='IN')
-        printf('predicted category: {}', op.argmax(axis=1), separator=None, type='OUT')
+    ip_arr = util.convert_data.img_to_array(img_list)
+    op_arr = net.net_act_forward(ip_arr).argmax(axis=1)
+
+    # print out info
+    parent_dir = '/'.join(img_list[0].split('/')[0:-1])
+    printf('parent dir: {}', parent_dir,separator=None)
+    img_file_list = [f.split('/')[-1] for f in img_list]
+    f_max_len = np.array([len(f) for f in img_file_list]).max()
+    print('-------------' + '-'*f_max_len)
+    print("PREDICTED    INPUT_FILE")
+    print('-------------' + '-'*f_max_len)
+    for i,f in enumerate(img_file_list):
+        print('{:9d}    {}'.format(op_arr[i],f))
